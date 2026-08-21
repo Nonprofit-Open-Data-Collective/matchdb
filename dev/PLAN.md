@@ -756,9 +756,11 @@ avoid.
 **Phase 2 — Schedule I as `observed`.** Move `pfmatch/dev/build-schedi-db.R` and
 `pf_bmf_augment()` behind `md_ingest_schedi()`. **Success criterion: the spec
 adding `observed` at `min_corroborators = 2` reproduces
-`BMF-AUGMENTED-unified.csv`, and the 1k benchmark reproduces the measured +43 YES
-/ +10 MAYBE.** The row-clone hack is then retired and its behaviour is a
-selectable spec.
+`BMF-AUGMENTED-unified.csv`, and the 1k benchmark reproduces the delta Phase 0c
+measured.** Note the target is 0c's decomposition, *not* the historical "+43 YES
+/ +10 MAYBE" — §6a establishes that figure is a net of aliases gained against
+promotions lost, and it should be treated as unverified until 0c separates the
+two. The row-clone hack is then retired and its behaviour is a selectable spec.
 
 **Phase 3 — publication.** Per-cell `df` vectors (§6c), spec-stamped bundles
 (§6a, §9), partitioned parquet (§7b), the three named tiers, `latest.json`.

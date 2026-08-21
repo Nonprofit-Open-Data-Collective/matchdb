@@ -182,8 +182,14 @@ Built once, in 0d, used by every gate afterwards. Lives in `dev/verify/`.
 
 **Comparison normal form.** Before diffing any two reference frames:
 
-1. restrict to the `np_fields` column set (`npmatch/R/config.R:10`) plus `.ein`
-   and `active`
+1. restrict to the **baseline's** field set, captured as an explicit column list
+   in the 0a manifest — not to `np_fields` as resolved at run time. `.ein` and
+   `active` are already members (`npmatch/R/config.R:10`), so naming them
+   separately is redundant; more importantly, `np_fields` is about to move.
+   Phase 0c adds `variant_class` to it, so a normal form that reads the live
+   constant would compare a baseline built without that column against a
+   candidate built with it and report a diff carrying no information — or fail
+   outright. **Pin the list; never resolve it from the installed npmatch.**
 2. coerce all comparison columns to character; normalize `""` to `NA`
 3. sort by `(ein, name_key, street_key, zip5)` and drop row order from the
    comparison
@@ -234,12 +240,16 @@ is a claim, not a property.
    fix can land immediately and Phase 1 follows. If it is underway, the A/B still
    runs now but the fix banks until it completes, and Phase 1 waits. This is the
    only item that changes the calendar.
-2. **`variant_class` in npmatch's `score.R`.** Gating the promotion on
-   `variant_class == "legal"` means npmatch's scorer learns a column that today
-   only matchdb would produce. Either npmatch grows an optional `variant_class`
-   field in `np_fields` (cleanest; small breaking-ish change), or matchdb encodes
-   it into an existing column (no npmatch change, but reintroduces exactly the
-   invisibility §6b is fixing). Recommend the former.
+2. ~~**`variant_class` in npmatch's `score.R`.**~~ **Settled** — `PLAN.md`
+   Phase 0 adopts the recommendation below, and the two documents agree. npmatch
+   grows an optional `variant_class` field in `np_fields`, defaulting to `NA` so
+   no existing caller is affected. The alternative — matchdb encoding it into an
+   existing column — was rejected because it reintroduces exactly the
+   invisibility §6b exists to fix. Carried here only so the reasoning is not
+   lost: `PLAN.md` §6b establishes that the provenance columns
+   (`row_source`, `alias_n_filers`) are dropped at `.np_canonicalize()`
+   (`npmatch/R/canonicalize.R:204`), so there is no existing column to encode
+   into without corrupting one that means something else.
 3. **Where the baseline lives.** `pfmatch/data-dev/` is gitignored and the frames
    are large. Either the existing `nccsdata` S3 asset tier with a manifest entry,
    or `dev/BASELINE-2026-08/` holding hashes and the benchmark output with the
@@ -250,6 +260,10 @@ is a claim, not a property.
 
 ## 8. Immediate next step
 
-Commit the untracked evidence in `pfmatch/dev/`, then run 0a's determinism check.
-One benchmark run answers a question every later gate depends on, and it requires
-no decision from anyone.
+~~Commit the untracked evidence in `pfmatch/dev/`~~ — done, `pfmatch@daa4b03`
+("Record the reference-rebuild cost probes: IDF is not the lever") tracks both
+probes and both logs.
+
+So: **run 0a's determinism check.** Two cold runs of the 1k benchmark, compared
+for exact equality. One benchmark run answers a question every later gate depends
+on, and it requires no decision from anyone.
