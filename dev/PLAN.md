@@ -466,8 +466,20 @@ small set:
 | name | layers | names | addresses |
 |---|---|---|---|
 | `active-legal` | active | legal, dba | mailing |
+| **`active-observed`** | active | legal, dba, observed (≥2 corroborators) | mailing, observed |
 | `unified-legal` | active + inactive | legal, dba | mailing |
 | `unified-observed` | active + inactive | legal, dba, observed (≥2 corroborators) | mailing, observed |
+
+> **Phase 0c changed which of these should be the default.** Measured on the 1k
+> benchmark (`pfmatch/dev/VARIANT-CLASS-AB.md`), the aliases carry the entire
+> YES gain (**+199**) while the inactive-EIN tranche is **−5 YES** for 1.76M
+> rows — nearly all of the reference's size and, by §2's scaling, nearly all of
+> its runtime. `active-observed` was not in the original set and is added here
+> because it is the combination that buys the gain without the cost; on this
+> evidence it, not `unified-observed`, is the right default. Confirm with a
+> direct run before Phase 3 fixes the published tiers. The `unified-*` specs
+> stay — resolving defunct grantees is a real use — but nobody should get the
+> inactive tranche without asking for it.
 
 `pf_reference()` becomes `md_reference("unified-observed")` — one bulk GET,
 cached locally by spec hash, **zero compile cost**. Parquet rather than DuckDB
@@ -925,12 +937,28 @@ avoid.
 
 **Phase 2 — Schedule I as `observed`.** Move `pfmatch/dev/build-schedi-db.R` and
 `pf_bmf_augment()` behind `md_ingest_schedi()`. **Success criterion: the spec
-adding `observed` at `min_corroborators = 2` reproduces
-`BMF-AUGMENTED-unified.csv`, and the 1k benchmark reproduces the delta Phase 0c
-measured.** Note the target is 0c's decomposition, *not* the historical "+43 YES
-/ +10 MAYBE" — §6a establishes that figure is a net of aliases gained against
-promotions lost, and it should be treated as unverified until 0c separates the
-two. The row-clone hack is then retired and its behaviour is a selectable spec.
+adding `observed` at `min_corroborators = 2` reproduces the augmented BMF frozen
+in 0a, and the 1k benchmark reproduces the A→B delta Phase 0c measured
+(+199 YES / −67 MAYBE).**
+
+Two corrections 0c forced, both worth heeding before this phase starts.
+
+*Name the target by content, not by filename.* Three near-identically named
+augmented CSVs sit in `pfmatch/data-dev/` — `BMF-AUGMENTED-unified.csv`
+(3,880,431 rows), `-unified-fixed.csv` (3,880,431), and
+`-bmf_unified_geocoded_2026-08-20.csv` (3,891,187) — and the reference bundle
+records which one built it nowhere. `REF-augmented.rds` resolves to
+`-unified-fixed.csv`, **not** to the 3,891,187-row artifact behind
+`REF-PERFORMANCE.md`'s published figure. An earlier draft of this plan named
+`BMF-AUGMENTED-unified.csv` as the Phase 2 target; that was the wrong file.
+0a's manifest must pin the target by row count and md5.
+
+*The historical "+43 YES / +10 MAYBE" is not the target and never was.* §6a
+established it is a net figure; 0c established it also spans the inactive-EIN
+tranche, and that it was measured against a different artifact. Use 0c's
+numbers.
+
+The row-clone hack is then retired and its behaviour is a selectable spec.
 
 **Phase 3 — publication.** Per-cell `df` vectors (§6c), spec-stamped bundles
 (§6a, §9), partitioned parquet (§7b), the three named tiers, `latest.json`.

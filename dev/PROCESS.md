@@ -180,7 +180,7 @@ Produce, from a single pinned `(npmatch, pfmatch)` commit pair, a
 | artifact | why |
 |---|---|
 | `REF-active.rds` | Phase 1 target |
-| `BMF-AUGMENTED-unified.csv` | Phase 2 target |
+| the augmented BMF **resolved by row count**, not by name — see below | Phase 2 target |
 | `PF_SET=1k` tiered output | both benchmarks |
 | md5 of each, row counts, the two commit SHAs, R and package versions | reproducibility |
 
@@ -287,6 +287,56 @@ Phase 2.
 
 **Output:** `pfmatch/dev/VARIANT-CLASS-AB.md`.
 
+**Done, 2026-08-21 — both halves.** Enums frozen in `PLAN.md` §3a
+(`matchdb@08c1fc0`). A/B at `pfmatch@4d4837a`, probe
+`dev/probe-variant-class-ab.R`, log `dev/AB-COMPARE.log`.
+
+It took **four** arms, not three. The published figure compares the *monthly
+active* BMF against the *augmented unified* reference, so it spans the
+inactive-EIN tranche and the aliases at once; a fourth arm separates them.
+
+```
+D -> A  inactive EIN tranche          -5 YES   +102 MAYBE
+A -> B  Schedule I aliases          +199 YES    -67 MAYBE
+B -> C  legal-gated promotion         -2 YES     -6 MAYBE
+------------------------------------------------------
+D -> B  the reported comparison     +194 YES    +35 MAYBE
+```
+
+**The decision rule is answered in the direction that favours this plan.**
+Aliases-gained is large (+199 net; 467 of arm B's 3015 YES are won on an alias
+row) and promotions-lost is 19. §6b's defect is real but cheap to fix: gating
+the promotion to legal rows costs **2 net YES**, because 17 of the 19 demoted
+identities have a legal-row alternative that clears YES on its own.
+
+Three consequences for this document and the plan:
+
+* **`bmf_inactive` should probably not be in the default published spec.** It is
+  1.76M of the 1.96M rows added — nearly all the size, and by
+  `REF-PERFORMANCE.md`'s scaling nearly all the runtime — for **−5 YES**. §7b's
+  proposed tiers should be revisited; an `active-observed` spec (~2.1M rows) was
+  not among them and looks like the better default.
+* **The §8 row budget should be justified per tier, not per row.** 193k alias
+  rows buy +199 YES; 1.76M inactive rows buy −5. A budget counting only rows
+  rates these identically.
+* **The comparison normal form (§5) needs a union-align rule for tiered
+  outputs.** Arms do not share an identity set — the tiered result carries a row
+  per identity that drew at least one candidate, and a bigger reference reaches
+  more of them (4,733 on the monthly BMF, 4,793 on the augmented). Align on the
+  union of `.id` and mark absent identities `NONE`, distinct from a scored `NO`.
+  Without this a gate comparing tiered outputs across references reports phantom
+  diffs. §5's normal form as written covers *reference frames* and is fine for
+  those; this is the additional rule for *results*.
+
+No npmatch change was required, so 0c did not depend on 0b merging. The scored
+pairs frame is retained on the result and carries `.y`, and the promotion
+already gates on `name_ver_y == "MAIN"`, so arm C is a wrapper over npmatch's
+own scoring rather than a reimplementation of it.
+
+**Not adopted.** Per §2 Collision B the gate moves the YES/MAYBE boundary, so it
+lands before threshold optimization begins or after it concludes, never during.
+The measurement is banked.
+
 ### 0d. Scaffold matchdb *(matchdb, ~1 day)*
 
 `DESCRIPTION` (Imports: npmatch, DBI, duckdb, arrow, data.table), `NAMESPACE`,
@@ -336,10 +386,10 @@ Phases are the plan's; the gate column is what this document adds.
 |---|---|---|
 | **0a** baseline | pfmatch | manifest committed; ~~benchmark verified deterministic~~ **determinism done** (`pfmatch@eacd5c3`, thread-independent) — manifest outstanding |
 | **0b** signature | npmatch | ~~exported and tested~~ **built** (`npmatch@9427304`, `v1-421e1e2a6afb024e`) — merge outstanding |
-| **0c** vocabulary + A/B | pfmatch | enums frozen; `VARIANT-CLASS-AB.md` reports the four-number decomposition |
+| **0c** vocabulary + A/B | pfmatch | ~~enums frozen; four-number decomposition~~ **done** (`matchdb@08c1fc0`, `pfmatch@4d4837a`) — four arms, aliases carry the whole gain |
 | **0d** scaffold | matchdb | package skeleton; harness runs baseline-vs-itself and reports three zeros |
 | **1** entity + name + address, BMF | matchdb | harness: `md_compile(active-legal)` vs `REF-active.rds` → three zeros; 1k benchmark exact |
-| **2** Schedule I as `observed` | matchdb | vs `BMF-AUGMENTED-unified.csv` → three zeros; 1k reproduces the A/B's measured delta |
+| **2** Schedule I as `observed` | matchdb | vs the row-count-resolved augmented BMF (0a) → three zeros; 1k reproduces 0c's measured delta |
 | **3** publication | matchdb | per-cell `df` recombination matches direct computation (< 1e-9, as measured); stamp mismatch **errors**; `latest.json` rollback exercised once |
 | **4** remaining layers | matchdb | per-source, against the §8 row budget; shape report emitted |
 
