@@ -1,0 +1,37 @@
+Package: matchdb
+Title: A Provenanced Disambiguation Database for Nonprofit Record Linkage
+Version: 0.0.0.9000
+Authors@R:
+    person("Jesse", "Lecy", email = "jdlecy@gmail.com", role = c("aut", "cre"))
+Description: Builds and distributes the reference side of nonprofit record
+    linkage: the universe of known EIN-to-name and EIN-to-address observations
+    from the IRS Business Master File, Form 990 Schedule I grant disclosures,
+    and other sources, each row carrying its provenance. Names and addresses are
+    stored long, one row per observed variant, normalized once and selected at
+    compile time by layer (which EINs exist) and variant class (which observed
+    strings for them). Compiled references are published as versioned artifacts
+    stamped with the normalizer signature they were built against, so a cached
+    artifact cannot be silently used with a normalizer that has since changed.
+    The linkage machinery itself lives in 'npmatch'.
+License: MIT + file LICENSE
+URL: https://github.com/Nonprofit-Open-Data-Collective/matchdb
+BugReports: https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.1.0)
+Imports:
+    data.table,
+    npmatch,
+    stats,
+    tools,
+    utils
+Suggests:
+    DBI,
+    arrow,
+    duckdb,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Remotes:
+    Nonprofit-Open-Data-Collective/npmatch

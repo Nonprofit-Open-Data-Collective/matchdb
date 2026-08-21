@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# matchdb
+#
+# The built database and every compiled reference are large and regenerable
+# from public sources plus the ingest functions. What IS tracked is the code,
+# the plan, and the gate reports -- the evidence that a phase passed.
+# ---------------------------------------------------------------------------
+
+# built database and compiled artifacts
+data-dev/*
+*.duckdb
+*.duckdb.wal
+*.parquet
+
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+inst/doc
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
