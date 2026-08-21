@@ -136,6 +136,62 @@ reference rows.
 string. Never selected; precomputed once and shipped. This is where most of the
 wall-clock saving lives (§6c).
 
+### 3a. The frozen enumerations
+
+**Normative. Frozen at Phase 0c.** These become enum constraints in the schema
+and appear inside spec hashes, so renaming one rewrites data *and* invalidates
+every artifact whose spec named it. Fixing the words now is the cheapest this
+will ever be.
+
+**`entity.layer`** — where the EIN came from. Exactly one per EIN; an EIN
+present in several sources takes the strongest.
+
+| value | meaning |
+|---|---|
+| `bmf_active` | in the current active BMF release |
+| `bmf_inactive` | in some BMF release but not the current active one — revoked, merged, terminated |
+| `filer_only` | observed on a 990-series filing (as filer, or as a Schedule I recipient with an EIN) but in no BMF release |
+| `irs527` | in the IRS 527 political-organization file and absent from the BMF |
+
+Layer is *provenance* and is stable once assigned. `entity.active` is *status*
+and flips (§7d). They are separate columns for that reason.
+
+**`name.variant_class`** — what kind of name string this row holds.
+
+| value | meaning |
+|---|---|
+| `legal` | the source's canonical legal name for the EIN (BMF `org_name` / `org_name_join`) |
+| `dba` | a doing-business-as name recorded by the source |
+| `division` | a second alternate-name field (SAM `entity_division_name`) |
+| `in_care_of` | the BMF in-care-of name |
+| `observed` | a name a **third party** wrote about this EIN — Schedule I recipient names |
+| `former` | a prior legal name, superseded by a later `source_vintage` |
+
+**`address.variant_class`** — same idea for addresses.
+
+| value | meaning |
+|---|---|
+| `mailing` | the correspondence address the source lists |
+| `principal` | a distinct principal-office address, where the source separates the two |
+| `observed` | an address a third party wrote — Schedule I |
+| `historical` | superseded by a later `source_vintage` |
+
+The distinction carrying the most weight is **`legal` versus `observed`**: first
+party versus third party. That is the line §6b's promotion guard needs and
+cannot currently see, and it is why `observed` appears in both tables meaning
+the same thing.
+
+**Deliberately not enum values.** Generated variants — acronyms, prefixes,
+abbreviations — stay *derived columns* (`name_acro`, `name_pre`), never rows
+(§10). Adding `acronym` here would double the name table for no blocking gain.
+Reserve `observed` for an acronym actually seen in the wild.
+
+**Amendment rule.** Append-only. Adding a value is cheap: existing rows keep
+their class, new rows adopt the new one, and old spec hashes stay valid because
+they never named it. Renaming or removing one is not cheap — it rewrites stored
+data and silently changes what an old spec hash refers to. **Deprecate, never
+delete or rename.**
+
 ---
 
 ## 4. Schema
