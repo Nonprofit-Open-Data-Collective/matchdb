@@ -604,7 +604,70 @@ rather than silently producing a reference that costs four times what was planne
 
 **Report the shape.** Every compile prints rows per source and the rows-per-EIN
 distribution. `build-augmented-bmf.R` already prints `aug[, .N, by = row_source]`.
-Keep it, make it universal.
+Keep it, make it universal — and see §8a, which adds what the spec *omits* to
+what it emits.
+
+### 8a. Contraction is the unguarded direction
+
+The three guards above bound growth, because growth is where the cost is. The
+measured danger runs the other way, and nothing above catches it.
+
+`pfmatch/dev/REFERENCE-TIER-FINDINGS.md` (2026-08-21, 1,000 identities, active
+BMF vs augmented) set out to justify a cheap-reference-first design and found the
+opposite. Of **569 YES** on the thin reference, **16 (2.8%) resolve to a
+different EIN** on the augmented one, and **12 of those 16 fall to MAYBE** once
+the sibling row is present:
+
+```
+BOSTON CHILDRENS HEART FOUNDATION   ->  BOSTON CHILDREN HOSPITAL
+UNIVERSITY OF KENTUCKY RESEARCH FDN ->  UNIVERSITY OF KENTUCKY
+REGIS HIGH SCHOOL PROPERTY          ->  REGIS HIGH SCHOOL
+TEXAS CHILDRENS HOSPITAL            ->  TEXAS CHILDRENS HOSPITAL FOUNDATION
+```
+
+These are arm/operating pairs. The thin reference does not contain the sibling,
+so the cascade never sees a contest, matches confidently to whichever member it
+holds, and auto-accepts. It is the failure mode `pfmatch/R/dyads.R` exists to
+fix, reintroduced upstream by reference selection.
+
+A second, independent mechanism points the same way. **54 of 956 winning pairs
+(6%) stop being rare** on the larger reference, so the `distinct_name_maxfreq <= 3`
+promotion gate fires *more* on the thin one. That is §6a's monotonic-count
+argument, measured: a smaller reference makes more names look rare, so it
+promotes more, so it auto-accepts more.
+
+**So: selecting fewer layers is a precision change in the unfavourable
+direction, not a cost saving.** That matters here specifically because §5 makes
+it a one-line user choice — `layers = "bmf_active"` is the shortest spec anyone
+will write, and it is exactly the configuration measured above.
+
+Worse, the error is undetectable from inside the thin run. The findings tested
+four safety flags computable from the small reference alone; the best combination
+caught **half** the risky cases while escalating **39% of all YES**. The reason
+is structural: a flag computed from the thin run is being asked to detect the
+absence of something it cannot see.
+
+Two consequences:
+
+**A fourth guard — report absence, not just volume.** Rows-per-EIN and
+rows-per-source describe what a spec emits. `md_compile()` should also report
+what the spec omits relative to the fullest available spec: at minimum, the count
+of selected EINs whose `ein_relation` siblings are excluded by the chosen layers.
+Note the dependency — `ein_relation` arrives in Phase 4 (§11), so until then the
+compile report should *state that it cannot measure this* rather than print a
+shape summary that reads as a clean bill of health.
+
+**Named tiers carry the warning.** `active-legal` is the thinnest published spec
+in §7b. It is legitimate to ship and some users genuinely want it, but its
+documentation has to say what it costs, or it will be read as the safe default
+because it is the smallest.
+
+And the temptation is not even well-founded on cost. The same findings conclude
+that the augmented reference is 2.2×, not an order of magnitude, and that the
+full run fits in 81 hours on 12 shards with it: *"There is no cost problem to
+solve."* Contraction buys little and risks precision. The default should be the
+fullest reference the budget in §8 allows, with thinner specs an explicit,
+documented choice.
 
 ---
 

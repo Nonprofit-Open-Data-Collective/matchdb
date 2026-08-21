@@ -83,22 +83,41 @@ the hash granularity does not cry wolf on documentation.
 **Collision B — the §6b A/B and the threshold optimization interfere.**
 
 §6b says run the `variant_class` promotion A/B "before matchdb starts." §11 says
-do not start Phase 1 "while pfmatch threshold optimization is in flight" — and it
-is in flight (`pfmatch@fda58e1`, `dev/probe-threshold-recall.R`,
-`dev/CASCADE.md` documenting `thresholds[yes] = 0.78`).
+do not start Phase 1 "while pfmatch threshold optimization is in flight."
 
 Both are right, and together they are contradictory, because the §6b fix *moves
 the YES/MAYBE boundary*. Adopting it mid-optimization contaminates the
 optimization exactly the way a new reference path would.
 
-Resolution — separate measuring from adopting:
+**Status, 2026-08-21 — the window is open, and it is narrower than "before
+sweeping starts."** `pfmatch/dev/OPTIMIZATION-PLAN.md` sequences the work in five
+steps and is at step 3. Sweeping is step 4, and the plan closes with **"Do not
+start at step 4"**: no tier boundary can be moved until §1b's ~600-case gold set
+spans all three tiers, because every existing label sits inside MAYBE and tuning
+a boundary on labels drawn from one side of it is circular.
+
+So nothing is currently being optimized, and the fix can land now. But the
+binding constraint is **not** the start of sweeping — it is the **drawing of the
+gold set**, one step earlier:
+
+> §1b draws its strata *by tier* — 250 YES, 250 MAYBE, 100 NO. The `variant_class`
+> gate moves cases across the YES/MAYBE boundary by construction. Draw 600
+> tier-stratified labels first and the fix silently re-tiers part of the sample,
+> so the strata no longer mean what their names say and the set has to be
+> re-drawn — after the labelling has been paid for.
+
+Resolution:
 
 * **Measure now.** The A/B is read-only: build both references, run the 1k
-  benchmark, report the delta. It touches no shipped default and cannot
-  contaminate anything.
-* **Adopt at a boundary.** Land the `variant_class` gate either *before*
-  threshold optimization begins or *after* it concludes. Never during. If
-  optimization has already begun, the measurement is banked and the fix waits.
+  benchmark, report the delta. It touches no shipped default.
+* **Adopt before the gold set is drawn** — i.e. before
+  `OPTIMIZATION-PLAN.md` step 3, not step 4. That is the last cheap moment. If it
+  slips past, the fix waits for the entire optimization round to conclude.
+* **Note the 99 already-drawn cases.** `data-dev/LABEL-FRAME-REFTIER.csv` holds
+  `MAYBE_to_YES` (47), `NO_to_YES` (36) and `YES_contested` (16), drawn under
+  current tiering. The `YES_contested` stratum is the one the fix could move.
+  Re-drawing 99 is cheap; re-drawing 600 is not. This is the argument for
+  sequencing the fix ahead of the main draw rather than after it.
 
 ---
 
@@ -135,9 +154,19 @@ act with a re-run of the gate, not a side effect of `git pull`.
 function, any `variant_class` awareness in `score.R`) land in npmatch, reviewed
 on npmatch's terms, before the matchdb work that depends on them.
 
+**Qualify every phase number with its repo.** pfmatch and matchdb both number
+phases from 0, and they mean unrelated things — pfmatch Phase 2 is "the
+development databases", matchdb Phase 2 is "Schedule I as `observed`". A bare
+"Phase 2" in a cross-repo note is ambiguous, and the ambiguity assigns work to
+the wrong team rather than merely confusing a reader. It has already happened
+once: `pfmatch/dev/REFERENCE-TIER-FINDINGS.md` §7 asked for top-K candidate
+retention "in the Phase 2 partitions", which reads as a matchdb deliverable and
+is not one — candidate pairs are match output, not reference data. Now
+disambiguated in place. Write "pfmatch Phase 2" or "matchdb Phase 2", always.
+
 ---
 
-## 4. Phase 0 — three workstreams, only one of them in this repo
+## 4. Phase 0 — four workstreams, only one of them in this repo
 
 Phase 0 is larger than `PLAN.md` implies, and two thirds of it happens elsewhere.
 It is also fully unblocked by the threshold-optimization freeze, so starting it
@@ -291,14 +320,56 @@ Phase 3's rollback exercise is the same principle. §7d's safety argument rests 
 "rollback is editing a pointer," and a rollback path that has never been executed
 is a claim, not a property.
 
+### A hazard the ladder must carry forward
+
+`pfmatch/dev/REFERENCE-TIER-FINDINGS.md` (2026-08-21) measured something the plan
+does not currently guard against. §8 controls expansion — the *growth* direction,
+where variants multiply rows. The measured danger runs the other way.
+
+Of 569 YES on the active-BMF reference, **16 (2.8%) resolve to a different EIN**
+on the augmented one, and **12 of the 16 fall to MAYBE** once the sibling row is
+present. They are arm/operating pairs — `REGIS HIGH SCHOOL PROPERTY` vs
+`REGIS HIGH SCHOOL`, `TEXAS CHILDRENS HOSPITAL` vs `... FOUNDATION`. The thin
+reference does not contain the sibling, so the cascade never sees a contest,
+matches to whichever member it holds, and auto-accepts. Separately, **54 of 956
+winning pairs (6%) stop being rare** on the larger reference, so the
+`name_freq <= 3` promotion gate fires *more* on the thin one.
+
+Both point the same way: **a smaller reference auto-accepts more, and some of
+what it accepts is wrong.** Selecting fewer layers is therefore not a safe
+cost-saving — it is a precision change, in the unfavourable direction, and it is
+invisible because the removed sibling cannot appear as a competing candidate.
+
+Two consequences for this ladder:
+
+* **`md_compile()`'s shape report (§8) must report absence, not just volume.**
+  Rows-per-EIN and rows-per-source describe what a spec emits. What matters here
+  is what it *omits* relative to the fullest available spec — at minimum, the
+  count of selected EINs whose `ein_relation` siblings are excluded by the chosen
+  layers.
+* **Named tiers should carry the warning.** `active-legal` is the thinnest
+  published spec in §7b, and is exactly the configuration measured above. It is
+  legitimate to ship, but its documentation should say what it costs rather than
+  reading as the safe default because it is the smallest.
+
+**Landed** as `PLAN.md` §8a ("Contraction is the unguarded direction"), the
+symmetric guard to the row budget. It adds a fourth guard — report absence, not
+just volume — and notes the dependency: `ein_relation` arrives in Phase 4, so
+until then the compile report must *say it cannot measure this* rather than print
+a shape summary that reads as a clean bill of health.
+
 ---
 
 ## 7. What needs deciding
 
-1. **Threshold optimization — where does it stand?** If it has not begun, 0c's
-   fix can land immediately and Phase 1 follows. If it is underway, the A/B still
-   runs now but the fix banks until it completes, and Phase 1 waits. This is the
-   only item that changes the calendar.
+1. ~~**Threshold optimization — where does it stand?**~~ **Answered** by
+   `pfmatch/dev/OPTIMIZATION-PLAN.md`: it is at step 3 of 5, blocked on a
+   ~600-case gold set, and explicitly must not proceed to sweeping before that
+   exists. Nothing is being optimized, so the window is open and Phase 1 is not
+   blocked. What replaces this as a decision is narrower and time-bound —
+   **land the `variant_class` fix before the §1b gold set is drawn**, per
+   Collision B. That is a scheduling commitment someone has to make, not a
+   question with an answer sitting in a file.
 2. ~~**`variant_class` in npmatch's `score.R`.**~~ **Settled** — `PLAN.md`
    Phase 0 adopts the recommendation below, and the two documents agree. npmatch
    grows an optional `variant_class` field in `np_fields`, defaulting to `NA` so
@@ -319,10 +390,15 @@ is a claim, not a property.
 
 ## 8. Immediate next step
 
-~~Commit the untracked evidence in `pfmatch/dev/`~~ — done, `pfmatch@daa4b03`
-("Record the reference-rebuild cost probes: IDF is not the lever") tracks both
-probes and both logs.
+~~Commit the untracked evidence in `pfmatch/dev/`~~ — done, `pfmatch@daa4b03`.
+~~Run 0a's determinism check~~ — done and passed, `pfmatch@eacd5c3`.
 
-So: **run 0a's determinism check.** Two cold runs of the 1k benchmark, compared
-for exact equality. One benchmark run answers a question every later gate depends
-on, and it requires no decision from anyone.
+So: **take the 0a baseline manifest**, and do it before the `variant_class` fix
+lands. The determinism result says a baseline will be reproducible once taken; it
+does not take one. And the ordering now matters in a way it did not a day ago —
+0c adds `variant_class` to `np_fields`, which changes the frame's column set. A
+baseline captured after that change cannot serve as the "reproduces today's
+behaviour" target for Phase 1, because "today" will already have moved.
+
+Capture it from the current pinned pair, record the explicit column list per §5,
+and the rest of Phase 0 can proceed in any order.
