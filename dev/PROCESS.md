@@ -46,7 +46,10 @@ Everything below follows from that.
 function does not exist:
 
 ```
-grep -rn "normalize_signature" npmatch/   ->   no matches
+git grep -l normalize_signature main origin/main -- R/ NAMESPACE
+grep -rn normalize_signature <R-library>/npmatch/NAMESPACE
+# no matches in either -- source or installed package. Verified 2026-08-21
+# against npmatch@fd17637.
 ```
 
 It is an upstream change in a repo matchdb only *Imports*. It cannot be a matchdb
@@ -56,8 +59,26 @@ first thing matchdb ships is an unstamped cache — precisely the correctness
 liability §9 exists to prevent.
 
 This is not hypothetical risk. The normalizer has already drifted once during
-this project's lifetime (apostrophe handling, `.np_strip_lead_the()`). The
-hazard is observed, not anticipated.
+this project's lifetime, with a measured recall consequence. `npmatch@5e23269`
+rewrote `.np_strip_joiners()` to **delete** apostrophes and intra-word periods
+before the general punctuation-to-space rule, because the IRS holds
+`BO'S PLACE` as `BOS PLACE` while the old rule produced `BO S PLACE` on the
+query side — 3.5% of 990-PF grantee names carry an apostrophe, and none of them
+could clear an exact-name pass. It moved the 5,000-grant benchmark from 2,746 to
+2,821 YES.
+
+That is precisely the §9 failure mode, already realized: any artifact whose
+`name_key` was built before that commit and read after it is normalized on one
+side only, and the symptom is a recall drop with no error attached. The hazard is
+observed, not anticipated.
+
+Two calibrating notes. The drift was a *fix*, not a regression — the argument is
+about cache validity across a normalizer change, not about code quality. And the
+newest npmatch commits (`407f48f`, merged as `fd17637`) touch `R/normalize.R`,
+`R/tier.R` and `R/veto.R` but are **comment-only**: stripping comment lines from
+the diff leaves nothing. Since 0b hashes bodies after `utils::removeSource()`,
+that commit correctly produces no signature change — a useful confirmation that
+the hash granularity does not cry wolf on documentation.
 
 **Collision B — the §6b A/B and the threshold optimization interfere.**
 
@@ -98,11 +119,13 @@ The classification is written down per diff, not decided in the moment. Category
 (b) is never waived; the plan is explicit that behaviour change is the failure
 mode this whole effort exists to avoid.
 
-**Probes are committed with their logs.** The plan's entire evidence base
-currently sits untracked in `pfmatch/dev/` — `MATCHDB-PLAN.md`,
-`probe-idf-atomize.R`, `probe-refbuild-cost.R`, `IDF-ATOMIZE.log`,
-`REFBUILD-COST.log`. Every measured claim in `PLAN.md` traces to files that are
-one `git clean` from gone. Commit them before anything else.
+**Probes are committed with their logs.** Every measured claim in `PLAN.md` has
+to trace to a tracked file, not to one that is a `git clean` from gone.
+**Discharged for the existing evidence:** `pfmatch@daa4b03` tracks
+`probe-idf-atomize.R` / `probe-refbuild-cost.R` and both logs;
+`pfmatch@eacd5c3` tracks `probe-determinism.R`, three logs and
+`DETERMINISM-FINDINGS.md`; `pfmatch@818c794` reduced the duplicated plan to a
+pointer. The rule stands for everything added from here.
 
 **Version pinning during a phase.** A matchdb phase pins the npmatch commit it
 builds against, recorded in the phase's gate report. Unpinning is a deliberate
@@ -163,6 +186,24 @@ A hash over `.np_abbrev`, the suffix list, `np_stopwords()`, and the bodies of
 the functions in `R/normalize.R` that feed the derived columns. Exported, tested
 for stability across a no-op edit and for change across a real one. Nothing in
 matchdb can be safely cached until this exists.
+
+**In progress** on `npmatch@feature/normalize-signature`. `PLAN.md` §9 carries
+the full contract; the two decisions worth flagging here because they shape the
+gate:
+
+* **Scope is exactly what matchdb precomputes** — the normalizer's rule tables
+  and functions, `np_stopwords()`, `np_name_freq()`, `np_token_idf()`, and the
+  blocking tokenizer behind `np_ref_index()`. Comparison, scoring, veto,
+  selection and tiering are deliberately **out**: none is precomputed, so a
+  change there must not invalidate a cache. A signature that fires on unrelated
+  edits teaches people to ignore it.
+* **Comments and formatting must not move it.** Bodies are deparsed after
+  `utils::removeSource()`. This is what makes "stability across a no-op edit"
+  testable rather than aspirational.
+
+Gate: exported and documented; a comment-only edit leaves the signature
+unchanged; a rule-table edit changes it; `detail = TRUE` localizes which
+component moved.
 
 ### 0c. Freeze vocabulary and run the promotion A/B *(pfmatch, ~2 days)*
 

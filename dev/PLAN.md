@@ -553,6 +553,14 @@ of the spec hash — coarser than the full spec, so `unified-legal` and
 S3 bucket from these numbers — as parquet with dictionary encoding and zstd this
 text compresses several-fold. Measure before provisioning.
 
+**A tiered result frame costs 242 MB.** Measured while running the determinism
+check: each saved `np_tiered` frame is 242,434,747 bytes for 4,733 rows × 24
+columns — about 51 KB per row, because the object carries its candidate pairs
+along as attributes. Harmless in normal use, but relevant to
+`PROCESS.md` §3's rule that gate output is committed as evidence: a gate that
+archives its *result frame* rather than its *diff report* would cost a
+quarter-gigabyte per run. Archive the report.
+
 ### 7g. What the consumer has to build
 
 The answer the whole design is aiming at:
@@ -646,6 +654,45 @@ cached artifact**. Sequenced any other way, the first thing matchdb ships is an
 unstamped cache, which is exactly the liability this section exists to prevent.
 See Phase 0.
 
+### The signature's contract
+
+Scope is the whole design question. A signature covering too little misses real
+drift; covering too much invalidates good caches on changes that cannot affect
+them. The rule: **cover exactly what matchdb precomputes, and nothing else.**
+
+*Covered* — the per-row derived columns and the corpus statistics that ship with
+a compiled reference:
+
+* every rule table `np_normalize()` consults — `.np_abbrev`,
+  `.np_legal_suffixes`, `.np_street_types`, `.np_street_type_set`,
+  `.np_directions`, `.np_ordinals`, `.np_generation`, `.np_gen_rank`,
+  `.np_state_abbr`, `.np_state_codes`, and the unit / PO-box patterns
+* every function feeding those columns — `np_normalize()` and its helpers
+  (`.np_basic_clean`, `.np_replace_tokens`, `.np_strip_suffix`,
+  `.np_strip_lead_the`, `.np_street_key`, `.np_parse_zip`, `.np_parse_street`,
+  the `.np_extract_*` family, `.np_to_state_abb`)
+* `np_stopwords()`, `np_name_freq()`, `np_token_idf()`
+* the blocking tokenizer behind `np_ref_index()` — `.np_tokenize()`,
+  `.np_doc_freq()`
+
+*Deliberately excluded* — comparison, scoring, veto, selection, tiering. None of
+it is precomputed, so a change there must **not** invalidate a cached artifact.
+Including them would produce exactly the false rebuilds that teach people to
+ignore the check.
+
+*Mechanism.* An md5 over a canonical serialization of the above. Function bodies
+are deparsed after `utils::removeSource()`, so **reformatting and comment edits
+do not move the signature while logic changes do** — the stability property
+Phase 0b has to demonstrate. No new dependency: `tools::md5sum` is base R.
+
+*Diagnosability.* A bare hash tells you a cache is stale but not why. The
+function takes `detail = TRUE` and returns per-component hashes, so a mismatch
+can be localized to the rule table or function that moved.
+
+*Versioned output.* The returned string carries a format prefix, so that later
+changes to *what* is hashed are themselves distinguishable from changes to the
+normalizer.
+
 Without this, the caching everything here is built on becomes a correctness
 liability rather than a speedup.
 
@@ -699,11 +746,15 @@ already works and is already benchmarked.
 > **Phase 0 is larger than the four paragraphs below, and two thirds of it
 > happens in other repos.** `dev/PROCESS.md` splits it into four workstreams
 > (freeze a baseline, land the npmatch signature, vocabulary + A/B, scaffold),
-> defines the comparison normal form the gates below depend on, and adds a
-> precondition this document missed: **verify the 1k benchmark is deterministic
-> across two cold runs before treating it as a gate.** A non-deterministic
-> benchmark cannot falsify anything, and discovering that mid-Phase-1 would read
-> as an extraction bug. Read both.
+> and defines the comparison normal form every gate below depends on. Read both.
+>
+> **The benchmark is deterministic — checked, not assumed.** Three cold runs,
+> two at seven `data.table` threads and one at a single thread, produce
+> bit-identical output across all 24 columns (`pfmatch@eacd5c3`,
+> `pfmatch/dev/DETERMINISM-FINDINGS.md`). Thread-independence is the part that
+> matters, since thread count is what differs between machines. Every gate in
+> this document rests on that result; without it none of them could falsify
+> anything. Untested: a second platform and R version.
 
 **Phase 0 — vocabulary, and make §6b measurable.** Freeze the `layer` and
 `variant_class` enumerations (§3) — cheap now, expensive later.
