@@ -621,13 +621,23 @@ of the spec hash — coarser than the full spec, so `unified-legal` and
 S3 bucket from these numbers — as parquet with dictionary encoding and zstd this
 text compresses several-fold. Measure before provisioning.
 
-**A tiered result frame costs 242 MB.** Measured while running the determinism
-check: each saved `np_tiered` frame is 242,434,747 bytes for 4,733 rows × 24
-columns — about 51 KB per row, because the object carries its candidate pairs
-along as attributes. Harmless in normal use, but relevant to
-`PROCESS.md` §3's rule that gate output is committed as evidence: a gate that
-archives its *result frame* rather than its *diff report* would cost a
-quarter-gigabyte per run. Archive the report.
+**A tiered result frame costs 242 MB — until one attribute is dropped.**
+Measured while running the determinism check, then run down while freezing the
+0a baseline. `as.data.frame()` does not drop a subclassed frame's attributes,
+and `np_cascade()` attaches the full scored candidate-pair table to its result
+(`attr(res, "pairs") <- union`). Of a 197.8 MB object, `pairs` is **194.4 MB**;
+the frame itself is ~3 MB.
+
+Setting `attr(x, "pairs") <- NULL` before saving took the two 0a baseline
+outputs from 9.65 MB and 16.64 MB to **0.163 MB and 0.165 MB** compressed — 60x
+and 100x — keeping `config`, `profile` and `stages`, which record the thresholds
+and pass table a gate will want to read later.
+
+Retaining the pairs is deliberate and correct: `np_route()` needs them, and it
+is what let Phase 0c recover variant class post-hoc with no npmatch change. But
+**anything persisting a result is storing them by default**, so a gate archiving
+result frames would pay a quarter-gigabyte a run for data it does not read.
+Strip the attribute, and archive the diff report rather than the frame.
 
 ### 7g. What the consumer has to build
 
