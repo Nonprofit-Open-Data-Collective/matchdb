@@ -289,9 +289,21 @@ under a rule written to trust IRS legal names only. `main_only` cannot see the
 difference because there is nothing in the row to see.
 
 A first-class `variant_class` fixes it: gate on `variant_class == "legal"` and
-the rule means what its comment says. **Worth an A/B on the pfmatch 1k benchmark
-before matchdb starts** — it is a live question about the augmented reference
-already in use.
+the rule means what its comment says.
+
+**The provenance does not currently survive to the matcher at all.**
+`pf_bmf_augment()` writes `row_source`, `alias_n_filers` and `alias_last_year`
+onto the augmented BMF, but `.np_canonicalize()` (`npmatch/R/canonicalize.R:204`)
+subsets to exactly `np_fields`, and none of those three appear anywhere in
+npmatch. They are dropped before blocking. So the situation is not merely that
+`main_only` ignores variant provenance — **there is no variant provenance in the
+frame to ignore**, and the effect cannot be measured without a change.
+
+The prerequisite is therefore small and belongs in **npmatch, not matchdb**: add
+`variant_class` (and optionally `variant_n_corroborators`) to `np_fields`,
+defaulting to `NA` so every existing caller is unaffected. That single change
+makes the question measurable, and it is the same column matchdb would populate
+later. Do it first; see Phase 0.
 
 ### 6c. What recompilation actually costs — measured
 
@@ -593,10 +605,26 @@ seen in the wild — different information.
 Build order is **extraction, not fresh design**: every stage moves code that
 already works and is already benchmarked.
 
-**Phase 0 — vocabulary and one A/B, no new code.** Freeze the `layer` and
-`variant_class` enumerations (§3). Run the §6b `variant_class` promotion A/B in
-pfmatch, since it is a live question about the reference in use today. Cheap now,
-expensive later.
+**Phase 0 — vocabulary, and make §6b measurable.** Freeze the `layer` and
+`variant_class` enumerations (§3) — cheap now, expensive later.
+
+Then, in **npmatch**: add `variant_class` to `np_fields`, defaulting to `NA`.
+Then, in **pfmatch**: have `pf_bmf_augment()` populate it (`"legal"` for BMF
+rows, `"observed"` for alias rows) and map it through `np_map_bmf()`. Then count,
+on the existing 1k augmented benchmark, how many YES verdicts came from the
+distinctive-name promotion firing on an `observed` row.
+
+That count decides what happens next, and nothing before it is worth arguing
+about:
+
+* **0–2** — close §6b as a non-issue with a note; the guard's blind spot is real
+  but empty.
+* **10+** — run the full A/B gating promotion on `variant_class == "legal"`, and
+  treat the measured "+43 YES" for the augmented reference as unverified until
+  it is decomposed.
+
+This is a few hours of work against artifacts that already exist, and it is
+worth doing whether or not matchdb is ever built.
 
 **Phase 1 — entity + name + address, BMF only.** `md_ingest_bmf()` loads active
 and unified. `md_compile()` emits the wide frame.
