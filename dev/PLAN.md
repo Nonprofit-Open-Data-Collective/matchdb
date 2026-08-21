@@ -89,6 +89,13 @@ lacks is any notion of a *table*, a *variant*, or a *spec*.
 near-synonymous artifacts distinguished by a convention that exists in one
 person's head. This is the problem, already realized.
 
+Worse than untidy: **the cache is keyed by path, not by content.**
+`pf_reference(cache = "data-dev/BMF-REFERENCE-BUNDLE.rds")` returns whatever
+sits at that path, regardless of which BMF built it or with what options. With
+seven near-duplicates on disk, silently matching against the wrong reference is
+one stale file away. Spec-hash keying (§5) is what retires that, and it is a
+correctness argument, not a housekeeping one.
+
 **Cost is measured and headroom is finite.** From `pfmatch/dev/REF-PERFORMANCE.md`:
 1.92M reference rows → 128 s per 1,000 identities; 3.89M rows → 226 s. Sublinear
 (1.77× time for 2.02× rows), but the full 12.5M-grant file at the augmented
@@ -493,6 +500,69 @@ md_ingest_bmf(vintage = "2026-10")     # against a local MATCHDB.duckdb
 md_publish(vintage = "2026-10")        # regenerate tiers 1+2, upload, bump latest
 ```
 
+### 7f. The local asset inventory — what publish must produce
+
+Everything pfmatch caches on disk today, and what a spec change actually
+invalidates. This is the checklist `md_publish()` has to satisfy.
+
+**A — reference-derived. Spec-dependent; matchdb's responsibility.**
+
+| asset | build cost | spec-dependent? |
+|---|---:|---|
+| normalized reference frame | 269.7 s | **no** — per-row, ships as columns |
+| recovery keys `name_acro` / `name_pre` | — | **no** — per-row |
+| `name_freq` | 27.5 s | yes — corpus statistic |
+| `token_idf` | 22.8 s | yes — corpus statistic |
+| `ref_index` | 87.8 s | yes — posting lists |
+| *bundled today as* `BMF-REFERENCE-BUNDLE.rds` | 408 s build, 51 s read | 1.30 GB (augmented: 2.84 GB) |
+
+**B — EIN-keyed. Layer-dependent but *not* variant-dependent.**
+
+| asset | size | note |
+|---|---:|---|
+| `ORG-TEXT-BUNDLE.rds` | 1.46 GB | mission / program / NTEE text by EIN |
+| `PF-DYADS.rds`, `PF-DYADS-UNIFIED.rds` | 123 MB each | two copies exist **only** because the `in_bmf` flag is layer-dependent |
+| `AFFIL-LINKS.rds` | 88 MB | Schedule A/R links, EIN-pair keyed |
+
+**C — query-derived. Unaffected by matchdb.** Prepared grants and identities
+(computed inline, uncached), `batches-*/` checkpoints (~1.7 MB per run, though
+invalidated by any reference change), `nteev2.rda` (static package data).
+
+Three consequences for the design.
+
+**Category B is bigger than the reference.** `orgtext` at 1.46 GB is larger than
+the entire reference bundle, which makes it a first-class distribution artifact
+rather than the afterthought §10's framing might suggest. §10's point stands —
+it stays out of the *variant machinery* — but it must be a published, layer-keyed
+sidecar, not something a consumer rebuilds.
+
+**Category B is layer-keyed, so it ships per layer set, not once.** The dyad
+table already exists in two versions for exactly this reason: `in_bmf` is
+computed against the reference EIN set (`pfmatch/R/dyads.R`, the `bmf` argument
+sets that one flag and nothing else). Publish these keyed on the *layer* subset
+of the spec hash — coarser than the full spec, so `unified-legal` and
+`unified-observed` share one copy.
+
+**Sizes above are uncompressed.** Every `saveRDS()` in pfmatch passes
+`compress = FALSE`, deliberately, to trade disk for load speed. Do not size the
+S3 bucket from these numbers — as parquet with dictionary encoding and zstd this
+text compresses several-fold. Measure before provisioning.
+
+### 7g. What the consumer has to build
+
+The answer the whole design is aiming at:
+
+* **Published spec — nothing.** Category A ships whole in the Tier-1 artifact;
+  category B ships as layer-keyed sidecars. Total local compute: zero.
+* **Custom spec — one asset, effectively.** `ref_index`, at 88 s, until per-cell
+  posting lists land (deferred in §6c). `name_freq` and `token_idf` recombine in
+  0.03 s from cell vectors, and the frame is a partition-pruned read with derived
+  columns already present.
+
+The only genuinely unavoidable local work in either case is query-side
+normalization of the grant file — a function of the query, not the reference, and
+therefore not something matchdb can or should cache.
+
 ---
 
 ## 8. Expansion control
@@ -573,6 +643,11 @@ candidate list exists, to break ties. It is adjudication input, not
 candidate-generation input. Keep it as a plain EIN-keyed `orgtext` table joined on
 demand. Putting it in the name/address selection model invites someone to block on
 it, which at 1.9M EINs × paragraph-length strings would be a disaster.
+
+"Out of the variant machinery" is not the same as "out of scope for
+distribution", though — at 1.46 GB it is the largest single asset a consumer
+would otherwise rebuild. It ships (§7f), it just does not participate in
+selection.
 
 **Per-source incremental differencing: defer.** Appends are easy; deciding "is
 this the same address written differently, or a new one?" is where the bugs live,
