@@ -30,6 +30,11 @@ side by side locally):
 | `matchdb` | **this repo.** The reference database. |
 | `ef2` | IRS 990 e-file processing. Not a dependency, but its S3/DuckDB pattern is the model for §7. |
 
+**Companion document.** `dev/PROCESS.md` covers *how the work is conducted* —
+phase gates, the comparison normal form, cross-repo sequencing, and the open
+decisions. This document decides what to build; that one decides how a phase is
+declared finished. Where they disagreed, this one has been corrected.
+
 **Evidence base.** The findings cited here live in `pfmatch/dev/`. Worth reading
 before starting:
 
@@ -621,7 +626,11 @@ Not hypothetical: `.np_strip_lead_the()` was added to `name_key` for a real fals
 negative found in labelling, and `.np_abbrev` is a token table that will keep
 growing.
 
-Required from the first commit:
+Confirmed drift, not anticipated drift: `npmatch@5e23269` ("Fix apostrophe
+normalization, gate geo credit on state, tighten promotion") changed the
+normalizer *this development cycle*.
+
+Required:
 
 1. npmatch exports `np_normalize_signature()` — a hash over the normalizer's rule
    tables (`.np_abbrev`, suffix list, stopwords) and function bodies.
@@ -629,6 +638,13 @@ Required from the first commit:
    `source_vintage`.
 3. `md_reference()` / `md_compile()` compare the stamp to the installed npmatch
    and **error** (not warn), with the remedy: rebuild, or pin npmatch.
+
+**Step 1 is a prerequisite pull request against npmatch, not a matchdb commit.**
+`np_normalize_signature()` does not exist today, and it lives in a repo matchdb
+only *Imports* — so it must merge upstream **before matchdb writes its first
+cached artifact**. Sequenced any other way, the first thing matchdb ships is an
+unstamped cache, which is exactly the liability this section exists to prevent.
+See Phase 0.
 
 Without this, the caching everything here is built on becomes a correctness
 liability rather than a speedup.
@@ -680,6 +696,15 @@ seen in the wild — different information.
 Build order is **extraction, not fresh design**: every stage moves code that
 already works and is already benchmarked.
 
+> **Phase 0 is larger than the four paragraphs below, and two thirds of it
+> happens in other repos.** `dev/PROCESS.md` splits it into four workstreams
+> (freeze a baseline, land the npmatch signature, vocabulary + A/B, scaffold),
+> defines the comparison normal form the gates below depend on, and adds a
+> precondition this document missed: **verify the 1k benchmark is deterministic
+> across two cold runs before treating it as a gate.** A non-deterministic
+> benchmark cannot falsify anything, and discovering that mid-Phase-1 would read
+> as an extraction bug. Read both.
+
 **Phase 0 — vocabulary, and make §6b measurable.** Freeze the `layer` and
 `variant_class` enumerations (§3) — cheap now, expensive later.
 
@@ -700,6 +725,24 @@ about:
 
 This is a few hours of work against artifacts that already exist, and it is
 worth doing whether or not matchdb is ever built.
+
+**Measuring and adopting are separate acts, and only the first is safe now.**
+§6b wants the fix "before matchdb starts"; §11 says do not start while pfmatch
+threshold optimization is in flight — and it is (`pfmatch@fda58e1`). Both are
+right and together they contradict, because the §6b fix *moves the YES/MAYBE
+boundary* and would contaminate the optimization exactly the way a new reference
+path would. So: **measure now** — the A/B is read-only, builds both references,
+reports the delta, and touches no shipped default. **Adopt at a boundary** —
+land the gate either before optimization begins or after it concludes, never
+during. If optimization is already underway, bank the measurement and wait.
+
+While both arms are being built anyway, extend the A/B past what §6b asks and
+report four numbers rather than one: YES gained from alias rows matching; YES
+lost to `name_freq` inflation tightening the promotion gate (§6a); and the same
+pair again under `variant_class == "legal"` gating. That decomposition is the
+empirical justification for the entire variant-class axis. If aliases-gained is
+small and promotions-lost is large, these priorities change — far better to
+learn that from two days of measurement than after Phase 2.
 
 **Phase 1 — entity + name + address, BMF only.** `md_ingest_bmf()` loads active
 and unified. `md_compile()` emits the wide frame.
