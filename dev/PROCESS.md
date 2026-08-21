@@ -216,9 +216,18 @@ the functions in `R/normalize.R` that feed the derived columns. Exported, tested
 for stability across a no-op edit and for change across a real one. Nothing in
 matchdb can be safely cached until this exists.
 
-**In progress** on `npmatch@feature/normalize-signature`. `PLAN.md` §9 carries
-the full contract; the two decisions worth flagging here because they shape the
-gate:
+**Built and pushed, awaiting merge** — `npmatch@9427304` on branch
+`feature/normalize-signature`. The PR is not yet opened (`gh` is not installed
+on the build machine):
+<https://github.com/Nonprofit-Open-Data-Collective/npmatch/pull/new/feature/normalize-signature>
+
+Signature at `npmatch@fd17637` is **`v1-421e1e2a6afb024e`** over 36 components.
+Record that value in the 0a manifest: it is what a Phase 1 artifact will be
+stamped with, and the first thing to compare if a later gate reports a diff
+nobody expected.
+
+`PLAN.md` §9 carries the full contract; the two decisions worth flagging here
+because they shape the gate:
 
 * **Scope is exactly what matchdb precomputes** — the normalizer's rule tables
   and functions, `np_stopwords()`, `np_name_freq()`, `np_token_idf()`, and the
@@ -232,7 +241,29 @@ gate:
 
 Gate: exported and documented; a comment-only edit leaves the signature
 unchanged; a rule-table edit changes it; `detail = TRUE` localizes which
-component moved.
+component moved. **All met**, and validated against real history rather than
+synthetic edits — `npmatch/dev/probe-signature-history.R` walks all eight
+commits that ever touched `normalize.R` or `block.R`:
+
+| commit | moves it? | expected |
+|---|---|---|
+| `5e23269` apostrophe fix | **yes** (`.np_basic_clean`) | yes — caches are invalid across it |
+| `407f48f` comment-only | no | no — must not cry wolf |
+| `4ce9ab3`, `7224b0a` comparison-layer | no | no — nothing cached changed |
+
+The last row is the one that confirms the scope decision: both commits edited
+`block.R`, and neither touched anything precomputed, so neither invalidates an
+artifact. A wider signature would have fired on both.
+
+Two things to carry forward. The registry is guarded by a test asserting it
+partitions `normalize.R` with the exemption list, so a newly added rule table
+fails the suite until classified — without which the signature could silently
+fall behind the code. And `R CMD check` is at **0 errors**; the 5 warnings and
+3 notes that remain are pre-existing (non-ASCII in `report.R`, groundtruth
+codoc mismatch, undocumented args in `np_compare`/`np_fetch_bmf`, vignettes,
+`zipcodeR` absent, license stub, `count.fields`/`na.omit` globals) and are
+**not** blockers for 0b, but they are the backdrop any later npmatch PR
+inherits.
 
 ### 0c. Freeze vocabulary and run the promotion A/B *(pfmatch, ~2 days)*
 
@@ -304,7 +335,7 @@ Phases are the plan's; the gate column is what this document adds.
 | phase | repo | gate — passes when |
 |---|---|---|
 | **0a** baseline | pfmatch | manifest committed; ~~benchmark verified deterministic~~ **determinism done** (`pfmatch@eacd5c3`, thread-independent) — manifest outstanding |
-| **0b** signature | npmatch | `np_normalize_signature()` exported and tested; matchdb can stamp |
+| **0b** signature | npmatch | ~~exported and tested~~ **built** (`npmatch@9427304`, `v1-421e1e2a6afb024e`) — merge outstanding |
 | **0c** vocabulary + A/B | pfmatch | enums frozen; `VARIANT-CLASS-AB.md` reports the four-number decomposition |
 | **0d** scaffold | matchdb | package skeleton; harness runs baseline-vs-itself and reports three zeros |
 | **1** entity + name + address, BMF | matchdb | harness: `md_compile(active-legal)` vs `REF-active.rds` → three zeros; 1k benchmark exact |
