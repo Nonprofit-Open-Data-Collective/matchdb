@@ -132,12 +132,30 @@ Produce, from a single pinned `(npmatch, pfmatch)` commit pair, a
 | `PF_SET=1k` tiered output | both benchmarks |
 | md5 of each, row counts, the two commit SHAs, R and package versions | reproducibility |
 
-**Determinism check first.** Run the 1k benchmark twice from a cold cache and
-confirm the outputs are identical. If they are not — batching, sharding and hash
-iteration order can all do this — that is discovered *now*, for the cost of one
-extra run, rather than in the middle of Phase 1 where it would read as an
-extraction bug. A non-deterministic benchmark cannot serve as a gate, and fixing
-it becomes a Phase 0 blocker in its own right.
+**Determinism check first.** ~~Run the 1k benchmark twice from a cold cache and
+confirm the outputs are identical.~~
+
+**Done, 2026-08-21 — passed.** `pfmatch@eacd5c3`,
+`pfmatch/dev/DETERMINISM-FINDINGS.md`. Three cold runs in separate processes —
+two at seven `data.table` threads, one at one thread — produce bit-identical
+output across all 24 columns of the tiered result (4,733 identities;
+2821 YES / 1006 MAYBE / 906 NO in every run), compared with `identical()` rather
+than any tolerance.
+
+Thread-independence is the result that matters here: thread count is the
+variable that actually differs between machines, so this is what discharges §3's
+requirement that a gate pass "on a machine that is not the author's". The risk
+was real rather than theoretical — `data.table` runs the blocking joins
+multi-threaded and selection breaks ties first-row-wins in `.np_argmax_by()` and
+`.np_overall_summary()`, which together are the standard recipe for a verdict
+that drifts between runs. It does not drift.
+
+Still untested: a second platform and R version. Nothing suggests risk, but one
+confirming run is worth taking when a second machine is available.
+
+This pins the *benchmark*, not the *baseline* — 0a's manifest is still to be
+produced. What the check establishes is that such a baseline will be
+reproducible once taken.
 
 ### 0b. Land `np_normalize_signature()` *(npmatch, ~1 day)*
 
@@ -215,7 +233,7 @@ Phases are the plan's; the gate column is what this document adds.
 
 | phase | repo | gate — passes when |
 |---|---|---|
-| **0a** baseline | pfmatch | manifest committed; benchmark verified deterministic across two cold runs |
+| **0a** baseline | pfmatch | manifest committed; ~~benchmark verified deterministic~~ **determinism done** (`pfmatch@eacd5c3`, thread-independent) — manifest outstanding |
 | **0b** signature | npmatch | `np_normalize_signature()` exported and tested; matchdb can stamp |
 | **0c** vocabulary + A/B | pfmatch | enums frozen; `VARIANT-CLASS-AB.md` reports the four-number decomposition |
 | **0d** scaffold | matchdb | package skeleton; harness runs baseline-vs-itself and reports three zeros |
