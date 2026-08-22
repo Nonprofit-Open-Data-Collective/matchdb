@@ -35,7 +35,7 @@
 #' @return Row counts, invisibly.
 #' @export
 md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
-                              new_entity_layer = NULL,
+                              new_entity_layer = "approved_only",
                               reconvert = FALSE) {
   dir <- md_path("sources", "f1023ez", version)
   books <- list.files(dir, pattern = "[.]xlsx$", full.names = TRUE)

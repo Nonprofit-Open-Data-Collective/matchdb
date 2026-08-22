@@ -119,22 +119,19 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
              max(TRY_CAST(tax_year AS INTEGER)) AS last_year
       FROM si_clean WHERE trim(name_key) <> ''
       GROUP BY 1,2 HAVING count(DISTINCT filer_ein) >= %d
-    ), spelling AS (
-      SELECT ein, name_key, name_raw,
-             row_number() OVER (PARTITION BY ein, name_key
-                                ORDER BY count(*) DESC, name_raw ASC) AS rk
-      FROM si_clean WHERE trim(name_key) <> ''
-      GROUP BY 1,2,3
-    )
+    ), %s
     SELECT a.*, s.name_raw
-    FROM agg a JOIN spelling s USING (ein, name_key)
-    WHERE s.rk = 1", as.integer(min_corroborators)))
+    FROM agg a JOIN modal_name_raw s USING (ein, name_key)
+    WHERE s.rk = 1", as.integer(min_corroborators),
+    md_modal_sql("si_clean", c("ein", "name_key"), "name_raw",
+                 where = "trim(name_key) <> ''")))
   n_alias <- .md_n(con, "si_alias")
   msg("  %s distinct (ein, name) aliases", format(n_alias, big.mark = ","))
 
   # Places for those names. City is upper-cased in the key: leaving it raw split
   # CHICAGO from Chicago and produced two rows for one address.
-  DBI::dbExecute(con, "
+  place_by <- c("ein", "name_key", "city_key", "state_key", "zip5")
+  DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE si_place AS
     WITH k AS (
       SELECT *, upper(trim(coalesce(city_raw,''))) AS city_key,
@@ -143,23 +140,15 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
     ), agg AS (
       SELECT ein, name_key, city_key, state_key, zip5, count(*) AS n_obs
       FROM k GROUP BY 1,2,3,4,5
-    ), st AS (
-      SELECT ein, name_key, city_key, state_key, zip5, street_raw,
-             row_number() OVER (PARTITION BY ein, name_key, city_key, state_key, zip5
-                                ORDER BY count(*) DESC, street_raw ASC) AS rk
-      FROM k GROUP BY 1,2,3,4,5,6
-    ), ct AS (
-      SELECT ein, name_key, city_key, state_key, zip5, city_raw,
-             row_number() OVER (PARTITION BY ein, name_key, city_key, state_key, zip5
-                                ORDER BY count(*) DESC, city_raw ASC) AS rk
-      FROM k GROUP BY 1,2,3,4,5,6
-    )
+    ), %s, %s
     SELECT a.ein, a.name_key, a.city_key, a.state_key, a.zip5,
            st.street_raw, ct.city_raw, a.n_obs
     FROM agg a
-    JOIN st USING (ein, name_key, city_key, state_key, zip5)
-    JOIN ct USING (ein, name_key, city_key, state_key, zip5)
-    WHERE st.rk = 1 AND ct.rk = 1")
+    JOIN modal_street_raw st USING (ein, name_key, city_key, state_key, zip5)
+    JOIN modal_city_raw   ct USING (ein, name_key, city_key, state_key, zip5)
+    WHERE st.rk = 1 AND ct.rk = 1",
+    md_modal_sql("k", place_by, "street_raw"),
+    md_modal_sql("k", place_by, "city_raw")))
 
   # Idempotence: a full load keyed on source_vintage (section 10), so a re-run
   # replaces rather than appends. Addresses go first because they carry the

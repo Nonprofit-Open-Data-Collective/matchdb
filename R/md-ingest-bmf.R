@@ -154,22 +154,21 @@ md_validate_bmf <- function(con) {
   e <- DBI::dbGetQuery(con, "SELECT ein, layer, source_vintage FROM entity")
   md_validate_report(md_validate(
     e, key = "ein",
-    enums = list(layer = c("bmf_active", "bmf_inactive", "filer_only", "irs527")),
+    enums = list(layer = md_layers()),
     required = c("layer", "source_vintage")))
 
   message("\nname")
   n <- DBI::dbGetQuery(con, "SELECT name_id, ein, variant_class, source_vintage FROM name")
   md_validate_report(md_validate(
     n, key = "name_id", parent = eins,
-    enums = list(variant_class = c("legal", "dba", "division",
-                                   "in_care_of", "observed", "former")),
+    enums = list(variant_class = md_name_classes()),
     required = c("variant_class", "source_vintage")))
 
   message("\naddress")
   a <- DBI::dbGetQuery(con, "SELECT address_id, ein, variant_class, source_vintage FROM address")
   md_validate_report(md_validate(
     a, key = "address_id", parent = eins,
-    enums = list(variant_class = c("mailing", "principal", "observed", "historical")),
+    enums = list(variant_class = md_address_classes()),
     required = c("variant_class", "source_vintage")))
 
   invisible(TRUE)

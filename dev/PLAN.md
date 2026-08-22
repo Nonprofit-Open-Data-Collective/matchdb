@@ -151,10 +151,29 @@ present in several sources takes the strongest.
 | `bmf_active` | in the current active BMF release |
 | `bmf_inactive` | in some BMF release but not the current active one — revoked, merged, terminated |
 | `filer_only` | observed on a 990-series filing (as filer, or as a Schedule I recipient with an EIN) but in no BMF release |
+| `approved_only` | granted exemption on a Form 1023-EZ approval but in no BMF release |
 | `irs527` | in the IRS 527 political-organization file and absent from the BMF |
 
 Layer is *provenance* and is stable once assigned. `entity.active` is *status*
 and flips (§7d). They are separate columns for that reason.
+
+**`approved_only` was added 2026-08-21**, after the 1023-EZ ingest found 12,352
+organisations the IRS had granted exemption to that reach no BMF release. None
+of the existing values described them: `filer_only` means observed on a
+990-series *filing*, and an approval is not a filing, so admitting them there
+would have put a false statement in the provenance column — the one column whose
+whole job is to be true.
+
+Adding a value invalidates every spec hash that enumerated `layer`. That cost is
+zero here because no spec has been published yet, which is precisely why the
+addition happens now rather than after Phase 3. The rule stands for later: a new
+layer is a deliberate act with a versioned artifact behind it, and the cheap
+moment has passed once anything is published.
+
+Note what the class does *not* assert. An `approved_only` organisation is real
+and exempt; its absence from the BMF is a statement about the BMF, not about the
+organisation. Reasons vary — approval too recent for the release, a subsequent
+revocation, or a BMF gap — and the layer deliberately does not guess which.
 
 **`name.variant_class`** — what kind of name string this row holds.
 
