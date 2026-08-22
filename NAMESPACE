@@ -4,6 +4,8 @@ export(md_normal_form)
 export(md_compare_frames)
 export(md_compare_tiered)
 
+export(md_xlsx_to_csv)
+
 export(md_ein)
 export(md_is_ein)
 

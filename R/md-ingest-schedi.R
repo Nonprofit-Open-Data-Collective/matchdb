@@ -1,0 +1,169 @@
+#' Ingest Schedule I recipient aliases as observed names and addresses
+#'
+#' Form 990 Schedule I Part II is where a non-PF filer lists every grant it made
+#' to a US organisation, with the recipient's **name, address and EIN**. That
+#' last field is what makes it unlike every other source here: it is a large set
+#' of (name variant, address variant) to EIN observations, written by third
+#' parties, in the register a grantmaker actually uses.
+#'
+#' The BMF gives one legal name per EIN. This gives many *observed* names, and
+#' it is the source `pfmatch/dev/AUDIT-FINDINGS.md` named as the missing piece
+#' for brand-versus-legal-name matching.
+#'
+#' @section Corroboration is the trust signal:
+#' Rows are collapsed to one per `(ein, name_key, city, state, zip5)` and carry
+#' `n_corroborators`, the count of **distinct filers** who wrote that string for
+#' that EIN. One filer's typo and a brand name fifty foundations independently
+#' use are both "observed names"; only the corroborator count separates them.
+#' It becomes a spec filter (§5) rather than a threshold baked into a script.
+#'
+#' @section The pairing link:
+#' A grantmaker wrote a name *and an address together*, and that pairing is real
+#' information. Each observed address carries the `name_id` it was seen with, so
+#' the compiler emits roughly *k + m* rows per EIN rather than *k x m* (§8).
+#' Losing the link is what turns a useful source into a row explosion.
+#'
+#' @section Grouping on a key, storing the raw string:
+#' Deduplication needs some normalisation or trivial punctuation differences
+#' become separate variants. Rows are grouped on a light key - uppercased,
+#' non-alphanumerics stripped, whitespace collapsed - but the stored `name_raw`
+#' is the **most frequently written raw form** within the group, so the database
+#' still holds a string a filer actually typed rather than a normalised
+#' reconstruction. `np_normalize()` derived columns are built from that raw
+#' string later, exactly as for BMF rows.
+#'
+#' @param version Pinned `schedi` version, e.g. `"v2_2"`.
+#' @param years Years to load. Defaults to every file present.
+#' @param con A connection from [md_db()].
+#' @param min_corroborators Drop groups written by fewer than this many distinct
+#'   filers. `1` keeps everything; filtering belongs in the spec, so the default
+#'   loads all of it.
+#' @return Row counts, invisibly.
+#' @export
+md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
+                             min_corroborators = 1L) {
+  dir <- md_path("sources", "schedi", version)
+  files <- list.files(dir, pattern = "^SI-P02-T01-GRANTS-US-ORGS-GOVTS-[0-9]{4}[.]CSV$",
+                      full.names = TRUE)
+  if (!length(files)) stop("no Schedule I files in ", dir, call. = FALSE)
+  if (!is.null(years)) {
+    keep <- as.integer(sub(".*-([0-9]{4})[.]CSV$", "\\1", files)) %in% years
+    files <- files[keep]
+  }
+
+  own <- is.null(con)
+  if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
+  vintage <- paste0("schedi-", version)
+  msg <- function(...) message(sprintf(...))
+  msg("schedule I: %d year files", length(files))
+
+  glob <- file.path(dir, "SI-P02-T01-GRANTS-US-ORGS-GOVTS-*.CSV")
+
+  # Raw grant rows, restricted to what an alias needs. The recipient EIN is
+  # SI_02_GRANT_US_ORG_EIN; EIN2 on the row is the *filer*.
+  DBI::dbExecute(con, sprintf("
+    CREATE OR REPLACE VIEW si_raw AS
+    SELECT
+      EIN2                                        AS filer_ein,
+      TAX_YEAR                                    AS tax_year,
+      SI_02_GRANT_US_ORG_EIN                      AS recipient_ein_raw,
+      trim(coalesce(SI_02_GRANT_US_ORG_NAME_L1,'') || ' ' ||
+           coalesce(SI_02_GRANT_US_ORG_NAME_L2,''))   AS name_raw,
+      trim(coalesce(SI_02_GRANT_US_ORG_ADDR_L1,'') || ' ' ||
+           coalesce(SI_02_GRANT_US_ORG_ADDR_L2,''))   AS street_raw,
+      SI_02_GRANT_US_ORG_ADDR_CITY                AS city_raw,
+      SI_02_GRANT_US_ORG_ADDR_STATE               AS state,
+      substr(regexp_replace(coalesce(SI_02_GRANT_US_ORG_ADDR_ZIP,''),'[^0-9]','','g'),1,5) AS zip5
+    FROM read_csv_auto('%s', ALL_VARCHAR=TRUE, union_by_name=TRUE)", glob))
+
+  # Recipient EIN to EIN2. Anything that is not nine digits is dropped rather
+  # than coerced: a mangled identifier attaches one charity's rows to another.
+  DBI::dbExecute(con, "
+    CREATE OR REPLACE TEMP TABLE si_clean AS
+    SELECT
+      'EIN-' || substr(d,1,2) || '-' || substr(d,3,9) AS ein,
+      filer_ein, tax_year, name_raw, street_raw, city_raw, state, zip5,
+      regexp_replace(upper(name_raw), '[^A-Z0-9 ]', '', 'g')  AS name_key_rough
+    FROM (
+      SELECT *, lpad(regexp_replace(coalesce(recipient_ein_raw,''),'[^0-9]','','g'), 9, '0') AS d
+      FROM si_raw
+      WHERE length(regexp_replace(coalesce(recipient_ein_raw,''),'[^0-9]','','g')) BETWEEN 1 AND 9
+    )
+    WHERE name_raw <> ''")
+  n_raw <- .md_n(con, "si_clean")
+  msg("  %s grant rows with a usable recipient EIN and name",
+      format(n_raw, big.mark = ","))
+
+  # Collapse to aliases. The stored name_raw is the modal raw spelling in the
+  # group, not the normalised key.
+  DBI::dbExecute(con, sprintf("
+    CREATE OR REPLACE TEMP TABLE si_alias AS
+    WITH g AS (
+      SELECT ein,
+             regexp_replace(name_key_rough, ' +', ' ', 'g') AS name_key,
+             city_raw, state, zip5,
+             count(*)                    AS n_obs,
+             count(DISTINCT filer_ein)   AS n_corroborators,
+             min(TRY_CAST(tax_year AS INTEGER)) AS first_year,
+             max(TRY_CAST(tax_year AS INTEGER)) AS last_year,
+             mode(name_raw)              AS name_raw,
+             mode(street_raw)            AS street_raw
+      FROM si_clean
+      GROUP BY 1,2,3,4,5
+    )
+    SELECT * FROM g WHERE n_corroborators >= %d AND trim(name_key) <> ''",
+    as.integer(min_corroborators)))
+  n_alias <- .md_n(con, "si_alias")
+  msg("  %s distinct (ein, name, place) aliases", format(n_alias, big.mark = ","))
+
+  ## ---- entities not already known --------------------------------------------
+  # A recipient EIN absent from every BMF release is a filer_only entity (3a).
+  n_new <- DBI::dbExecute(con, sprintf("
+    INSERT INTO entity (ein, layer, active, source_vintage)
+    SELECT DISTINCT a.ein, 'filer_only', FALSE, '%s'
+    FROM si_alias a LEFT JOIN entity e USING (ein)
+    WHERE e.ein IS NULL", vintage))
+  msg("  %s recipient EINs new to the database (layer = filer_only)",
+      format(n_new, big.mark = ","))
+
+  ## ---- names ------------------------------------------------------------------
+  base_name <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
+  DBI::dbExecute(con, sprintf("
+    CREATE OR REPLACE TEMP TABLE si_name AS
+    SELECT %s + row_number() OVER () AS name_id, *
+    FROM (SELECT ein, name_key, city_raw, state, zip5, name_raw, street_raw,
+                 n_obs, n_corroborators, first_year, last_year FROM si_alias)",
+    format(base_name, scientific = FALSE)))
+
+  DBI::dbExecute(con, sprintf("
+    INSERT INTO name (name_id, ein, name_raw, variant_class, source,
+                      source_vintage, n_obs, n_corroborators)
+    SELECT name_id, ein, name_raw, 'observed', 'schedi', '%s',
+           n_obs, n_corroborators
+    FROM si_name", vintage))
+
+  ## ---- addresses, carrying the pairing link -----------------------------------
+  base_addr <- DBI::dbGetQuery(con, "SELECT coalesce(max(address_id),0) AS m FROM address")$m
+  n_addr <- DBI::dbExecute(con, sprintf("
+    INSERT INTO address (address_id, ein, name_id, street_raw, city_raw, state,
+                         zip5, variant_class, spell_rank, source, source_vintage)
+    SELECT %s + row_number() OVER (), ein, name_id, street_raw, city_raw, state,
+           zip5, 'observed', 0, 'schedi', '%s'
+    FROM si_name
+    WHERE coalesce(street_raw,'') <> '' OR coalesce(city_raw,'') <> ''",
+    format(base_addr, scientific = FALSE), vintage))
+
+  msg("  %s observed names, %s observed addresses",
+      format(n_alias, big.mark = ","), format(n_addr, big.mark = ","))
+
+  for (tb in list(c("name", n_alias), c("address", n_addr), c("entity", n_new))) {
+    md_record_vintage(con, "schedi", version, paste0(tb[1], ":observed"),
+                      as.integer(tb[2]),
+                      build_note = sprintf("md_ingest_schedi(min_corroborators=%d)",
+                                           as.integer(min_corroborators)))
+  }
+
+  DBI::dbExecute(con, "DROP VIEW IF EXISTS si_raw")
+  invisible(stats::setNames(c(n_alias, n_addr, n_new),
+                            c("names", "addresses", "new_entities")))
+}

@@ -183,8 +183,24 @@ md_source_head <- function(url) {
 md_source_pin <- function(source, file, version = NULL) {
   reg <- md_sources()
   if (!source %in% reg$source) stop("unknown source: ", source)
-  if (!file.exists(file)) stop("no such file: ", file)
+  missing <- file[!file.exists(file)]
+  if (length(missing)) stop("no such file: ", paste(missing, collapse = ", "))
   row <- reg[reg$source == source, ]
+
+  # A year-partitioned source is pinned as a set. The digest is an md5 over the
+  # per-file md5s in filename order, so adding a year or silently replacing one
+  # changes the pin - which is the only thing that makes "the 2009-2024 Schedule
+  # I" a citable object rather than a description.
+  if (length(file) > 1L) {
+    per <- sort(stats::setNames(unname(tools::md5sum(file)), basename(file)))
+    return(.md_write_pin(source, version %||% "v-set", row, list(
+      local_file = sprintf("%d files: %s ... %s", length(file),
+                           names(per)[1], names(per)[length(per)]),
+      local_size = as.character(sum(file.info(file)$size)),
+      local_md5  = .md_md5_string(paste(names(per), per, collapse = "\n")),
+      file_count = as.character(length(file))
+    ), dirname(file[1])))
+  }
 
   head <- md_source_head(row$url)
   if (is.null(version)) {
@@ -391,3 +407,30 @@ NULL
 #'
 #' @name md_ntee_canonical
 NULL
+
+# md5 of an in-memory string, via a temp file. tools::md5sum has no string form
+# and matchdb takes no dependency purely to hash one line.
+.md_md5_string <- function(x) {
+  tf <- tempfile(); on.exit(unlink(tf))
+  writeLines(x, tf)
+  unname(tools::md5sum(tf))
+}
+
+# Shared tail of md_source_pin(): assemble the record and write PIN.dcf.
+.md_write_pin <- function(source, version, row, local, dest_hint = NULL) {
+  head <- md_source_head(row$url)
+  pin <- c(
+    list(source = source, version = version,
+         url = row$url,
+         fetched = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
+         upstream_etag     = if (!is.null(head)) head[["etag"]] else NA_character_,
+         upstream_modified = if (!is.null(head)) head[["last_modified"]] else NA_character_,
+         upstream_size     = if (!is.null(head)) head[["size"]] else NA_character_),
+    local,
+    list(npmatch_version = as.character(utils::packageVersion("npmatch")),
+         normalize_signature = npmatch::np_normalize_signature())
+  )
+  dest <- md_path("sources", source, version, create = TRUE)
+  write.dcf(as.data.frame(pin, stringsAsFactors = FALSE), file.path(dest, "PIN.dcf"))
+  invisible(pin)
+}
