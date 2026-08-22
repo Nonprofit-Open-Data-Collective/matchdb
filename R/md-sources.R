@@ -59,6 +59,10 @@ md_sources <- function() {
     c("address_geocoded",  "address derived (county, cbsa, tract)",
       NA, "csv", "FALSE", NA, "1.2 GB",
       "census geography per EIN2: CBSA, tract, block, urban area"),
+    c("f1023ez",           "name (legal), address (historical), ntee_observed",
+      "https://www.irs.gov/pub/irs-tege/f1023ez-approvals-%d.xlsx",
+      "xlsx", "FALSE", "2014:2023", "361 MB",
+      "Form 1023-EZ approvals. The only INDEPENDENT NTEE opinion: chosen by the organisation, not derived from the BMF. See ?md_f1023ez_urls"),
     c("irs527",            "entity (irs527), name, address, orgtext",
       "https://nccsdata.s3.us-east-1.amazonaws.com/public/pacs/2024-11-POL-ORGS-FM-8871.csv",
       "csv", "FALSE", NA, "37 MB",
@@ -435,3 +439,28 @@ NULL
   write.dcf(as.data.frame(pin, stringsAsFactors = FALSE), file.path(dest, "PIN.dcf"))
   invisible(pin)
 }
+
+#' The 1023-EZ approval URLs are not consistently named
+#'
+#' [md_source_urls()] renders one pattern, which is wrong for this source often
+#' enough to matter. The IRS has published these files under at least three
+#' conventions:
+#'
+#' \preformatted{
+#'   f1023ez_approvals_2014.xlsx     underscores, lowercase   2014-2016, 2018-2019
+#'   f1023EZ_approvals_2017.xlsx     underscores, EZ upper    2017
+#'   f1023ez-approvals-2020.xlsx     hyphens                  2020-2023
+#' }
+#'
+#' 2024 is listed on the approvals page under `/system/files/irs-tege/` and
+#' **404s**, so the published range is 2014-2023 whatever the page implies.
+#'
+#' The downloader therefore tries each convention rather than trusting one. This
+#' is recorded because a single-pattern fetch would silently acquire nine years
+#' and look complete.
+#'
+#' Column names shift too: the EIN header is `EIN` through 2018 and `Ein` by
+#' 2023, which is why [md_xlsx_to_csv()] matches case-insensitively.
+#'
+#' @name md_f1023ez_urls
+NULL
