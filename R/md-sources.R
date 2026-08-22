@@ -207,7 +207,7 @@ md_source_pin <- function(source, file, version = NULL) {
     ), dirname(file[1])))
   }
 
-  head <- md_source_head(row$url)
+  head <- if (is.na(row$url)) NULL else md_source_head(row$url)
   if (is.null(version)) {
     lm <- if (!is.null(head)) head[["last_modified"]] else NA_character_
     version <- if (!is.na(lm)) {
@@ -423,7 +423,7 @@ NULL
 
 # Shared tail of md_source_pin(): assemble the record and write PIN.dcf.
 .md_write_pin <- function(source, version, row, local, dest_hint = NULL) {
-  head <- md_source_head(row$url)
+  head <- if (is.na(row$url)) NULL else md_source_head(row$url)
   pin <- c(
     list(source = source, version = version,
          url = row$url,

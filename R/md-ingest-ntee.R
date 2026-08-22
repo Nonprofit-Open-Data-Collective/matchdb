@@ -56,7 +56,8 @@
 #' @export
 md_ingest_ntee <- function(version, crosswalk = NULL, con = NULL) {
   if (is.null(crosswalk)) {
-    crosswalk <- md_path("sources", "ntee", "ntee_resolved_crosswalk.csv")
+    crosswalk <- md_path("sources", "ntee_crosswalk", "2026-08",
+                         "ntee_resolved_crosswalk.csv")
   }
   if (!file.exists(crosswalk)) stop("no NTEE crosswalk at ", crosswalk, call. = FALSE)
   if (!requireNamespace("fiscal", quietly = TRUE)) {

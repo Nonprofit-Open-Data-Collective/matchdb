@@ -125,6 +125,9 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       '%s'                      AS source_vintage,
       CAST(NULL AS INTEGER)     AS n_obs,
       CAST(NULL AS INTEGER)     AS n_corroborators,
+      first_vintage_ym          AS first_vintage,
+      last_vintage_ym           AS last_vintage,
+      TRY_CAST(bmf_vintages_observed AS INTEGER) AS n_vintages,
       org_addr_is_po_box        AS is_po_box,
       geo_lat AS lat, geo_lon AS lon, geo_county AS county,
       geo_metro_area AS cbsa
