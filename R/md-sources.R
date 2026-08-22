@@ -50,6 +50,15 @@ md_sources <- function() {
     c("meta_group_return", "ein_relation",
       meta("metadata-group-return"), "csv", "FALSE", NA, "42 MB",
       "group-return filing flag, per EIN"),
+    c("ntee_crosswalk",    "entity.ntee_code, entity.nteev2",
+      NA, "csv", "FALSE", NA, "715 MB",
+      "CANONICAL NTEE, over the BMF: carries per-vintage provenance. nteev2 columns must be recomputed. See ?md_ntee_canonical"),
+    c("address_crosswalk", "address (historical)",
+      NA, "csv", "FALSE", NA, "1.1 GB",
+      "one row per (EIN, address spell) with first/last vintage. HISTORIC, not current. Supersedes parsing meta_addresses"),
+    c("address_geocoded",  "address derived (county, cbsa, tract)",
+      NA, "csv", "FALSE", NA, "1.2 GB",
+      "census geography per EIN2: CBSA, tract, block, urban area"),
     c("irs527",            "entity (irs527), name, address, orgtext",
       "https://nccsdata.s3.us-east-1.amazonaws.com/public/pacs/2024-11-POL-ORGS-FM-8871.csv",
       "csv", "FALSE", NA, "37 MB",
@@ -84,12 +93,14 @@ md_sources <- function() {
 #'     truncated tail would enter the database as a name that never existed.
 #'     Quantify the truncation rate before ingesting; a variant source that
 #'     invents strings is worse than no variant source.
-#'   \item **`EIN2` is not an EIN.** It is formatted `EIN-00-0019818`; ingest must
-#'     strip to nine digits and verify, not assume.
+#'   \item **`ORG_ADDRESS_ALL` is comma-joined** as `street,city,state,zip`,
+#'     which collides with commas inside street lines. Prefer
+#'     `address_resolved_crosswalk`, which has already done this parse and
+#'     records each address spell as its own row with a vintage range.
 #' }
 #'
-#' `ORG_ADDRESS_ALL` is likewise comma-joined as `street,city,state,zip`, which
-#' collides with commas inside street lines.
+#' `EIN2` is **not** a defect - it is the canonical identifier for this project.
+#' See [md_ein()]. An earlier revision of this note had that backwards.
 #'
 #' @name md_meta_caveats
 NULL
@@ -328,4 +339,46 @@ NULL
 #' The file is kept under `sources/query-side/` as a future matching workload.
 #'
 #' @name md_schedb_excluded
+NULL
+
+#' The NTEE crosswalk is canonical, and its nteev2 columns are not
+#'
+#' `ntee_resolved_crosswalk` supersedes the BMF's NTEE fields because it carries
+#' provenance: per-EIN it gives `ntee_current`, `ntee_most_recent` and
+#' `ntee_modal`, each with a subsector and an nteev2 rendering, plus
+#' `ntee_most_recent_source`, `n_vintages_with_ntee`, `n_distinct_codes`, an
+#' `ntee_agreement` verdict, and `ntee_code_distribution` - a JSON object giving
+#' each observed code's count and first/last vintage.
+#'
+#' @section NTEE is not an invariant trait:
+#' Measured on a 400,000-row sample: `ntee_agreement` is `unanimous` for 62%,
+#' **`mixed` for 31%**, and `single` for 7%. Roughly a third of organisations
+#' have been classified inconsistently across vintages. Any schema that stores
+#' one NTEE code per EIN without saying which rule produced it, and without
+#' surfacing that the underlying history disagreed, is presenting a coin flip as
+#' a fact.
+#'
+#' Note also that `ntee_current` is populated for only 34.7% of rows while
+#' `ntee_most_recent` is populated for 100%. `current` means "currently listed",
+#' not "the current value" - most EINs in the unified file are not in the active
+#' BMF at all.
+#'
+#' @section The nteev2 columns carry the known defect:
+#' They are populated, and they must still be recomputed with
+#' `fiscal::get_nteev2()` rather than taken as given. The specialty
+#' double-encoding documented in `pfmatch/dev/SCHEDI-ALIAS-FINDINGS.md` §6d is
+#' present: `B11` renders as `EDU-B11-MS` where the correct value is
+#' `EDU-B00-MS`. In NTEEv2 the digits 01-19 encode organisation *type*, not
+#' activity, so the activity slot is `B00` and the type is carried by the `MS`
+#' suffix - this file emits `11` in both slots.
+#'
+#' 21,983 of the 400,000 sampled rows (5.5%) carry a 10-19 org-type code and are
+#' affected. Others seen: `D11 -> ENV-D11-MS`, `S11 -> PSB-S11-MS`,
+#' `N12 -> HMS-N12-MM`, `X19 -> REL-X19-NS`.
+#'
+#' Recompute from `ntee_code_raw`, not from a cleaned three-character code: the
+#' legacy five-character form carries the `B8443 -> B43` rule, which truncation
+#' destroys.
+#'
+#' @name md_ntee_canonical
 NULL

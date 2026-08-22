@@ -4,6 +4,9 @@ export(md_normal_form)
 export(md_compare_frames)
 export(md_compare_tiered)
 
+export(md_ein)
+export(md_is_ein)
+
 export(md_data_init)
 export(md_data_root)
 export(md_path)

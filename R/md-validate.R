@@ -54,9 +54,10 @@ md_validate <- function(x, key = NULL, ein = "ein", parent = NULL,
 
   if (!is.null(ein) && ein %in% names(x)) {
     e <- as.character(x[[ein]])
-    bad <- !grepl("^[0-9]{9}$", e) | is.na(e)
-    add("EIN is 9 digits", sum(bad) == 0L, sum(bad),
-        if (any(bad)) paste("e.g.", paste(utils::head(unique(e[bad]), 3), collapse = ", ")) else "")
+    bad <- !md_is_ein(e)
+    add("EIN is canonical EIN2", sum(bad) == 0L, sum(bad),
+        if (any(bad)) paste("e.g.", paste(utils::head(unique(e[bad]), 3), collapse = ", "))
+        else "EIN-XX-XXXXXXX")
     if (!is.null(parent)) {
       orphan <- !(e %in% as.character(parent))
       add("EIN resolves to entity", sum(orphan) == 0L, sum(orphan),
