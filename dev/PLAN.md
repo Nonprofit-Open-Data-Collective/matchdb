@@ -196,34 +196,108 @@ delete or rename.**
 
 ## 4. Schema
 
-Five core tables plus two relations. All keyed on a 9-digit EIN.
+Six core tables plus two relations. **Every key is an `EIN2`** —
+`EIN-XX-XXXXXXX`, e.g. `EIN-00-0019818` — the stable identifier shared by the
+e-file series, the BMF and the NCCS crosswalks. Leading zeros are the reason:
+`00-0019818` read as a number is `19818`, and an EIN that has passed through a
+spreadsheet or an untyped CSV read is a well known way to lose an organisation.
+A string that cannot be coerced to a number cannot be silently renumbered.
+`md_ein()` converts; `md_is_ein()` tests.
+
+### What the BMF can and cannot supply
+
+The unified BMF is **a snapshot, not a panel**: 3,698,124 rows over 3,698,124
+distinct EINs, one row per organisation, carrying `first_vintage_ym`,
+`last_vintage_ym` and `bmf_vintages_observed` rather than one row per vintage.
+
+The rest of this section is built around the consequence. The BMF supplies the
+*identity spine* and the *current* name and address. It cannot supply history.
+History comes from the NCCS crosswalks — `ntee_resolved_crosswalk`,
+`address_resolved_crosswalk`, `metadata-names` — which have already collapsed
+each attribute into spells with vintage ranges and provenance. A design that
+expects the BMF to yield a time series will quietly produce a single point and
+present it as one.
 
 ### `entity` — one row per EIN, the layer axis
 
+Three kinds of column, kept visibly distinct because they carry different
+warranties.
+
 ```
-ein                 char(9)   PK
+-- 1. identity and lifecycle: invariant, or monotone
+ein                 EIN2      PK
 layer               enum      bmf_active | bmf_inactive | filer_only | irs527
 active              bool      currently in the active BMF
-first_seen          date
-last_seen           date
-subsection, ntee_code_clean, nteev2, foundation_code, affiliation_code,
-group_exemption_number, ruling_date, assets, revenue, form_990, ...
+first_vintage       ym        earliest vintage this EIN was observed in
+last_vintage        ym        latest
+n_vintages          int       how many vintages observed
+ruling_date         date      IRS determination - the one near-invariant trait
+bmf_source          text      which BMF series the row came from
+
+-- 2. resolved attributes: value + rule + agreement, never a bare value
+ntee_code           text      the resolved NTEE
+ntee_rule           enum      current | most_recent | modal
+ntee_agreement      enum      unanimous | mixed | single
+ntee_n_distinct     int       distinct codes ever observed for this EIN
+ntee_source         text      series the resolved value came from
+nteev2              text      RECOMPUTED, never copied - see below
+subsection          text  |  subsection_rule, subsection_agreement, ...
+foundation_code     text  |  foundation_code_rule, foundation_code_agreement, ...
+affiliation_code, group_exemption_number, group_exemption_is_member
 ```
+
+**Almost nothing descriptive is invariant, and the schema has to say so.** The
+temptation is to read NTEE and 501(c) status as fixed organisational traits and
+store one value each. The data refuses: in the canonical NTEE crosswalk,
+`ntee_agreement` is **`mixed` for 31% of EINs** — roughly a third have been
+classified inconsistently across vintages. `ntee_current` is populated for only
+34.7% of rows while `ntee_most_recent` is populated for 100%, because "current"
+means *currently listed* and most EINs in the unified file are not in the active
+BMF at all.
+
+So every time-varying attribute arrives as a **triple — value, the rule that
+produced it, and whether the underlying history agreed.** Store a bare
+`ntee_code` and 31% of them look authoritative while being a coin flip; a
+consumer filtering on NTEE has no way to know it is standing on a `mixed` value
+resolved by an unstated rule. The crosswalk already publishes exactly these
+columns, so this adopts its shape rather than inventing one.
+
+`nteev2` is **recomputed** with `fiscal::get_nteev2()` at ingest, never copied
+from a source. Both the BMF and the NTEE crosswalk ship an `nteev2` rendering
+carrying the specialty double-encoding defect — `B11` as `EDU-B11-MS` where the
+correct value is `EDU-B00-MS`, because digits 01–19 encode organisation *type*
+and belong in the suffix, not the activity slot. Recompute from
+`ntee_code_raw`, not from a cleaned three-character code: the legacy
+five-character form carries the `B8443 → B43` rule, which truncation destroys.
 
 `layer` is provenance (which tranche this EIN came from); `active` is status.
 Keeping them apart is what lets an update flip status without rewriting
 provenance.
 
+**What is deliberately not here.** `asset_amount`, `income_amount`,
+`revenue_amount`, `tax_period` and the filing-requirement codes are
+point-in-time facts about one filing year, on a table whose grain is the
+organisation's entire life. Putting them on `entity` means silently publishing
+whichever year the source snapshot happened to carry. They are also not
+candidate-generation signal — the same argument §10 makes for keeping mission
+text out of the variant machinery. If size is wanted later it is an
+`entity_financials` sidecar keyed `(ein, tax_year)`, not a column here.
+
+**No legal-name column either.** The legal name is a `name` row with
+`variant_class = 'legal'`. Storing it on `entity` duplicates it and re-creates
+the primacy problem §7d exists to avoid; derive it in the compiled reference
+instead.
+
 ### `name` — many rows per EIN, the variant axis
 
 ```
 name_id             bigint    PK
-ein                 char(9)   FK
+ein                 EIN2      FK
 name_raw            text      as written by the source
 variant_class       enum      legal | dba | division | in_care_of |
                               observed | former
-source              enum      bmf | schedi | efile990 | irs527
-source_vintage      text      "bmf-2026-01", "schedi-2009-2023"
+source              enum      bmf | schedi | efile990 | irs527 | meta_names
+source_vintage      text      "bmf-2026-08", "schedi-2009-2024"
 n_obs               int       times observed (NULL for BMF)
 n_corroborators     int       distinct filers who wrote it (Schedule I trust)
 first_year, last_year
@@ -246,18 +320,27 @@ append-only.
 
 ```
 address_id          bigint    PK
-ein                 char(9)   FK
+ein                 EIN2      FK
 name_id             bigint    NULL — the pairing link, see §8
 street_raw, unit_raw, city_raw, state, zip5, zip_plus4
 variant_class       enum      mailing | principal | observed | historical
-source, source_vintage, n_obs, n_corroborators, first_year, last_year
+spell_rank          int       0 = most recent spell, ascending into the past
+source, source_vintage, n_obs, n_corroborators, first_vintage, last_vintage
 -- derived:
 street_key, street_num, street_name, street_type, street_unit,
-is_po_box, city, zip3, zip9, lat, lon, county, cbsa
+is_po_box, city, zip3, zip9, lat, lon, county, cbsa, tract
 ```
 
 The `name_id` foreign key is not decoration. It is what stops the cross-product
 blowup in §8.
+
+`spell_rank` comes from `address_resolved_crosswalk`, which has already resolved
+each EIN's address history into ranked spells with vintage ranges. **Historic
+spells are archive, not current**: a spell with `spell_rank > 0` describes where
+an organisation used to be, and compiling it into a reference as though it were
+a present address is a false-match generator. Selecting historic addresses must
+be an explicit spec choice, and `variant_class = 'historical'` is what makes it
+one.
 
 ### `orgtext` — mission and program text
 
@@ -270,25 +353,49 @@ EIN-keyed, deliberately outside the name/address selection logic. See §10.
 ### `ein_relation` — affiliate and dyad structure
 
 ```
-ein_a, ein_b, relation (group_parent | group_member | affiliate |
-                        dyad_substitutable | successor), evidence, confidence
+ein_a               EIN2
+ein_b               EIN2      NULL when the counterparty has no EIN
+related_name        text      the counterparty as written, when ein_b is NULL
+relation            enum      group_parent | group_member | affiliate |
+                              dyad_substitutable | successor
+relation_raw        text      the source's own wording, unmapped
+evidence, confidence
 ```
 
 Where affiliates go. Not the name table. See §10.
 
+`ein_b` is nullable because two real sources cannot fill it. The 527 Schedule R
+gives a counterparty name and address but no EIN, and only about 10% of those
+names correspond to a known 527 at all. Resolving a name to an EIN is a
+*matching* problem, which is `npmatch`'s job — so matchdb records the relation
+with the counterparty named and leaves `ein_b` open rather than guessing.
+
+`relation_raw` exists because the source vocabularies are not enumerations.
+527 Schedule R's `ENTITY_RELATIONSHIP` has 528 distinct values; `Connected` and
+`Affiliated` cover 97.4% and the tail runs to `Mother` and
+`Common candidate-CA 33rd Assembly Dist.`. Keeping the raw string means the
+mapping onto `relation` can be revised without re-ingesting.
+
 ### `source_vintage` — the audit table
 
 ```
-vintage_id, source, url, fetched, md5, row_count, rows_added, build_note,
+vintage_id, source, origin (remote | local), url, fetched,
+upstream_etag, upstream_modified, upstream_size,
+local_md5, row_count, rows_added, build_note,
 npmatch_version, normalize_signature
 ```
 
 One row per ingest. This is `np_manifest()` promoted from a CSV of files to a
 table of loads, and it is what makes any compiled reference explainable six
-months later. The last two columns are the §9 drift guard.
+months later.
+
+`upstream_etag` is not decoration either. The canonical BMF is published at a
+`latest/` key that is overwritten in place, so "the BMF as of latest" is not
+provenance — the ETag is the only thing that identifies *which* BMF a row came
+from. `md_source_pin()` records it; `md_source_moved()` reports whether upstream
+has been replaced since. The last two columns are the §9 drift guard.
 
 ---
-
 ## 5. The spec
 
 The user-facing object: a small, serializable, hashable description of a
