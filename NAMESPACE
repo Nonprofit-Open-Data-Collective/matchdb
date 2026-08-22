@@ -25,6 +25,7 @@ export(md_db)
 export(md_db_close)
 export(md_record_vintage)
 export(md_ingest_bmf)
+export(md_ingest_ntee)
 export(md_validate_bmf)
 
 S3method(print, md_diff)
