@@ -50,9 +50,14 @@ md_sources <- function() {
     c("meta_group_return", "ein_relation",
       meta("metadata-group-return"), "csv", "FALSE", NA, "42 MB",
       "group-return filing flag, per EIN"),
-    c("irs527",            "entity (layer = irs527)",
-      NA, NA, NA, NA, NA,
-      "IRS Form 8871 political organisations; source URL not yet recorded")
+    c("irs527",            "entity (irs527), name, address, orgtext",
+      "https://nccsdata.s3.us-east-1.amazonaws.com/public/pacs/2024-11-POL-ORGS-FM-8871.csv",
+      "csv", "FALSE", NA, "37 MB",
+      "IRS Form 8871. 68,365 filings / 51,542 EINs; key is FORM_ID_NUMBER, not EIN. See ?md_irs527_shape"),
+    c("irs527_related",    "ein_relation (ein_b unresolved)",
+      "https://nccsdata.s3.us-east-1.amazonaws.com/public/pacs/2024-11-POL-ORGS-SCHED-R.csv",
+      "csv", "FALSE", NA, "12 MB",
+      "527 Schedule R. 62,153 rows / 8,377 EINs. Related entity has a name, not an EIN. See ?md_irs527_shape")
   )
   out <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
   names(out) <- c("source", "feeds", "url", "format", "pointer", "years", "size", "note")
@@ -187,6 +192,20 @@ md_source_pin <- function(source, file, version = NULL) {
   )
 
   dest <- md_path("sources", source, version, create = TRUE)
+
+  # A pin describes the file beside it. Writing one into a directory the file
+  # does not live in produces a provenance record pointing at nothing - the pin
+  # stores only a basename, so the mismatch is silent and survives until someone
+  # tries to trace a row back to its source.
+  same_dir <- normalizePath(dirname(file), winslash = "/", mustWork = FALSE) ==
+              normalizePath(dest,          winslash = "/", mustWork = FALSE)
+  if (!same_dir) {
+    stop("pin/file mismatch: ", source, " pins into\n  ", dest,
+         "\nbut the file is in\n  ", dirname(file),
+         "\nMove the file, or pin it under the source it belongs to.",
+         call. = FALSE)
+  }
+
   write.dcf(as.data.frame(pin, stringsAsFactors = FALSE),
             file.path(dest, "PIN.dcf"))
   invisible(pin)
@@ -216,3 +235,97 @@ md_source_moved <- function(source, version) {
   if (is.null(head) || is.na(head[["etag"]]) || is.na(pin$upstream_etag)) return(NA)
   !identical(unname(head[["etag"]]), pin$upstream_etag)
 }
+
+#' What the 527 files can and cannot support
+#'
+#' Measured on the 2024-11 vintage, before writing any ingest against them.
+#'
+#' @section Form 8871 (`irs527`):
+#' 68,365 rows over **51,542 distinct EINs** - so the key is `FORM_ID_NUMBER`
+#' (68,365 distinct, exactly the row count), not `EIN`. Each amendment is a new
+#' row, which is why the file carries name variants at all: 1,231 EINs (2.4%)
+#' appear under more than one organisation name. Ingest is therefore
+#' filing-level for `name`/`address` and deduplicated to EIN for `entity`.
+#'
+#' EIN quality is perfect - all 68,365 are already bare 9-digit strings, none
+#' blank. Notably better than `meta_names`, whose `EIN2` is `EIN-00-0019818`.
+#'
+#' The file carries four address blocks (mailing, business, custodian, contact)
+#' and two person-name fields. `CUSTODIAN_NAME` and `CONTACT_PERSON_NAME` are
+#' legitimate `in_care_of` variants - an organisation genuinely written as
+#' "c/o <person>" is a spelling the matcher should know. `E_MAIL_ADDRESS`
+#' should not be ingested: it carries no matching signal and is personal
+#' contact data with no purpose in a disambiguation reference.
+#'
+#' @section Schedule R (`irs527_related`):
+#' 62,153 rows over 8,377 EINs - only 16% of 527s file one. Three findings
+#' shape how it can be used, and two of them are restrictive:
+#'
+#' \enumerate{
+#'   \item **The related entity has no EIN.** The file gives
+#'     `(527 EIN) -> (ENTITY_NAME, address)`. `ein_relation` as specified in
+#'     `PLAN.md` §4 is `(ein_a, ein_b)`; this source cannot populate `ein_b`.
+#'     Resolving a name to an EIN is a matching problem, which is `npmatch`'s
+#'     job, not matchdb's - so these rows land with `ein_b` NULL and the
+#'     counterparty recorded by name, or they wait.
+#'   \item **Most related entities are not nonprofits.** Only 1,102 of 10,597
+#'     distinct `ENTITY_NAME` values match a known 8871 organisation name -
+#'     about 10%. The rest are sponsoring corporations, unions and trade
+#'     associations, largely outside the BMF universe entirely.
+#'   \item **`ENTITY_RELATIONSHIP` is free text, not an enumeration.** 528
+#'     distinct values. `Connected` (54,660) and `Affiliated` (5,801) are 97.4%
+#'     of rows, with a long tail running to `Mother`, `Indirect Control` and
+#'     `Common candidate-CA 33rd Assembly Dist.`. Any mapping onto the
+#'     `ein_relation.relation` enum has to be explicit and has to say what it
+#'     does with the tail.
+#' }
+#'
+#' Referential integrity to the 8871 file is close but not exact: 15,095 of
+#' 15,285 `FORM_ID_NUMBER` values resolve, leaving **190 orphans (1.2%)**.
+#'
+#' @section What must not happen:
+#' The related entity's name must never be registered as a `name` variant on the
+#' 527's EIN. `PLAN.md` §10 is explicit that affiliates are not DBAs, and this is
+#' the case that most invites the error - "ASSOCIATION OF SAFETY GROUPS" is a
+#' different body from "ASGM PAC", and aliasing them would manufacture exactly
+#' the false matches the disambiguation database exists to prevent.
+#'
+#' @section An ingest hazard:
+#' `data.table::fread()` segfaults on the 8871 file; `utils::read.csv()` reads it
+#' cleanly. The data is not malformed - line count and row count agree, so there
+#' are no embedded newlines. Ingest should not assume `fread` on these.
+#'
+#' @name md_irs527_shape
+NULL
+
+#' Why 527 Schedule B is not a matchdb source
+#'
+#' `2024-11-POL-ORGS-SCHED-B.csv` (1.33 GB, 6,936,571 rows) records what a 527
+#' *paid out*: filer `EIN` and `ORG_NAME` on one side, `RECIEPIENT_NAME` plus an
+#' address on the other, with `EXPENDITURE_AMOUNT`, `EXPENDITURE_PURPOSE` and
+#' `EXPENDITURE_DATE`.
+#'
+#' **The recipient has no EIN.** That makes the file structurally identical to
+#' 990-PF Part XIV grants - a payer identified by EIN, a payee identified only by
+#' a name and address someone typed. It is therefore a *query-side* dataset: the
+#' kind of file you run **against** a disambiguation database, exactly as
+#' `pfmatch` runs grants against the reference. It is not a source of
+#' `(name -> EIN)` observations, because the EIN on the row belongs to the payer,
+#' not to the name being described.
+#'
+#' Ingesting it as a `name` source would attach every payee's name to the *payer's*
+#' EIN - aliasing "Hawaii Republican Party" onto a teachers' union PAC. That is
+#' the single most destructive thing that could be done to a disambiguation
+#' reference, and the row shape makes it an easy mistake, which is why the
+#' exclusion is written down rather than left implicit.
+#'
+#' Two further reasons it does not belong on the reference side: most payees are
+#' political committees, candidates and vendors rather than exempt organisations;
+#' and `RECIPIENT_OCCUPATION` and `RECIEPIENT_EMPLOYER` are individual-level
+#' fields, so a large share of rows describe people, who have no place in an
+#' organisational reference.
+#'
+#' The file is kept under `sources/query-side/` as a future matching workload.
+#'
+#' @name md_schedb_excluded
+NULL
