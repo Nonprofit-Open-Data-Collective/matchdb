@@ -25,10 +25,17 @@
 #'
 #' @param version Pinned version directory, e.g. `"v2014-2023"`.
 #' @param con A connection from [md_db()].
+#' @param new_entity_layer Layer under which to admit approved organisations that
+#'   appear in no BMF release. `NULL`, the default, holds them back instead. No
+#'   value in the frozen enumeration (section 3a) describes an organisation the
+#'   IRS granted exemption to but which reached no BMF release: `filer_only`
+#'   means observed on a 990-series filing, and an approval is not a filing.
+#'   Set this once that question is settled.
 #' @param reconvert Redo the xlsx-to-CSV step even if a CSV is already present.
 #' @return Row counts, invisibly.
 #' @export
 md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
+                              new_entity_layer = NULL,
                               reconvert = FALSE) {
   dir <- md_path("sources", "f1023ez", version)
   books <- list.files(dir, pattern = "[.]xlsx$", full.names = TRUE)
@@ -67,6 +74,13 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   n_raw <- .md_n(con, "ez")
   msg("  %s approvals", format(n_raw, big.mark = ","))
 
+  # Idempotence. This is a full load keyed on source_vintage (section 10), so a re-run
+  # replaces rather than appends. Without this a second call silently doubles
+  # every row it wrote.
+  for (tb in c("name", "address")) {
+    DBI::dbExecute(con, sprintf("DELETE FROM %s WHERE source = 'f1023ez'", tb))
+  }
+
   ## ---- how much of this is new? ---------------------------------------------
   known <- DBI::dbGetQuery(con, "
     SELECT count(*) AS n,
@@ -74,6 +88,37 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
     FROM (SELECT DISTINCT ein FROM ez) z LEFT JOIN entity e USING (ein)")
   msg("  %s distinct EINs, %s absent from the database",
       format(known$n, big.mark = ","), format(known$absent_from_db, big.mark = ","))
+
+  # An approved 1023-EZ organisation that appears in no BMF release does not fit
+  # any frozen layer (section 3a): `filer_only` means observed on a 990-series filing,
+  # and an approval is not a filing. Minting an entity under a layer that does
+  # not describe it would put a wrong answer in the provenance column, which is
+  # the one column that has to be right.
+  #
+  # So by default those rows are held back rather than orphaned or mislabelled,
+  # and the count is reported. Pass a layer explicitly to admit them once the
+  # enumeration question is settled.
+  if (is.null(new_entity_layer)) {
+    DBI::dbExecute(con, "
+      CREATE OR REPLACE TEMP TABLE ez_keep AS
+      SELECT z.* FROM ez z JOIN entity e USING (ein)")
+    held <- n_raw - .md_n(con, "ez_keep")
+    if (held > 0) {
+      msg("  holding back %s approvals for %s EINs in no BMF release -",
+          format(held, big.mark = ","), format(known$absent_from_db, big.mark = ","))
+      msg("    no frozen layer describes them. See ?md_ingest_f1023ez.")
+    }
+  } else {
+    DBI::dbExecute(con, sprintf("
+      INSERT INTO entity (ein, layer, active, source_vintage)
+      SELECT DISTINCT z.ein, '%s', FALSE, '%s'
+      FROM ez z LEFT JOIN entity e USING (ein) WHERE e.ein IS NULL",
+      new_entity_layer, vintage))
+    DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE ez_keep AS SELECT * FROM ez")
+    msg("  admitted %s new EINs as layer = %s",
+        format(known$absent_from_db, big.mark = ","), new_entity_layer)
+  }
+  DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE ez AS SELECT * FROM ez_keep")
 
   ## ---- names ----------------------------------------------------------------
   base_name <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
