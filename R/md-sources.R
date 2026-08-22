@@ -71,7 +71,16 @@ md_sources <- function() {
   out <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
   names(out) <- c("source", "feeds", "url", "format", "pointer", "years", "size", "note")
   out$pointer <- as.logical(out$pointer)
-  out
+
+  # A source with no URL is not automatically a gap. Some are supplied locally as
+  # derived NCCS extracts with no published address; those are fetchable only in
+  # the sense that someone put them on the disk, and the pin records the md5 that
+  # says which copy. Distinguishing the two matters because "unrecorded" is work
+  # outstanding and "local" is not.
+  local <- c("ntee_crosswalk", "address_crosswalk", "address_geocoded")
+  out$origin <- ifelse(!is.na(out$url), "remote",
+                ifelse(out$source %in% local, "local", "unrecorded"))
+  out[, c("source", "feeds", "origin", "url", "format", "pointer", "years", "size", "note")]
 }
 
 # NCCS metadata crosswalks. Static keys, not pointers - dated 2023-09 (group)
