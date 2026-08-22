@@ -396,6 +396,7 @@ from. `md_source_pin()` records it; `md_source_moved()` reports whether upstream
 has been replaced since. The last two columns are the §9 drift guard.
 
 ---
+
 ## 5. The spec
 
 The user-facing object: a small, serializable, hashable description of a

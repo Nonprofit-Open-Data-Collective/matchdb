@@ -21,6 +21,12 @@ export(md_source_moved)
 export(md_validate)
 export(md_validate_report)
 
+export(md_db)
+export(md_db_close)
+export(md_record_vintage)
+export(md_ingest_bmf)
+export(md_validate_bmf)
+
 S3method(print, md_diff)
 
 importFrom(tools, md5sum)
