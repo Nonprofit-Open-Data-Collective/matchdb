@@ -22,10 +22,51 @@
 #' hundreds of millions of pairs on its own. So membership is recorded as
 #' parent-to-member, which is linear in group size.
 #'
-#' That requires identifying the parent, and the BMF `affiliation_code` does it:
-#' 6 is the central organisation of a group ruling, 7 an intermediate, and 8 or 9
-#' a subordinate. Groups with no coded parent produce no rows rather than a
-#' guessed one, and the count of those is reported.
+#' That requires identifying the parent, and the BMF `affiliation_code` does it.
+#' The codes are **not ordered by seniority**, which is a trap worth spelling out
+#' because an earlier version of this function fell into it:
+#'
+#' \preformatted{
+#'   1  NETWORK-PARENT            parent, no group exemption
+#'   2  NETWORK-INTERM            intermediate, no group exemption
+#'   3  INDEPENDENT               unaffiliated
+#'   6  GROUP-EXM-PARENT-REGULAR  parent of a group ruling
+#'   7  GROUP-EXM-INTERM          intermediate within a group ruling
+#'   8  GROUP-EXM-PARENT-CHURCH   parent of a group ruling, church or 501(c)(1)
+#'   9  SUBORDINATE               subordinate in a group ruling
+#' }
+#'
+#' **8 is a parent, not a subordinate.** Reading the codes as ascending
+#' seniority puts 713 church parents on the member side of their own groups and
+#' never uses them as parents. Parents are therefore `6` or `8`; members are `7`
+#' or `9`.
+#'
+#' Intermediates are deliberately treated as members only. A `7` is genuinely
+#' dual-role - a member of the central organisation and a parent to subordinates
+#' beneath it - but nothing in the BMF says *which* subordinates report to which
+#' intermediate, so emitting intermediate-to-subordinate links would be inventing
+#' a hierarchy the data does not contain. One level, honestly.
+#'
+#' Groups with no coded parent produce no rows rather than a guessed one, and the
+#' count of those is reported.
+#'
+#' @section Group exemption is not the whole of affiliate structure:
+#' Measured on the active BMF, a GEN and a group-exemption role are two encodings
+#' of one fact: no EIN carries a GEN without a group role, and only nine carry a
+#' group role without a GEN.
+#'
+#' But **4,500 active organisations are coded `1` or `2` - network parents and
+#' intermediates with no group exemption at all**. Affiliate structure does not
+#' require the group exemption process, and this ingest does not reach it,
+#' because a network has no GEN and therefore no key to join members on. Worse,
+#' network *subordinates* are not separately coded - only nine subordinates lack
+#' a GEN - so those 3,459 network parents have members that cannot be identified
+#' from the BMF at all.
+#'
+#' That gap is what Schedule R covers: disclosure does not depend on group
+#' exemption, so an affiliate relationship outside a group ruling still appears
+#' there. The two halves of this function are complementary rather than
+#' overlapping.
 #'
 #' @section Schedule R gives both EINs, and sometimes only one:
 #' Part II lists related tax-exempt organisations with an EIN, so most rows
@@ -130,8 +171,8 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
            'bmf_group_exemption', NULL, NULL, NULL, NULL,
            'bmf_gen', 'bmf_unified-v2026-08-11'
     FROM gen p JOIN gen m ON p.gen = m.gen AND p.ein <> m.ein
-    WHERE p.affiliation_code = '6'
-      AND m.affiliation_code IN ('7','8','9')",
+    WHERE p.affiliation_code IN ('6','8')
+      AND m.affiliation_code IN ('7','9')",
     format(base, scientific = FALSE)))
 
   orphan <- DBI::dbGetQuery(con, "
