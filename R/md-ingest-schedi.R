@@ -83,7 +83,8 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
     SELECT
       'EIN-' || substr(d,1,2) || '-' || substr(d,3,9) AS ein,
       filer_ein, tax_year, name_raw, street_raw, city_raw, state, zip5,
-      regexp_replace(upper(name_raw), '[^A-Z0-9 ]', '', 'g')  AS name_key_rough
+      trim(regexp_replace(regexp_replace(upper(name_raw), '[^A-Z0-9 ]', '', 'g'),
+                          ' +', ' ', 'g'))                    AS name_key
     FROM (
       SELECT *, lpad(regexp_replace(coalesce(recipient_ein_raw,''),'[^0-9]','','g'), 9, '0') AS d
       FROM si_raw
@@ -94,27 +95,41 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
   msg("  %s grant rows with a usable recipient EIN and name",
       format(n_raw, big.mark = ","))
 
-  # Collapse to aliases. The stored name_raw is the modal raw spelling in the
-  # group, not the normalised key.
+  # A name is one row per (ein, name), not per (ein, name, place). Grouping by
+  # place too inflated the table 31% with the same string repeated at each
+  # address it was seen at, and every one of those rows would multiply out again
+  # at compile time (SS8). The place lives on the address rows instead, which is
+  # where it belongs and where the pairing link already carries it.
+  #
+  # n_corroborators is therefore counted over the whole name: distinct filers
+  # who wrote that string for that EIN, wherever they said it was.
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE si_alias AS
-    WITH g AS (
-      SELECT ein,
-             regexp_replace(name_key_rough, ' +', ' ', 'g') AS name_key,
-             city_raw, state, zip5,
-             count(*)                    AS n_obs,
-             count(DISTINCT filer_ein)   AS n_corroborators,
-             min(TRY_CAST(tax_year AS INTEGER)) AS first_year,
-             max(TRY_CAST(tax_year AS INTEGER)) AS last_year,
-             mode(name_raw)              AS name_raw,
-             mode(street_raw)            AS street_raw
-      FROM si_clean
-      GROUP BY 1,2,3,4,5
-    )
-    SELECT * FROM g WHERE n_corroborators >= %d AND trim(name_key) <> ''",
-    as.integer(min_corroborators)))
+    SELECT ein, name_key,
+           count(*)                    AS n_obs,
+           count(DISTINCT filer_ein)   AS n_corroborators,
+           min(TRY_CAST(tax_year AS INTEGER)) AS first_year,
+           max(TRY_CAST(tax_year AS INTEGER)) AS last_year,
+           mode(name_raw)              AS name_raw
+    FROM si_clean
+    WHERE trim(name_key) <> ''
+    GROUP BY 1,2
+    HAVING count(DISTINCT filer_ein) >= %d", as.integer(min_corroborators)))
   n_alias <- .md_n(con, "si_alias")
-  msg("  %s distinct (ein, name, place) aliases", format(n_alias, big.mark = ","))
+  msg("  %s distinct (ein, name) aliases", format(n_alias, big.mark = ","))
+
+  # Places for those names. City is upper-cased in the key: leaving it raw split
+  # CHICAGO from Chicago and produced two rows for one address.
+  DBI::dbExecute(con, "
+    CREATE OR REPLACE TEMP TABLE si_place AS
+    SELECT ein, name_key, city_key, state_key, zip5,
+           mode(street_raw) AS street_raw,
+           mode(city_raw)   AS city_raw,
+           count(*)         AS n_obs
+    FROM (SELECT *, upper(trim(coalesce(city_raw,''))) AS city_key,
+                    upper(trim(coalesce(state,'')))    AS state_key
+          FROM si_clean WHERE trim(name_key) <> '')
+    GROUP BY 1,2,3,4,5")
 
   ## ---- entities not already known --------------------------------------------
   # A recipient EIN absent from every BMF release is a filer_only entity (3a).
@@ -131,9 +146,7 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE si_name AS
     SELECT %s + row_number() OVER () AS name_id, *
-    FROM (SELECT ein, name_key, city_raw, state, zip5, name_raw, street_raw,
-                 n_obs, n_corroborators, first_year, last_year FROM si_alias)",
-    format(base_name, scientific = FALSE)))
+    FROM si_alias", format(base_name, scientific = FALSE)))
 
   DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
@@ -146,11 +159,12 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
   base_addr <- DBI::dbGetQuery(con, "SELECT coalesce(max(address_id),0) AS m FROM address")$m
   n_addr <- DBI::dbExecute(con, sprintf("
     INSERT INTO address (address_id, ein, name_id, street_raw, city_raw, state,
-                         zip5, variant_class, spell_rank, source, source_vintage)
-    SELECT %s + row_number() OVER (), ein, name_id, street_raw, city_raw, state,
-           zip5, 'observed', 0, 'schedi', '%s'
-    FROM si_name
-    WHERE coalesce(street_raw,'') <> '' OR coalesce(city_raw,'') <> ''",
+                         zip5, variant_class, spell_rank, source, source_vintage,
+                         n_obs)
+    SELECT %s + row_number() OVER (), p.ein, n.name_id, p.street_raw, p.city_raw,
+           p.state_key, p.zip5, 'observed', 0, 'schedi', '%s', p.n_obs
+    FROM si_place p JOIN si_name n USING (ein, name_key)
+    WHERE coalesce(p.street_raw,'') <> '' OR coalesce(p.city_raw,'') <> ''",
     format(base_addr, scientific = FALSE), vintage))
 
   msg("  %s observed names, %s observed addresses",

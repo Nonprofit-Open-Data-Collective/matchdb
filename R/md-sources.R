@@ -192,7 +192,8 @@ md_source_pin <- function(source, file, version = NULL) {
   # changes the pin - which is the only thing that makes "the 2009-2024 Schedule
   # I" a citable object rather than a description.
   if (length(file) > 1L) {
-    per <- sort(stats::setNames(unname(tools::md5sum(file)), basename(file)))
+    per <- stats::setNames(unname(tools::md5sum(file)), basename(file))
+    per <- per[order(names(per))]
     return(.md_write_pin(source, version %||% "v-set", row, list(
       local_file = sprintf("%d files: %s ... %s", length(file),
                            names(per)[1], names(per)[length(per)]),

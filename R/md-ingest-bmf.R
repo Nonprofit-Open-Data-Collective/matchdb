@@ -123,6 +123,8 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       0                         AS spell_rank,
       'bmf'                     AS source,
       '%s'                      AS source_vintage,
+      CAST(NULL AS INTEGER)     AS n_obs,
+      CAST(NULL AS INTEGER)     AS n_corroborators,
       org_addr_is_po_box        AS is_po_box,
       geo_lat AS lat, geo_lon AS lon, geo_county AS county,
       geo_metro_area AS cbsa
