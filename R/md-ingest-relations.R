@@ -131,7 +131,7 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
     base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
     n_sr <- DBI::dbExecute(con, sprintf("
       INSERT INTO ein_relation
-      SELECT %s + row_number() OVER (), ein_a, ein_b, related_name, 'affiliate',
+      SELECT %s + row_number() OVER (), ein_a, ein_b, related_name, 'related_entity',
              relation_raw, 'schedule_r_part_ii', NULL,
              first_year, last_year, n_obs, 'efile_sched_r', '%s'
       FROM (

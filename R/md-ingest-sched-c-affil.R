@@ -7,10 +7,17 @@
 #'
 #' @section It is a different concept from group exemption, and must stay one:
 #' A §501(h) affiliated group is defined by interlocking governance under §4911 -
-#' one organisation controlling another's lobbying decisions. That is not the
-#' group exemption process, and these edges must never enter the `group_id`
-#' components (`GROUP-STRUCTURE-FINDINGS.md` §2). They land as `affiliate`, the
-#' same relation Schedule R Part II uses.
+#' one organisation bound by another's decisions on legislative issues, or enough
+#' board overlap to control them. That is a **control test**, not the group
+#' exemption process, so these edges must never enter the `group_id` components
+#' (`GROUP-STRUCTURE-FINDINGS.md` §2).
+#'
+#' They land as `related_entity` (§4a), the same value Schedule R Part II uses,
+#' and the measured overlap is the argument: **834 of 886 edges (94%) already
+#' exist as a Schedule R Part II edge**. A looser coordination tie - a
+#' `coalition` in the §4a sense - would not overlap Schedule R that heavily.
+#' The word "affiliated" in the statute names a control relationship, not a
+#' federated chapter structure.
 #'
 #' @section It is reciprocal, which is why the self-loops matter:
 #' Every electing member reports the *whole* group, so a five-member group
@@ -86,25 +93,25 @@ md_ingest_sched_c_affil <- function(con = NULL, path = NULL) {
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
   n_new <- DBI::dbExecute(con, sprintf("
     INSERT INTO ein_relation
-    SELECT %s + row_number() OVER (), ein_a, ein_b, nm, 'affiliate',
+    SELECT %s + row_number() OVER (), ein_a, ein_b, nm, 'related_entity',
            'AffiliatedScheduleGrp', 'schedule_c_part_ii_a', NULL,
            fy, ly, n, 'efile_sched_c', '%s'
     FROM (SELECT ein_a, ein_b, max(nm) AS nm, min(ty) AS fy, max(ty) AS ly,
                  count(*) AS n
           FROM scaf WHERE NOT self GROUP BY ein_a, ein_b)",
     format(base, scientific = FALSE), vintage))
-  msg("  %s affiliate edges added", format(n_new, big.mark = ","))
+  msg("  %s related_entity edges added", format(n_new, big.mark = ","))
 
   dup <- DBI::dbGetQuery(con, "
     SELECT count(*) AS n FROM (SELECT DISTINCT ein_a, ein_b FROM scaf WHERE NOT self) s
     WHERE EXISTS (SELECT 1 FROM ein_relation r
-                  WHERE r.source = 'efile_sched_r' AND r.relation = 'affiliate'
+                  WHERE r.source = 'efile_sched_r' AND r.relation = 'related_entity'
                     AND ((r.ein_a = s.ein_a AND r.ein_b = s.ein_b)
                       OR (r.ein_a = s.ein_b AND r.ein_b = s.ein_a)))")$n
   msg("  %s of them are corroborations of a Schedule R Part II edge", format(dup, big.mark = ","))
 
   md_record_vintage(con, "efile_sched_c_affil", "v2009-2013",
-                    "ein_relation:affiliate", as.integer(n_new),
+                    "ein_relation:related_entity", as.integer(n_new),
                     build_note = "md_ingest_sched_c_affil(); 501(h) affiliated group")
   msg("  ein_relation: %s rows", format(.md_n(con, "ein_relation"), big.mark = ","))
   invisible(stats::setNames(c(n_self, n_new, dup), c("self_refs", "added", "corroborations")))

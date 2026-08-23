@@ -382,11 +382,79 @@ EIN-keyed, deliberately outside the name/address selection logic. See §10.
 ein_a               EIN2
 ein_b               EIN2      NULL when the counterparty has no EIN
 related_name        text      the counterparty as written, when ein_b is NULL
-relation            enum      group_parent | group_member | affiliate |
+relation            enum      disregarded_entity | group_member | group_parent |
+                              affiliate | related_entity |
                               dyad_substitutable | successor
 relation_raw        text      the source's own wording, unmapped
 evidence, confidence
 ```
+
+### 4a. The relation vocabulary
+
+These words already mean specific things in the sector, and an earlier draft of
+this build used `affiliate` as a catch-all for six different disclosures. That
+was wrong: in nonprofit usage "affiliate" means a **federated chapter**, which is
+close to group structure and nothing like a hospital system's taxable subsidiary.
+The enum is ordered by **strength of tie** - how substitutable the two EINs are -
+because that is the axis a matcher acts on.
+
+| relation | definition | sources |
+|---|---|---|
+| `disregarded_entity` | not a separate taxpayer; activity reported on the other's own return | Sch R Part I |
+| `group_member` | IRS group exemption - applied for, GEN-registered, granted by the IRS | BMF GEN, 990 line H(c), NCCS historical, `AffiliateListing` |
+| `affiliate` | federated chapter structure **without** a group exemption | none yet - see below |
+| `related_entity` | control, ownership, or shared governance | Sch R Parts II/III/IV, Sch C Part II-A, 527 Sch R |
+| `coalition` | coordination without control | **derived, never stored** |
+
+`group_parent` remains reserved for the inverse direction and is unused - a row
+already reads "`ein_b` is a `relation` of `ein_a`", and storing both directions
+doubles the table to say nothing new. `dyad_substitutable` and `successor` are
+likewise unused so far.
+
+**`affiliate` is defined and deliberately empty.** The population is real -
+4,774 organisations carry BMF `affiliation_code` 1 or 2 (network parent,
+network intermediate) and **not one of them has a GEN**, which is exactly
+federated structure outside the group exemption process. But the BMF names the
+*parents* and never says which organisations report to them, the same wall
+`md_ingest_relations()` hits with intermediates. So the category is defined,
+holds zero rows, and will until a source states the edges. That is better than
+leaving it as a catch-all: nothing is mislabelled into it now.
+
+**The IRS uses the word differently, which is where the confusion started.** The
+e-file element for a group-return roster is literally `AffiliateListing`, so the
+IRS says "affiliate" where this vocabulary says `group_member`. That source
+correctly produces `group_member` rows despite its name.
+
+**`coalition` is a latent construct, not a disclosure.** Two organisations that
+both support the same 501(c)(4) or 527 coordinate without sharing governance -
+but no filing states that tie. It is inferred from co-membership over a shared
+counterparty, so it is derived at consumption time from the observed relations,
+never materialised. Materialising it would also be a clique, which §4 forbids on
+its own.
+
+Two judgement calls worth recording, because both went against first instinct:
+
+* **Schedule C Part II-A is `related_entity`, not `coalition`.** §4911(f) defines
+  an affiliated group by a *control* test - one organisation bound by another's
+  decisions on legislative issues, or enough board overlap to control them - and
+  834 of its 886 edges (94%) already exist as Schedule R Part II edges. A looser
+  tie would not overlap that heavily.
+* **527 Schedule R is `related_entity`, not `coalition`.** A "connected
+  organisation" established, administers or funds the political organisation.
+  That is a support and control tie. The coalition is the *derived* relation
+  between two organisations connected to the same one.
+
+A `relation` value can be revised without re-ingesting, because `relation_raw`
+and `evidence` preserve what the source actually said. Promotion out of
+`related_entity` - splitting controlled-by from merely-related, say - is a
+mapping change.
+
+**A known defect blocks exactly that split.** `md_ingest_relations()` puts
+`SR_02_RLTD_ORG_PRIMARY_ACT` into `relation_raw`, so Part II's raw values read
+`HOSPITAL`, `HEALTHCARE`, `low-inc hsng` - the counterparty's *activity*, not the
+relationship. Part II's actual relationship signal, `SR_02_RLTD_ORG_CTRL_NAME_L1`
+(direct controlling entity), is not ingested at all. Fixing it needs a re-ingest
+of 863,976 rows and should land with the self-loop fix noted below.
 
 Where affiliates go. Not the name table. See §10.
 

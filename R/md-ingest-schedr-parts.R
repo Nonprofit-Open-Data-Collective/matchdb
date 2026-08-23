@@ -31,25 +31,29 @@
 #' `ein_b` to `entity` should expect roughly one in seven to land, and the
 #' per-source rate is reported on every run.
 #'
-#' @section Why they are all `affiliate` rather than new enum values:
-#' `relation` is a frozen enumeration (§3a). Adding `disregarded_entity` or
-#' `taxable_subsidiary` would be a schema change, and the case for it is not yet
-#' made - nothing downstream consumes the distinction today. So all three land as
-#' `affiliate`, and the part is carried in `evidence`
+#' @section Part I is a different relation from Parts III and IV:
+#' See the §4a vocabulary. Parts III and IV describe organisations the filer
+#' controls, owns a share of, or shares governance with - `related_entity`. Part I
+#' describes an entity with **no separate tax existence at all**, whose activity
+#' is reported on the filer's own return. That is a tighter tie than any
+#' disclosure on the rest of the form, so it gets its own value,
+#' `disregarded_entity`.
+#'
+#' The part is additionally carried in `evidence`
 #' (`schedule_r_part_i_disregarded`, `..._part_iii_partnership`,
-#' `..._part_iv_corporation`), which is exactly what `evidence` is for. Promoting
-#' any of them to its own relation later is a mapping change, not a re-ingest.
+#' `..._part_iv_corporation`), so the taxable/exempt distinction inside
+#' `related_entity` survives without needing its own enum value.
 #'
 #' @section A deferred question about disregarded entities:
-#' A disregarded entity has no separate tax existence - its activity is reported
-#' on the parent's return - so its name is arguably a name the *parent* operates
-#' under, which would make it closer to a `dba` than to an affiliate. That would
-#' be a `name` row on the parent's EIN, not a relation.
+#' Because a disregarded entity has no separate tax existence, its name is
+#' arguably a name the *parent* operates under - closer to a `dba` than to a
+#' relation at all. That would be a `name` row on the parent's EIN.
 #'
-#' It is deliberately **not** done here. §10 forbids casually aliasing an
-#' affiliate onto a parent, and the difference between "disregarded for tax" and
-#' "the same organisation for matching" has not been measured. Recording the
-#' relation keeps the option open; writing the alias would not be reversible.
+#' It is deliberately **not** done here. §10 forbids casually aliasing one
+#' organisation's name onto another, and the difference between "disregarded for
+#' tax" and "the same organisation for matching" has not been measured.
+#' Recording the relation keeps the option open; writing the alias would not be
+#' reversible.
 #'
 #' @section An ingest hazard, and it is not the one documented for 527:
 #' Pre-2013 files carry doubled quotes inside *unquoted* fields
@@ -68,13 +72,13 @@ md_ingest_schedr_parts <- function(con = NULL,
   which <- match.arg(which, several.ok = TRUE)
   spec <- list(
     disregarded = list(src = "efile_disregarded",   tbl = "SR-P01-T01-ID-DISREGARDED-ENTITIES",
-                       pre = "SR_01_DISREG_ENTITY", tag = "efile_sr_p01",
+                       pre = "SR_01_DISREG_ENTITY", tag = "efile_sr_p01", rel = "disregarded_entity",
                        ev  = "schedule_r_part_i_disregarded",  raw = "Part I disregarded entity"),
     partnership = list(src = "efile_related_ptr",   tbl = "SR-P03-T01-ID-RLTD-ORGS-TAXABLE-PARTNERSHIP",
-                       pre = "SR_03_RLTD_ORG_PTR",  tag = "efile_sr_p03",
+                       pre = "SR_03_RLTD_ORG_PTR",  tag = "efile_sr_p03", rel = "related_entity",
                        ev  = "schedule_r_part_iii_partnership", raw = "Part III taxable partnership"),
     corporation = list(src = "efile_related_corp",  tbl = "SR-P04-T01-ID-RLTD-ORGS-TAXABLE-CORPORATION",
-                       pre = "SR_04_RLTD_ORG_CORP", tag = "efile_sr_p04",
+                       pre = "SR_04_RLTD_ORG_CORP", tag = "efile_sr_p04", rel = "related_entity",
                        ev  = "schedule_r_part_iv_corporation",  raw = "Part IV taxable corporation or trust"))
 
   own <- is.null(con)
@@ -121,16 +125,16 @@ md_ingest_schedr_parts <- function(con = NULL,
     base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
     n_new <- DBI::dbExecute(con, sprintf("
       INSERT INTO ein_relation
-      SELECT %s + row_number() OVER (), ein_a, ein_b, nm, 'affiliate',
+      SELECT %s + row_number() OVER (), ein_a, ein_b, nm, '%s',
              '%s', '%s', NULL, fy, ly, n, '%s', '%s'
       FROM (SELECT ein_a, ein_b, max(nm) AS nm, min(ty) AS fy, max(ty) AS ly,
                    count(*) AS n
             FROM srp GROUP BY ein_a, ein_b)",
-      format(base, scientific = FALSE), s$raw, s$ev, s$tag, paste0(s$src, "-v2_2")))
-    msg("  %s affiliate edges added", format(n_new, big.mark = ","))
+      format(base, scientific = FALSE), s$rel, s$raw, s$ev, s$tag, paste0(s$src, "-v2_2")))
+    msg("  %s edges added", format(n_new, big.mark = ","))
 
     md_source_pin(s$src, sort(files), version = "v2_2")
-    md_record_vintage(con, s$src, "v2_2", "ein_relation:affiliate", as.integer(n_new),
+    md_record_vintage(con, s$src, "v2_2", paste0("ein_relation:", s$rel), as.integer(n_new),
                       build_note = sprintf("md_ingest_schedr_parts('%s')", w))
     out[[w]] <- c(rows = prof$n, with_ein = prof$with_ein, added = n_new)
   }

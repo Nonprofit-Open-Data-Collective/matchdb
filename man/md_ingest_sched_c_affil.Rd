@@ -23,10 +23,17 @@ expenditures. \code{AffiliatedGroupSchedule/AffiliatedScheduleGrp} in the XML.
 \section{It is a different concept from group exemption, and must stay one}{
 
 A §501(h) affiliated group is defined by interlocking governance under §4911 -
-one organisation controlling another's lobbying decisions. That is not the
-group exemption process, and these edges must never enter the \code{group_id}
-components (\code{GROUP-STRUCTURE-FINDINGS.md} §2). They land as \code{affiliate}, the
-same relation Schedule R Part II uses.
+one organisation bound by another's decisions on legislative issues, or enough
+board overlap to control them. That is a \strong{control test}, not the group
+exemption process, so these edges must never enter the \code{group_id} components
+(\code{GROUP-STRUCTURE-FINDINGS.md} §2).
+
+They land as \code{related_entity} (§4a), the same value Schedule R Part II uses,
+and the measured overlap is the argument: \strong{834 of 886 edges (94\%) already
+exist as a Schedule R Part II edge}. A looser coordination tie - a
+\code{coalition} in the §4a sense - would not overlap Schedule R that heavily.
+The word "affiliated" in the statute names a control relationship, not a
+federated chapter structure.
 }
 
 \section{It is reciprocal, which is why the self-loops matter}{
