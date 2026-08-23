@@ -2,6 +2,9 @@
 
 **Status: proposal, 2026-08-22.** Companion to [`PLAN.md`](PLAN.md) §5–§8.
 
+> Section references written bare — §8, §10, §6c — point at `PLAN.md`.
+> References to this document say so explicitly.
+
 Ten sources are ingested and all five core tables are populated. This document
 is about the step that has not been taken: turning 43 million rows of archive
 into a reference small enough to match against and sharp enough to be worth
@@ -54,7 +57,98 @@ data says.
 
 ---
 
-## 3. `name` — 9,665,441 rows
+## 3. Three roles, and three ways to process them
+
+The tables do not hold one kind of thing. They hold three, and which one a row
+belongs to decides what it becomes at compile time. The current schema makes the
+distinction half-way — `name`/`address` on one side, `ein_relation` on the other
+— but treats them as parallel tables to be processed alike, and they are not.
+
+### What each table actually asserts
+
+**Alternative identity** — *the same organisation, written differently.*
+
+| table | classes | rows |
+|---|---|---:|
+| `name` | `legal` 4,998,567 · `observed` 1,912,147 · `dba` 981,303 · `former` 197,251 | 8,089,268 |
+| `address` | `historical` 12,390,751 · `mailing` 3,848,551 · `observed` 2,307,115 | 18,546,417 |
+
+**Affiliate structure** — *different organisations, related to each other.*
+`ein_relation`, 1.3M rows and growing.
+
+**Neither** — `in_care_of` (1,576,173 rows naming a *person*, this document §4) and `orgtext`
+(adjudication input, this document §7).
+
+### The two categories have opposite economics
+
+| | alternative identity | affiliate structure |
+|---|---|---|
+| what it buys | **recall** — another way to find one organisation | **precision** — how to choose between organisations |
+| compiled form | **rows** in the reference | **a column** on `entity` |
+| marginal cost | multiplies reference size and blocking time | **zero reference rows** |
+| the §8 row budget | fully subject to it | exempt |
+| risk of adding more | false matches, row blowup | none to recall |
+
+So the disciplines are **inverted**, and this is the practical consequence:
+
+**Alternative identity should be minimally inclusive.** Every class added
+multiplies rows, and some actively harm — `in_care_of`'s 1.58M personal names,
+the 690,200 rows sitting on hundred-way-ambiguous keys, the 5.3M addresses more
+than a decade stale. Each class earns its place against a budget or it does not
+go in.
+
+**Affiliate structure should be maximally inclusive.** More relations strictly
+improve `cluster_id` and cost nothing, because the graph collapses to one integer
+per entity before the reference is built. There is no reason to be selective
+about Schedule R, group exemption, 527 disclosures or anything else that names
+two EINs — take all of it, from every source that offers it.
+
+Those two sentences pull in opposite directions, which is why processing the two
+halves with one discipline gets both wrong.
+
+### The boundary case, and why it holds
+
+`dyad_substitutable` and `successor` look like identity. They assert that two
+EINs are interchangeable *for matching purposes*, which is exactly what
+`pf_dyad_collapse()` acts on. But even those stay column- or lookup-shaped and
+**never become reference rows**: they are consulted after blocking, to merge
+candidates that were generated independently. Structure is used at selection
+time; it is never compiled into the frame.
+
+That boundary is load-bearing, and there is a number behind it. On a 396,892-pair
+sample of group relations, **175,635 — 44% — connect two EINs with an exact
+matching legal name.** Chapters really are called what their parent is called.
+
+So the tempting move — registering the parent's name as an alias on each
+subordinate's EIN, "so the chapter can be found" — would take an already
+unresolvable case and make it worse, adding rows to a key that resolves to
+nothing. §10 forbids it, and the 44% is why: the names are *already* identical
+without anyone's help. What is missing there is not another spelling but a way to
+choose, and choosing is what the structure side is for.
+
+### The routing rule for anything that arrives next
+
+When a new source appears, one question decides where it goes:
+
+> **Does it give another way to *find* an organisation, or another way to
+> *choose* between organisations?**
+
+* **Find** → an identity variant. It becomes rows, pays the row budget, needs a
+  `variant_class`, must be deduplicated and must justify its discriminative
+  value.
+* **Choose** → structure. It becomes a relation, collapses into a column, costs
+  nothing, and should be taken in full.
+* **Neither** → it is context. `orgtext` is the model: keep it in the database,
+  ship a compact summary, join it on demand, and never let it near blocking.
+
+Applied to what is already registered but unloaded: `irs527_related` is *choose*
+(take all of it), `meta_names` is *find* (and must clear the truncation question
+in `?md_meta_caveats` first), and `meta_group_return` is *neither* — a filing
+arrangement that identifies nothing and relates nobody.
+
+---
+
+## 4. `name` — 9,665,441 rows
 
 ### The redundancy is modest
 
@@ -91,7 +185,7 @@ THRIVENT FINANCIAL FOR LUTHERANS          11,297
 
 Every one is a group-exemption chapter structure. **The name-collision problem
 and the affiliate-structure problem are the same problem**, which is the central
-observation of this document and §5 below.
+observation of this document, and §6 below.
 
 ### One variant class is not organisations
 
@@ -122,7 +216,7 @@ ein, name_key, name_raw (modal, for display),
 variant_class   -- highest precedence present: legal > dba > observed > former
 source_mask     -- bitmask of attesting sources, not one row per source
 n_corroborators -- max across sources
-n_eins_sharing  -- how many EINs hold this key (precomputed, see §5)
+n_eins_sharing  -- how many EINs hold this key (precomputed, see §6)
 first_year, last_year
 ```
 
@@ -133,7 +227,7 @@ of the remaining redundancy lives.
 
 ---
 
-## 4. `address` — 18,546,417 rows
+## 5. `address` — 18,546,417 rows
 
 ### Redundancy is larger here
 
@@ -193,7 +287,7 @@ geocode_type, lat, lon, county, cbsa, tract
 
 ---
 
-## 5. The latent structure: collisions *are* affiliations
+## 6. The latent structure: collisions *are* affiliations
 
 This is the finding worth building on.
 
@@ -207,14 +301,14 @@ So the two hardest problems in this data — why a name matches a hundred
 organisations, and which organisations are affiliates — have **one answer**.
 That makes a derived feature available that neither table can produce alone.
 
-### 5a. `cluster_id` on `entity` — the highest-value derivation
+### 6a. `cluster_id` on `entity` — the highest-value derivation
 
 Take the connected components of `ein_relation` and stamp each EIN with a
 cluster identifier. One integer per entity replaces traversing 1.3M pairs, and it
 answers in O(1) the question `pfmatch/R/dyads.R` currently recomputes: *are these
 two candidates the same family?*
 
-### 5b. `name_ambiguity` — turning a count into a structural claim
+### 6b. `name_ambiguity` — turning a count into a structural claim
 
 For each `(name_key)`, compare the clusters of the EINs holding it:
 
@@ -235,7 +329,7 @@ It is also the honest form of the §6b question. A rare *legal* name is
 meaningful; a rare name inside a 21,000-member family is not rare at all in the
 sense the rule intends.
 
-### 5c. Cheap derivations worth having
+### 6c. Cheap derivations worth having
 
 **`n_eins_at_address`** — down-weight geographic agreement at shared addresses,
 and incidentally identify fiscal sponsors and registered agents.
@@ -254,7 +348,7 @@ why a query names an organisation that appears to have dissolved.
 
 ---
 
-## 6. `orgtext` — 15,072,111 rows, 5 GB
+## 7. `orgtext` — 15,072,111 rows, 5 GB
 
 The largest table by far, and the one whose compact form differs most from its
 stored form. It is adjudication input, consumed *after* a candidate list exists
@@ -274,7 +368,7 @@ tiebreak would help most.
 
 ---
 
-## 7. Proposed build order
+## 8. Proposed build order
 
 Each step is cheap, and each one makes the next cheaper.
 
@@ -301,7 +395,7 @@ Each step is cheap, and each one makes the next cheaper.
 
 ---
 
-## 8. What this is not
+## 9. What this is not
 
 It is not a proposal to delete anything from the database. Every row loaded stays
 loaded, with its provenance — that is what the archive is for, and the 1,269
