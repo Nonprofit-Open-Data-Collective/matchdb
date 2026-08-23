@@ -47,7 +47,7 @@ Three questions, applied to every row:
 
 1. **Is it redundant?** Two rows that normalize to the same key for the same EIN
    are one row.
-2. **Is it discriminative?** A name held by 21,173 organisations identifies none
+2. **Is it discriminative?** A name held by 22,034 organisations identifies none
    of them.
 3. **Is it true of an organisation at all?** Some of what has been loaded
    describes people, not organisations.
@@ -93,7 +93,7 @@ So the disciplines are **inverted**, and this is the practical consequence:
 
 **Alternative identity should be minimally inclusive.** Every class added
 multiplies rows, and some actively harm — `in_care_of`'s 1.58M personal names,
-the 690,200 rows sitting on hundred-way-ambiguous keys, the 5.3M addresses more
+the 706,255 rows sitting on hundred-way-ambiguous keys, the 5.3M addresses more
 than a decade stale. Each class earns its place against a budget or it does not
 go in.
 
@@ -152,22 +152,21 @@ arrangement that identifies nothing and relates nobody.
 
 ### The redundancy is modest
 
-Deduplicating on `(ein, rough_key)` gives 8,133,990 distinct rows: **15.8%
-saved**. The real `name_key` from `np_normalize()` will do better, because it
-also folds abbreviations, strips legal suffixes and removes a leading "THE" —
-call it 25%. Worth doing, not transformative.
+Deduplicating on `(ein, name_key)` — the real key from `np_normalize()`, not a
+rough uppercase one — gives 7,701,425 distinct rows: **20.3% saved.** Measured
+after the derived columns were built, superseding a 15.8% estimate taken against
+a rough key that did not strip legal suffixes.
 
 ### The discriminative structure is where the value is
 
 | EINs sharing a name key | keys | rows |
 |---|---:|---:|
-| 1 — unique | 6,061,157 | 6,061,157 |
-| 2–3 | 357,800 | 777,315 |
-| 4–10 | 56,258 | 304,484 |
-| 11–100 | 12,326 | 300,834 |
-| **100+** | **1,269** | **690,200** |
-
-**1,269 name keys account for 690,200 rows — 7.1% of the table — and each one
+| 1 — unique | 5,434,621 | 5,434,621 |
+| 2–3 | 382,351 | 834,750 |
+| 4–10 | 67,057 | 364,224 |
+| 11–100 | 15,108 | 360,325 |
+| **100+** | **1,308** | **706,255** |
+**1,308 name keys account for 706,255 rows — 7.3% of the table — and each one
 matches at least a hundred organisations.** They are pure cost: every query that
 touches one generates a hundred candidates that all have to be scored and all
 but one rejected.
@@ -175,12 +174,12 @@ but one rejected.
 And they are not random. The top of the list is:
 
 ```
-TOASTMASTERS INTERNATIONAL                21,173 EINs
-INTERNATIONAL ASSOCIATION OF LIONS CLUBS  17,279
-KNIGHTS OF COLUMBUS                       12,820
-AMERICAN LEGION                           12,042
-4H CLUBS AFFILIATED 4H ORGANIZATIONS      11,920
-THRIVENT FINANCIAL FOR LUTHERANS          11,297
+TOASTMASTERS INTERNATIONAL                    22,034 EINs
+INTERNATIONAL ASSOCIATION OF LIONS CLUBS      17,326
+AMATEUR ATHLETIC UNION OF THE UNITED STATES   13,504
+KNIGHTS OF COLUMBUS                           12,825
+4 H CLUBS AND AFFILIATED 4 H ORGANIZATIONS    12,241
+AMERICAN LEGION                               12,082
 ```
 
 Every one is a group-exemption chapter structure. **The name-collision problem
@@ -231,7 +230,7 @@ of the remaining redundancy lives.
 
 ### Redundancy is larger here
 
-Deduplicating on `(ein, street, zip5)` gives 13,030,740: **29.7% saved**. Most of
+Deduplicating on `(ein, street_key, zip5)` gives 11,779,126: **36.5% saved**. Most of
 that is the same address recurring across vintages in the historical crosswalk,
 which should collapse to one row carrying `first_vintage`, `last_vintage` and
 `n_vintages` rather than one row per spell.
@@ -291,7 +290,7 @@ geocode_type, lat, lon, county, cbsa, tract
 
 This is the finding worth building on.
 
-`TOASTMASTERS INTERNATIONAL` is held by 21,173 EINs. Those EINs are not
+`TOASTMASTERS INTERNATIONAL` is held by 22,034 EINs. Those EINs are not
 coincidentally similar organisations — they are **one group exemption**, and
 `ein_relation` already links them to a common parent. The same is true of the
 Lions Clubs, the Knights of Columbus, the American Legion, 4-H. And `1 WATERFOWL
@@ -398,7 +397,7 @@ Each step is cheap, and each one makes the next cheaper.
 ## 9. What this is not
 
 It is not a proposal to delete anything from the database. Every row loaded stays
-loaded, with its provenance — that is what the archive is for, and the 1,269
+loaded, with its provenance — that is what the archive is for, and the 1,308
 worthless-for-matching name keys are perfectly good answers to "what is this
 organisation called".
 

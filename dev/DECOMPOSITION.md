@@ -150,7 +150,7 @@ The ranking that drives the threshold, in descending priority:
 | rank | signal | rationale |
 |---|---|---|
 | 1 | `variant_class` | `legal` > `dba` > `observed` > `former`; `in_care_of` excluded entirely |
-| 2 | `n_eins_sharing` | a key held by 21,173 EINs identifies none of them |
+| 2 | `n_eins_sharing` | a key held by 22,034 EINs identifies none of them |
 | 3 | `n_corroborators` | independent filers who wrote it |
 | 4 | `last_year` / `last_vintage` | recency; 5.3M addresses are over a decade stale |
 | 5 | `source_mask` popcount | attested by more sources |

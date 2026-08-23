@@ -1,0 +1,32 @@
+=== NAME dedupe headroom, real name_key vs rough key ===
+  rows_now distinct_ein_key pct_saved
+1  9665441          7701425      20.3
+
+=== NAME collision: EINs per name_key (REAL key) ===
+  eins_sharing  n_keys  n_rows
+1   1 (unique) 5434621 5434621
+2          2-3  382351  834750
+3         4-10   67057  364224
+4       11-100   15108  360325
+5         100+    1308  706255
+
+=== worst keys, real normalization ===
+                                     name_key n_eins
+1                  TOASTMASTERS INTERNATIONAL  22034
+2    INTERNATIONAL ASSOCIATION OF LIONS CLUBS  17326
+3 AMATEUR ATHLETIC UNION OF THE UNITED STATES  13504
+4                         KNIGHTS OF COLUMBUS  12825
+5  4 H CLUBS AND AFFILIATED 4 H ORGANIZATIONS  12241
+6                             AMERICAN LEGION  12082
+
+=== ADDRESS dedupe headroom on (ein, street_key, zip5) ===
+  rows_now distinct_key pct_saved
+1 18546417     11779126      36.5
+
+=== derived column fill ===
+  pct_name_key pct_form
+1          100     38.4
+  pct_street_key pct_po_box
+1            100       12.9
+
+db size: 6.52 GB
