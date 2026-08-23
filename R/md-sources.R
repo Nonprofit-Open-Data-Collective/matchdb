@@ -91,14 +91,22 @@ md_sources <- function() {
   names(out) <- c("source", "feeds", "url", "format", "pointer", "years", "size", "note")
   out$pointer <- as.logical(out$pointer)
 
-  # A source with no URL is not automatically a gap. Some are supplied locally as
-  # derived NCCS extracts with no published address; those are fetchable only in
-  # the sense that someone put them on the disk, and the pin records the md5 that
-  # says which copy. Distinguishing the two matters because "unrecorded" is work
-  # outstanding and "local" is not.
-  local <- c("ntee_crosswalk", "address_crosswalk", "address_geocoded")
+  # A source with no URL is not automatically a gap, and there are three ways to
+  # lack one. The distinction is not pedantry: `unrecorded` is work outstanding,
+  # and the other two are not, so conflating them puts permanent entries on a
+  # to-do list and hides real ones among them.
+  #
+  #   local    a published file someone put on the disk. Fetchable only in that
+  #            sense; the pin's md5 says which copy.
+  #   derived  extracted here from raw XML because NO published table exists.
+  #            There is no address to record, now or later.
+  #   unrecorded  a real gap: the source exists upstream and we have not found
+  #            or written down where.
+  local   <- c("ntee_crosswalk", "address_crosswalk", "address_geocoded")
+  derived <- c("efile_affiliate_listing", "efile_sched_c_affil")
   out$origin <- ifelse(!is.na(out$url), "remote",
-                ifelse(out$source %in% local, "local", "unrecorded"))
+                ifelse(out$source %in% local,   "local",
+                ifelse(out$source %in% derived, "derived", "unrecorded")))
   out[, c("source", "feeds", "origin", "url", "format", "pointer", "years", "size", "note")]
 }
 
