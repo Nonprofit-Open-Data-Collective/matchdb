@@ -22,15 +22,16 @@ RoxygenNote: 7.3.2
 Depends:
     R (>= 4.1.0)
 Imports:
+    DBI,
+    duckdb,
     data.table,
     npmatch,
     stats,
     tools,
     utils
 Suggests:
-    DBI,
+    openxlsx,
     arrow,
-    duckdb,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Remotes:
