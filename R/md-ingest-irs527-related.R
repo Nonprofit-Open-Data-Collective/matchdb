@@ -102,14 +102,14 @@ md_ingest_irs527_related <- function(con = NULL, path = NULL) {
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
 
   n_new <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
+    INSERT INTO ein_relation (%s)
     SELECT %s + row_number() OVER (), ein_a, NULL, related_name, 'related_entity',
            relation_raw, 'irs527_schedule_r', NULL,
            NULL, NULL, n_obs, 'irs527_sched_r', '%s'
     FROM (
       SELECT ein_a, related_name, relation_raw, count(*) AS n_obs
       FROM sr527 GROUP BY ein_a, related_name, relation_raw)",
-    format(base, scientific = FALSE), vintage))
+    .md_relation_cols(), format(base, scientific = FALSE), vintage))
   msg("  %s related_entity rows added (ein_b NULL by construction)",
       format(n_new, big.mark = ","))
 

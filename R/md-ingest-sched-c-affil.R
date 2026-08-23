@@ -92,14 +92,14 @@ md_ingest_sched_c_affil <- function(con = NULL, path = NULL) {
   DBI::dbExecute(con, "DELETE FROM ein_relation WHERE source = 'efile_sched_c'")
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
   n_new <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
+    INSERT INTO ein_relation (%s)
     SELECT %s + row_number() OVER (), ein_a, ein_b, nm, 'related_entity',
            'AffiliatedScheduleGrp', 'schedule_c_part_ii_a', NULL,
            fy, ly, n, 'efile_sched_c', '%s'
     FROM (SELECT ein_a, ein_b, max(nm) AS nm, min(ty) AS fy, max(ty) AS ly,
                  count(*) AS n
           FROM scaf WHERE NOT self GROUP BY ein_a, ein_b)",
-    format(base, scientific = FALSE), vintage))
+    .md_relation_cols(), format(base, scientific = FALSE), vintage))
   msg("  %s related_entity edges added", format(n_new, big.mark = ","))
 
   dup <- DBI::dbGetQuery(con, "

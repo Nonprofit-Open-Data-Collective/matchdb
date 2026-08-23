@@ -91,7 +91,7 @@ md_ingest_group_meta <- function(con = NULL, path = NULL) {
   # the BMF gives no group at all. A former member and a current one are not the
   # same claim, so the relation is marked as historical in `evidence`.
   n_new <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
+    INSERT INTO ein_relation (%s)
     SELECT %s + row_number() OVER (), p.ein, m.ein, NULL, 'group_member',
            'group.exempt.num.best', 'nccs_group_metadata_historical', NULL,
            NULL, NULL, NULL, 'meta_gen', '%s'
@@ -99,7 +99,7 @@ md_ingest_group_meta <- function(con = NULL, path = NULL) {
     JOIN entity e ON e.ein = m.ein
     JOIN entity p ON p.group_exemption_number = m.gen AND p.affiliation_code = '6'
     WHERE (e.group_exemption_number IS NULL OR e.group_exemption_number IN ('', '0000'))
-      AND p.ein <> m.ein", format(base, scientific = FALSE), vintage))
+      AND p.ein <> m.ein", .md_relation_cols(), format(base, scientific = FALSE), vintage))
   msg("  %s historical group_member pairs added", format(n_new, big.mark = ","))
 
   md_record_vintage(con, "meta_group_number", "2023-09",

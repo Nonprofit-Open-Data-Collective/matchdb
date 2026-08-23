@@ -1,3 +1,25 @@
+#' The `ein_relation` column list, named once
+#'
+#' Every ingest that writes `ein_relation` used to do it by **positional**
+#' `INSERT ... SELECT`. That works until the table gains a column, at which point
+#' all of them write the new column silently and wrongly - the failure is a
+#' shifted value, not an error. Adding `controlled_512` forced the fix, and the
+#' fix is to name the columns.
+#'
+#' Naming them in each ingest separately would recreate the same drift one level
+#' up, so the list lives here and every writer calls this. A future column is
+#' added in two places - the `CREATE TABLE` in [md_ingest_relations()] and this
+#' vector - and every ingest keeps working.
+#'
+#' @param extra Columns this particular writer supplies beyond the common set.
+#' @return A comma-separated column list for an `INSERT`.
+#' @keywords internal
+.md_relation_cols <- function(extra = NULL) {
+  paste(c("relation_id", "ein_a", "ein_b", "related_name", "relation",
+          "relation_raw", "evidence", "confidence", "first_year", "last_year",
+          "n_obs", "source", "source_vintage", extra), collapse = ", ")
+}
+
 #' Build ein_relation from Schedule R and the group exemption structure
 #'
 #' Section 10 is emphatic that group and related-entity structure belongs in a relation table
@@ -65,19 +87,25 @@
 #' record. That is not true of Parts III and IV, whose counterparties resolve at
 #' 5-9%.
 #'
-#' @section What is measured but still not stored:
+#' @section `controlled_512` is the sharpest signal the form carries:
 #' `SR_02_RLTD_ORG_CTRL_512_X` - is the counterparty a §512(b)(13) controlled
-#' entity - is the **best** relationship signal on the form: a statutory
-#' yes/no, 93.1% populated (2.07M true, 4.02M false), against 68.8% for the
-#' controller name. It is what would cleanly split `related_entity` into
-#' controlled-by versus merely-related.
+#' entity - is a statutory yes/no, **93.1% populated** (2.07M true, 4.02M false)
+#' against 68.8% for the controller name. It is what splits `related_entity`
+#' into controlled-by versus merely-related, and it is the only column on the
+#' form that answers that question directly rather than by inference from a name.
 #'
-#' It is not stored because `ein_relation` has no boolean column for it, and
-#' every ingest writes the table by **positional** `INSERT ... SELECT` of 13
-#' values. Adding a 14th column silently breaks all six of them unless each is
-#' rewritten with an explicit column list. That refactor is worth doing and is
-#' not this change; doing it halfway would leave a column that some ingests fill
-#' and others corrupt.
+#' It is encoded four ways across schema versions - `0`/`1` and `false`/`true` -
+#' so both forms are normalised. Anything else becomes `NULL`: a blank box is
+#' silence, not a denial, and coercing it to `FALSE` would invent 449,599
+#' assertions nobody made.
+#'
+#' Aggregating to one row per pair uses `bool_or`, so a pair is `TRUE` if the
+#' filer asserted control in **any** year. The alternative - `bool_and` - would
+#' let one year with the box blank erase a control relationship stated in every
+#' other year.
+#'
+#' Only Part II populates it. It is `NULL` for every other source, which is
+#' honest: no other disclosure asks the question.
 #'
 #' @section Direction is fixed, not doubled:
 #' A relation row reads **"`ein_b` is a `relation` of `ein_a`"**. Group rows are
@@ -170,7 +198,13 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
         last_year      INTEGER,
         n_obs          INTEGER,
         source         VARCHAR,
-        source_vintage VARCHAR)")
+        source_vintage VARCHAR,
+        controlled_512 BOOLEAN)")
+  }
+  # Older databases predate controlled_512; adding it here keeps a rebuild and an
+  # upgrade on the same path.
+  if (!"controlled_512" %in% DBI::dbListFields(con, "ein_relation")) {
+    DBI::dbExecute(con, "ALTER TABLE ein_relation ADD COLUMN controlled_512 BOOLEAN")
   }
 
   ## ---- Schedule R Part II -----------------------------------------------------
@@ -198,6 +232,13 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
         nullif(trim(coalesce(SR_02_RLTD_ORG_CTRL_NAME_L1,'') || ' ' ||
                     coalesce(SR_02_RLTD_ORG_CTRL_NAME_L2,'')), '') AS ctrl_name,
         nullif(trim(SR_02_RLTD_ORG_CTRL_NA), '')          AS ctrl_na,
+        -- §512(b)(13) controlled entity. The flag is encoded four ways across
+        -- schema versions - 0/1 and false/true - so both are normalised and
+        -- anything else becomes NULL rather than a guessed FALSE.
+        CASE WHEN lower(trim(coalesce(SR_02_RLTD_ORG_CTRL_512_X,''))) IN ('1','true','x','yes')
+             THEN TRUE
+             WHEN lower(trim(coalesce(SR_02_RLTD_ORG_CTRL_512_X,''))) IN ('0','false','no')
+             THEN FALSE END                                AS controlled_512,
         TRY_CAST(TAX_YEAR AS INTEGER)                     AS tax_year
       FROM read_csv_auto('%s', ALL_VARCHAR=TRUE, union_by_name=TRUE,
                          quote='\"', escape='\"')
@@ -212,22 +253,25 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
 
     base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
     n_sr <- DBI::dbExecute(con, sprintf("
-      INSERT INTO ein_relation
+      INSERT INTO ein_relation (%s)
       SELECT %s + row_number() OVER (), ein_a, ein_b, related_name, 'related_entity',
              relation_raw, 'schedule_r_part_ii', NULL,
-             first_year, last_year, n_obs, 'efile_sched_r', '%s'
+             first_year, last_year, n_obs, 'efile_sched_r', '%s', c512
       FROM (
         SELECT ein_a, ein_b,
                max(related_name) AS related_name,
                -- a named controller outranks an 'N/A' asserted in another year
                coalesce(max(ctrl_name), max(ctrl_na)) AS relation_raw,
+               -- TRUE if the filer ever asserted control in any filing year: a
+               -- year with the box blank is silence, not a denial
+               bool_or(controlled_512) AS c512,
                min(tax_year) AS first_year, max(tax_year) AS last_year,
                count(*) AS n_obs
         FROM sr
         WHERE (ein_b IS NOT NULL OR trim(related_name) <> '')
           AND (ein_b IS NULL OR ein_b <> ein_a)
         GROUP BY ein_a, ein_b)",
-      format(base, scientific = FALSE), vintage))
+      .md_relation_cols("controlled_512"), format(base, scientific = FALSE), vintage))
 
     unresolved <- DBI::dbGetQuery(con, "
       SELECT count(*) AS n FROM ein_relation
@@ -251,7 +295,7 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
 
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
   n_gen <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
+    INSERT INTO ein_relation (%s)
     SELECT %s + row_number() OVER (), p.ein, m.ein, NULL, 'group_member',
            'affiliation_code=' || coalesce(m.affiliation_code,'?'),
            'bmf_group_exemption', NULL, NULL, NULL, NULL,
@@ -259,7 +303,7 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
     FROM gen p JOIN gen m ON p.gen = m.gen AND p.ein <> m.ein
     WHERE p.affiliation_code IN ('6','8')
       AND m.affiliation_code IN ('7','9')",
-    format(base, scientific = FALSE)))
+    .md_relation_cols(), format(base, scientific = FALSE)))
 
   orphan <- DBI::dbGetQuery(con, "
     SELECT count(*) AS n FROM (

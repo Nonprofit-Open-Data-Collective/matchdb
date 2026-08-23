@@ -85,20 +85,26 @@ record. That is not true of Parts III and IV, whose counterparties resolve at
 5-9\%.
 }
 
-\section{What is measured but still not stored}{
+\section{\code{controlled_512} is the sharpest signal the form carries}{
 
 \code{SR_02_RLTD_ORG_CTRL_512_X} - is the counterparty a §512(b)(13) controlled
-entity - is the \strong{best} relationship signal on the form: a statutory
-yes/no, 93.1\% populated (2.07M true, 4.02M false), against 68.8\% for the
-controller name. It is what would cleanly split \code{related_entity} into
-controlled-by versus merely-related.
+entity - is a statutory yes/no, \strong{93.1\% populated} (2.07M true, 4.02M false)
+against 68.8\% for the controller name. It is what splits \code{related_entity}
+into controlled-by versus merely-related, and it is the only column on the
+form that answers that question directly rather than by inference from a name.
 
-It is not stored because \code{ein_relation} has no boolean column for it, and
-every ingest writes the table by \strong{positional} \verb{INSERT ... SELECT} of 13
-values. Adding a 14th column silently breaks all six of them unless each is
-rewritten with an explicit column list. That refactor is worth doing and is
-not this change; doing it halfway would leave a column that some ingests fill
-and others corrupt.
+It is encoded four ways across schema versions - \code{0}/\code{1} and \code{false}/\code{true} -
+so both forms are normalised. Anything else becomes \code{NULL}: a blank box is
+silence, not a denial, and coercing it to \code{FALSE} would invent 449,599
+assertions nobody made.
+
+Aggregating to one row per pair uses \code{bool_or}, so a pair is \code{TRUE} if the
+filer asserted control in \strong{any} year. The alternative - \code{bool_and} - would
+let one year with the box blank erase a control relationship stated in every
+other year.
+
+Only Part II populates it. It is \code{NULL} for every other source, which is
+honest: no other disclosure asks the question.
 }
 
 \section{Direction is fixed, not doubled}{

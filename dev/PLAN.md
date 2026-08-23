@@ -386,8 +386,17 @@ relation            enum      disregarded_entity | group_member | group_parent |
                               affiliate | related_entity |
                               dyad_substitutable | successor
 relation_raw        text      the source's own wording, unmapped
+controlled_512      bool      §512(b)(13) controlled entity. Schedule R Part II
+                              only; NULL everywhere else, and NULL for a blank box
 evidence, confidence
 ```
+
+Every writer names its columns via `.md_relation_cols()` rather than relying on
+position. Positional `INSERT ... SELECT` is why this table went five commits
+without a boolean it needed: adding one would have shifted a value in all eight
+writers silently, and a shifted value is not an error. A future column is added
+in two places — the `CREATE TABLE` and that helper — and every ingest keeps
+working.
 
 ### 4a. The relation vocabulary
 
@@ -463,15 +472,21 @@ Note `relation_raw` is unmapped by contract, so a filer who typed `NA` rather
 than `N/A` appears verbatim as `NA` (65,968 rows). Normalising it would be a
 mapping, which belongs downstream.
 
-**The better signal is measured and still not stored.**
-`SR_02_RLTD_ORG_CTRL_512_X` - is the counterparty a §512(b)(13) controlled
-entity - is a statutory yes/no, **93.1% populated** against 68.8% for the
-controller name, and is what would cleanly split `related_entity` into
-controlled-by versus merely-related. It has no home: `ein_relation` has no
-boolean column, and all six ingests write the table by **positional**
-`INSERT ... SELECT` of 13 values, so adding a 14th silently breaks every one of
-them. Rewriting all six with explicit column lists is the prerequisite, and it
-is worth doing on its own terms rather than as a side effect.
+**The sharper signal is `controlled_512`.** `SR_02_RLTD_ORG_CTRL_512_X` - is the
+counterparty a §512(b)(13) controlled entity - is a statutory yes/no, **93.1%
+populated** against 68.8% for the controller name, and unlike a controlling-entity
+name it answers the control question directly rather than by inference. It is
+now a column.
+
+Two encoding decisions worth knowing before filtering on it. The source writes
+the flag four ways across schema versions (`0`/`1` and `false`/`true`); both are
+normalised, and **anything else becomes `NULL` rather than `FALSE`** - a blank
+box is silence, not a denial, and coercing it would invent 449,599 assertions
+nobody made. Aggregating to one row per pair uses `bool_or`, so a pair is `TRUE`
+if control was asserted in *any* year; `bool_and` would let a single year with
+the box blank erase a relationship stated in every other year.
+
+It is `NULL` for every source but Part II, because no other disclosure asks.
 
 Where affiliates go. Not the name table. See §10.
 

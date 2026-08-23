@@ -87,15 +87,23 @@ from `irs527_sched_r`. Expected, not a bug: 527 political organisations are not
 in the BMF-derived entity layer because `irs527` itself has not been ingested to
 `entity` yet. That ingest is the remaining gap.
 
-**Deferred, with a reason.** `SR_02_RLTD_ORG_CTRL_512_X` — the §512(b)(13)
-controlled-entity flag — is the best relationship signal on the form: statutory
-yes/no, **93.1% populated** against 68.8% for the controller name, and exactly
-what would split `related_entity` into controlled-by versus merely-related. It
-is not stored because `ein_relation` has no boolean column and all six ingests
-write it by **positional** `INSERT ... SELECT` of 13 values. Adding a 14th column
-breaks every one of them unless each is rewritten with an explicit column list.
-That refactor is worth doing on its own terms; done halfway it leaves a column
-some ingests fill and others corrupt.
+**Done, in the column-list refactor.** `SR_02_RLTD_ORG_CTRL_512_X` — the
+§512(b)(13) controlled-entity flag — is now the `controlled_512` column. It is
+the best relationship signal the form carries: statutory yes/no, **93.1%
+populated** against 68.8% for the controller name, answering the control
+question directly rather than by inference from a name. It splits
+`related_entity` into controlled-by versus merely-related, which was the point.
+
+Getting there required removing the reason it had been deferred. All eight
+writers used **positional** `INSERT ... SELECT`, so a new column would have
+shifted a value in every one of them without raising an error. They now name
+their columns through a single `.md_relation_cols()` helper — naming them
+separately in each ingest would have recreated the same drift one level up. A
+future column is added in two places (the `CREATE TABLE` and that helper) and
+every ingest keeps working.
+
+Verified by re-running all seven ingests end to end: every source reproduced its
+row count exactly.
 
 ## The queue — all cleared
 

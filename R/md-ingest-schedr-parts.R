@@ -124,13 +124,14 @@ md_ingest_schedr_parts <- function(con = NULL,
     DBI::dbExecute(con, sprintf("DELETE FROM ein_relation WHERE source = '%s'", s$tag))
     base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
     n_new <- DBI::dbExecute(con, sprintf("
-      INSERT INTO ein_relation
+      INSERT INTO ein_relation (%s)
       SELECT %s + row_number() OVER (), ein_a, ein_b, nm, '%s',
              '%s', '%s', NULL, fy, ly, n, '%s', '%s'
       FROM (SELECT ein_a, ein_b, max(nm) AS nm, min(ty) AS fy, max(ty) AS ly,
                    count(*) AS n
             FROM srp GROUP BY ein_a, ein_b)",
-      format(base, scientific = FALSE), s$rel, s$raw, s$ev, s$tag, paste0(s$src, "-v2_2")))
+      .md_relation_cols(), format(base, scientific = FALSE), s$rel, s$raw, s$ev, s$tag,
+      paste0(s$src, "-v2_2")))
     msg("  %s edges added", format(n_new, big.mark = ","))
 
     md_source_pin(s$src, sort(files), version = "v2_2")
