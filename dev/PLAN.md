@@ -44,6 +44,13 @@ before starting:
 * `SCHEDI-ALIAS-FINDINGS.md`, `AUDIT-FINDINGS.md` — what the alias source buys
 * `IDF-ATOMIZE.log`, `REFBUILD-COST.log` — the benchmarks behind §6c
 
+One findings document lives in this repo rather than `pfmatch/dev/`, because it
+was measured against `MATCHDB.duckdb` and the pinned baseline together:
+
+* `GROUP-STRUCTURE-FINDINGS.md` — `group_id`, affiliate and group-return
+  structure, and three rejected proposals. Read it before reopening §4's
+  `ein_relation` or §10's affiliate paragraph.
+
 ---
 
 ## 1. Verdict
@@ -382,6 +389,27 @@ evidence, confidence
 ```
 
 Where affiliates go. Not the name table. See §10.
+
+**`group_id` is derived from this table, not stored in it.** Connected
+components over `relation = 'group_member'` give 3,643 groups covering 446,492
+EINs — 12.1% of the BMF. It is a derived column in the §3 sense (always built,
+never selected), and it has to be derived rather than stored because GEN is not
+stable: a single logical group is already split across multiple GENs today
+(Lions 4, AAU 7, 4-H 12), and Rev. Proc. 2026-8 forces central organisations to
+terminate all but one ruling by 2027-01-22. GEN is evidence feeding the key, not
+the key.
+
+Two constraints on the derivation, both measured:
+
+* **Only `group_member` edges form the components.** Unioning `affiliate` edges
+  in produces a 37,163-EIN giant component across the health-system and
+  university sectors.
+* **Schedule C is not a third structure.** 91.6% of its undirected pairs are
+  already Schedule R edges; it lands as `relation='affiliate'`,
+  `evidence='schedule_c_part_ii_a'`.
+
+`dev/GROUP-STRUCTURE-FINDINGS.md` carries the evidence and the rejected
+alternatives.
 
 `ein_b` is nullable because two real sources cannot fill it. The 527 Schedule R
 gives a counterparty name and address but no EIN, and only about 10% of those
@@ -988,6 +1016,38 @@ The narrow exception: where a subordinate genuinely files under a brand name
 distinct from its legal name, that is an `observed` name on the subordinate's own
 EIN, sourced from Schedule I like any other — already handled by the normal path.
 
+**That exception turns out to be the highest-value item in the whole area, and
+it is bigger than Schedule I.** The BMF assigns most subordinates the *parent's*
+legal name — 75.2% of e-file `AffiliateListing` affiliates carry a BMF name
+different from the one they report for themselves, and in 70% of group returns
+*every* member shares one identical BMF name. So the subordinate's own name is
+usually absent from the reference entirely. The e-file affiliate rosters supply
+it. In a held-out retrieval test those tokens were 0.19% of the index and
+carried 23% of the gain. Ingest `AffiliateListing` names as `observed` variants
+on the subordinates' own EINs, all years — it is a `name`-table ingest of the
+kind Phase 2 already performs, needs no schema change, and is worth pulling
+ahead of the rest of Phase 4.
+
+**Three things in this area were proposed, measured, and rejected**
+(`dev/GROUP-STRUCTURE-FINDINGS.md`):
+
+* **`semantic_group_id`** — a name-similarity cluster nested inside a structural
+  group. Rejected: semantic cohesion is a function of `(variant_class, source,
+  normalize_signature)`, so it is a property of the *spec*, not of the entity,
+  and storing it would bake a spec into the database against §9. It is also
+  redundant inside group rulings (modal name share 0.905) and destructive inside
+  related-entity networks (78.1% of which have no two members sharing a name).
+  Compute `same_group(A,B) AND name_similar(A,B)` pairwise at match time instead.
+* **A `group_signature` token-union index** — union each group's member tokens
+  into one composite row and block against 3,643 of those instead of 3.69M
+  names. Rejected: it cannot be gated (84.9% of non-group EINs hit some
+  signature; keeping 90% of true members admits 89% of non-members), it is
+  biased toward large groups (62.6% of wrong top hits are bigger than the truth),
+  and end to end it buys +1.0 point of rank-1 for +6% candidates.
+* **Address unions** — same idea on addresses. Rejected: median 1.64 distinct
+  cities *per member*, so a city+state block returns a median of 154 groups.
+  Address stays a scoring feature.
+
 **Generated variants stay columns, not rows.** Acronyms and prefixes are pure
 functions of `name_key`. `pf_add_recovery_keys()` already computes them as
 columns (`name_acro`, `name_pre`), which is strictly cheaper than a new row and
@@ -1093,7 +1153,11 @@ Repoint `pf_reference()` at `md_reference()` with the local path as fallback.
 This is the phase that pays back.
 
 **Phase 4 — remaining layers.** `filer_only` EINs, 527s, `ein_relation`,
-`orgtext`. Each is one ingest function against a proven schema.
+`orgtext`. Each is one ingest function against a proven schema. Two additions
+from `dev/GROUP-STRUCTURE-FINDINGS.md`: derive `group_id` from `ein_relation`
+(§4), and ingest e-file `AffiliateListing` names as `observed` variants (§10) —
+the latter is a `name` ingest with no schema change and can move ahead of the
+rest of the phase.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.
