@@ -261,3 +261,69 @@ representational.
 wall-clock consequence is not, because blocking cost depends on token
 distribution rather than row count alone. A probe on one shard would settle it
 and should precede any commitment.
+
+---
+
+## 7. Verification — measured, 2026-08-23
+
+`dev/probes/probe-decomposition-sampled.R` and
+`probe-decomposition-constructed.R`; output in `DECOMPOSITION-PROBE.log`.
+
+### The linear part is exact
+
+300 EINs drawn from the database with 2–4 names and 2–4 addresses each, expanded
+to the full cross-product (≈7 rows per EIN, 21,715 candidate pairs). Queries were
+built to take the **first** name and the **last** address, so the best-matching
+name and the best-matching address deliberately live on *different* reference
+rows — the case where max-of-sums could diverge from sum-of-maxes.
+
+```
+groups compared : 3,360
+exactly equal   : 3,360 (100.0%)
+max |delta|     : 0.000000
+```
+
+### The promotion cross-term decomposes, but only if `geo_state` travels
+
+Two false starts are worth recording, because both looked like confirmations.
+
+**First**, `name_freq` was not passed to `np_compare()`, so `nf` was `NA`,
+`promote` requires `!is.na(nf)`, and the promotion never fired at all. The
+equality was real but tested only the linear half.
+
+**Second**, with `name_freq` supplied the promotion fired on 398 pairs — and the
+floor still never *bound*, because the minimum raw score among promoted pairs was
+0.9305 against a 0.90 floor. Firing is not binding: the floor is a `pmax`, so it
+changes nothing unless the raw score falls below it. Self-matches score too well
+to reach that region.
+
+**Third**, isolating the terms by scoring with `name_geo = c(0, 1)` is invalid.
+The floor ignores the weights, so a "pure geography" score came back as 0.900 —
+the floor, not a geography value — and produced a fake divergence. Term isolation
+requires disabling the floor (`distinct_name_floor = 0`) as well as zeroing the
+weight.
+
+With those corrected, on constructed cases placed inside the binding region
+(a rare name matching exactly, geography agreeing only on state, so raw = 0.68
+against a 0.90 floor):
+
+```
+rare name, bad geo     pureN=1.000 pureG=0.200 | A=0.9000  B=0.9000  MATCH
+split best name/addr   pureN=1.000 pureG=0.950 | A=0.9800  B=0.9800  MATCH
+```
+
+Before `geo_state` was read correctly the same case diverged by exactly 0.18 —
+the gap between the same-state floor (0.90) and the cross-state floor (0.72).
+That is the failure mode this design has to avoid, and it is silent: the answer
+is simply wrong by the width of a threshold, with nothing to indicate it.
+
+**So the decomposed pipeline must carry, per EIN: `max_name_score`, the winning
+name's `variant_class` and `name_freq`, `max_geo_score`, and `geo_state` — and
+must apply the promotion floor after combining, never inside either arm.**
+
+### Cost of the normalization pass
+
+`dev/probes/probe-normalize-cost.R`: 18.1 s per 200,000 name rows and 14.0 s per
+200,000 address rows, extrapolating to **14.6 min** and **21.7 min** for the full
+tables, about 36 minutes in total. Roughly half of each pass is wasted computing
+the other table's columns, which is what §4's `fields =` argument would recover.

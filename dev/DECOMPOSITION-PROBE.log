@@ -1,0 +1,8 @@
+=== floor-binding region: rare name matches, geography does not ===
+rare name, bad geo     pairs=2  pureN=1.000 pureG=0.200 | A=0.9000  B_raw=0.6800  B_floored=0.9000  MATCH
+
+=== best name and best address on DIFFERENT reference rows ===
+split best name/addr   pairs=4  pureN=1.000 pureG=0.950 | A=0.9800  B_raw=0.9800  B_floored=0.9800  MATCH
+
+=== cross-state (the lower floor) ===
+same-state ctrl        pairs=2  pureN=1.000 pureG=0.200 | A=0.9000  B_raw=0.6800  B_floored=0.9000  MATCH
