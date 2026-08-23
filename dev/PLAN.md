@@ -526,7 +526,9 @@ mapping onto `relation` can be revised without re-ingesting.
 ### `source_vintage` — the audit table
 
 ```
-vintage_id, source, origin (remote | local), url, fetched,
+vintage_id, source, origin (remote | local), url,
+fetched, built,                                   -- when acquired / when loaded
+content_vintage, content_vintage_rule,            -- what period the data describes
 upstream_etag, upstream_modified, upstream_size,
 local_md5, row_count, rows_added, build_note,
 npmatch_version, normalize_signature
@@ -535,6 +537,47 @@ npmatch_version, normalize_signature
 One row per ingest. This is `np_manifest()` promoted from a CSV of files to a
 table of loads, and it is what makes any compiled reference explainable six
 months later.
+
+**Three dates, not one, because they differ and only one of them answers "is
+this stale?"**
+
+| column | means | example |
+|---|---|---|
+| `content_vintage` | the period the data *describes* | `2026-07` |
+| `upstream_modified` | when the file was *published* | `2026-08-11` |
+| `fetched` | when we *downloaded* it | `2026-08-21` |
+| `built` | when the table was last *loaded* from it | `2026-08-22` |
+
+The BMF makes the case: published 2026-08-11, but the newest vintage inside it
+is **2026-07**. `md_ingest_bmf()` already computes that and puts it in
+`build_note` as prose, where it cannot be queried.
+
+`fetched` and `built` differ too. `fetched` is copied from the pin, so
+re-running an ingest against an unchanged source leaves it untouched — there is
+currently no way to ask when a table was last built, which is exactly the
+question after a bug fix.
+
+**`content_vintage_rule` records how the date was obtained**, on the same
+value/rule/provenance discipline the NTEE triple uses:
+
+| rule | when |
+|---|---|
+| `measured` | read from the data itself — BMF `last_vintage_ym`, e-file `TAX_YEAR`. Preferred, and available more often than expected. |
+| `declared` | supplied by the collector. The only honest option for a hand-delivered file. |
+| `published` | fell back to `Last-Modified`. Recorded as a fallback so a publication date is never mistaken for a content date. |
+
+The fallback matters because it is the common case: **27 of 33 loads have no
+`upstream_modified` at all.** The e-file CSVs, the locally supplied crosswalks
+and anything hand-delivered return no date, so automatic extraction is the
+exception rather than the default. `md_source_pin(content_vintage = )` therefore
+takes an explicit value, and `version` stays what it is — an identifier and a
+directory name, not a claim about time.
+
+`upstream_etag` is not decoration either. The canonical BMF is published at a
+`latest/` key that is overwritten in place, so "the BMF as of latest" is not
+provenance — the ETag is the only thing that identifies *which* BMF a row came
+from. `md_source_pin()` records it; `md_source_moved()` reports whether upstream
+has been replaced since.
 
 `upstream_etag` is not decoration either. The canonical BMF is published at a
 `latest/` key that is overwritten in place, so "the BMF as of latest" is not
