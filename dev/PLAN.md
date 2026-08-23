@@ -449,12 +449,29 @@ and `evidence` preserve what the source actually said. Promotion out of
 `related_entity` - splitting controlled-by from merely-related, say - is a
 mapping change.
 
-**A known defect blocks exactly that split.** `md_ingest_relations()` puts
-`SR_02_RLTD_ORG_PRIMARY_ACT` into `relation_raw`, so Part II's raw values read
-`HOSPITAL`, `HEALTHCARE`, `low-inc hsng` - the counterparty's *activity*, not the
-relationship. Part II's actual relationship signal, `SR_02_RLTD_ORG_CTRL_NAME_L1`
-(direct controlling entity), is not ingested at all. Fixing it needs a re-ingest
-of 863,976 rows and should land with the self-loop fix noted below.
+**`relation_raw` now carries the controller, not the activity.** An earlier
+version put `SR_02_RLTD_ORG_PRIMARY_ACT` there, so Part II's raw values read
+`HOSPITAL`, `low-inc hsng` - the counterparty's *activity*, which is a property
+of the organisation and not of the relation. It now holds the direct controlling
+entity as written (688,328 rows) or the filer's explicit `N/A` (99,090), so the
+values read `MERCY HOUSING INC`, `TRINITY HEALTH CORPORATION`. Dropping the
+activity costs nothing *here and only here*: Part II counterparties are exempt
+organisations and 119,865 of 119,865 resolve into `entity`, so each one's
+activity is on its own record. Parts III and IV resolve at 5-9% and keep theirs.
+
+Note `relation_raw` is unmapped by contract, so a filer who typed `NA` rather
+than `N/A` appears verbatim as `NA` (65,968 rows). Normalising it would be a
+mapping, which belongs downstream.
+
+**The better signal is measured and still not stored.**
+`SR_02_RLTD_ORG_CTRL_512_X` - is the counterparty a §512(b)(13) controlled
+entity - is a statutory yes/no, **93.1% populated** against 68.8% for the
+controller name, and is what would cleanly split `related_entity` into
+controlled-by versus merely-related. It has no home: `ein_relation` has no
+boolean column, and all six ingests write the table by **positional**
+`INSERT ... SELECT` of 13 values, so adding a 14th silently breaks every one of
+them. Rewriting all six with explicit column lists is the prerequisite, and it
+is worth doing on its own terms rather than as a side effect.
 
 Where affiliates go. Not the name table. See §10.
 

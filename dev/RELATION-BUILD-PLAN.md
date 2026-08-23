@@ -20,7 +20,7 @@ order*.
 
 ```
 relation           evidence                          rows    ein_a    ein_b
-related_entity     schedule_r_part_ii              863,976   96,955  119,865
+related_entity     schedule_r_part_ii              859,843   96,955  119,865
 related_entity     schedule_r_part_iii_partnership 412,151   19,394   40,718
 related_entity     schedule_r_part_iv_corporation  342,433   31,487   63,799
 related_entity     irs527_schedule_r                15,891    8,300        0  (ein_b NULL by design)
@@ -31,10 +31,10 @@ group_member       efile_group_exemption_number      6,012    1,036    5,972
 group_member       nccs_group_metadata_historical    2,913      709    2,913
 group_member       efile_affiliate_listing           2,497      135    2,492
                                                  ---------
-  related_entity     1,635,337
+  related_entity     1,631,204
   group_member         451,358
   disregarded_entity    64,103
-  TOTAL              2,150,798      (was 1,306,825)
+  TOTAL              2,146,665      (was 1,306,825)
 ```
 
 Relation values follow the **§4a vocabulary** in `PLAN.md`. An earlier pass in
@@ -59,15 +59,43 @@ needs a guard before any consumer treats a component as an organisation.
 subordinates' own EINs - the findings §5 item, and the only source of those
 names.
 
-### Two defects surfaced by loading
+### Defects surfaced by loading
 
-* **4,133 self-loops**, all from `md_ingest_relations()` Part II. Every other
-  relation source filters `ein_a = ein_b`; that one does not. One-line fix plus
-  a re-run.
-* **12,519 rows over 6,423 EINs have an `ein_a` not in `entity`**, all from
-  `irs527_sched_r`. Expected, not a bug: 527 political organisations are not in
-  the BMF-derived entity layer because `irs527` itself has not been ingested to
-  `entity` yet. That ingest is the remaining gap.
+**Fixed, in a Part II re-ingest.** Two problems, both in `md_ingest_relations()`,
+both needing the same 863,976-row re-run:
+
+* **4,133 self-loops.** Dropped — an edge from an entity to itself distorts every
+  degree statistic. But the first note calling them "worthless" was wrong:
+  **61.7% disclose a different name under the same EIN** — DBAs
+  (`Backbone Housing Inc (dba Starner Hill)`), former names
+  (`Franciscan Health System FKA ...`), acronyms, and genuinely distinct
+  programmes under one exemption (a union and its 401k plan; a foundation and
+  the school it supports). Exactly the case where IRS reporting structure and
+  operating reality diverge. Nothing is lost, because what is useful is a
+  **name**, and `md_ingest_schedr()` already registers it as an `observed`
+  variant on that EIN — **4,116 of 4,133 (99.6%) were already there**.
+* **`relation_raw` held the wrong column.** It carried the counterparty's
+  *primary activity* (`HOSPITAL`, `low-inc hsng`). It now carries the direct
+  controlling entity, which is the form's actual statement of the relation:
+  688,328 named controllers plus 99,090 explicit `N/A`. Sample values are now
+  `MERCY HOUSING INC`, `TRINITY HEALTH CORPORATION`, `ASCENSION HEALTH`.
+
+Part II: 863,976 → **859,843** rows.
+
+**Still open.** 12,519 rows over 6,423 EINs have an `ein_a` not in `entity`, all
+from `irs527_sched_r`. Expected, not a bug: 527 political organisations are not
+in the BMF-derived entity layer because `irs527` itself has not been ingested to
+`entity` yet. That ingest is the remaining gap.
+
+**Deferred, with a reason.** `SR_02_RLTD_ORG_CTRL_512_X` — the §512(b)(13)
+controlled-entity flag — is the best relationship signal on the form: statutory
+yes/no, **93.1% populated** against 68.8% for the controller name, and exactly
+what would split `related_entity` into controlled-by versus merely-related. It
+is not stored because `ein_relation` has no boolean column and all six ingests
+write it by **positional** `INSERT ... SELECT` of 13 values. Adding a 14th column
+breaks every one of them unless each is rewritten with an explicit column list.
+That refactor is worth doing on its own terms; done halfway it leaves a column
+some ingests fill and others corrupt.
 
 ## The queue — all cleared
 
