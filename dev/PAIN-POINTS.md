@@ -119,9 +119,10 @@ requires a file under `sources/<source>/`, and the supplied crosswalks were in
 
 ## 4. Environment
 
-**An orphaned R process held the DuckDB file lock** after its task reported
+**An orphaned R process held the DuckDB file lock** (twice) after its task reported
 complete, blocking the next query with "File is already open". **Fix:** audit
-`on.exit()` in the ingest wrappers; consider a lock-check helper.
+`on.exit()` in the ingest wrappers; consider a lock-check helper. Note `pkill -f`
+does not reach these on Windows -- `taskkill //PID <n> //F` does.
 
 **Concurrent work on the same repository.** The working tree was checked out to
 `main` mid-session, so the package appeared to lose eighteen files; everything was
