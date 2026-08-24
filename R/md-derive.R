@@ -70,6 +70,48 @@ md_build_derived <- function(con = NULL, what = c("name", "address"),
   invisible(out)
 }
 
+#' Has a re-ingest invalidated the derived tables?
+#'
+#' `md_ingest_*()` functions are idempotent by deleting their own source's rows
+#' and re-inserting, and the re-inserted rows get **freshly assigned** ids —
+#' `base_id <- max(id)` at insert time, not a content-stable key. So any
+#' re-ingest, however small the actual change, invalidates every `name_id` /
+#' `address_id` the derived tables were built against, and `name_derived`'s
+#' `LEFT JOIN` degrades silently rather than erroring: it just matches fewer
+#' rows every time.
+#'
+#' This was found, not anticipated: two backfill re-runs during Phase 0
+#' development left `name_derived` matching only 6,052,242 of 9,662,561 name
+#' rows — every row except the untouched BMF ones — and a compaction pass built
+#' on top of it silently lost every `observed`/`former` name and every EIN
+#' outside the BMF, with no error at any step. See `PAIN-POINTS.md`.
+#'
+#' Call this before anything joins to `name_derived`/`address_derived`, not only
+#' right after ingest — a re-ingest run by someone else, or an earlier session,
+#' leaves no other trace.
+#'
+#' @param con A connection from [md_db()].
+#' @param stop_on_stale Error rather than warn when orphans are found.
+#' @return Invisibly, a two-row data frame of orphan counts.
+#' @export
+md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
+  orphan_name <- DBI::dbGetQuery(con,
+    "SELECT count(*) AS n FROM name a LEFT JOIN name_derived d USING (name_id)
+     WHERE d.name_id IS NULL")$n
+  orphan_addr <- DBI::dbGetQuery(con,
+    "SELECT count(*) AS n FROM address a LEFT JOIN address_derived d USING (address_id)
+     WHERE d.address_id IS NULL")$n
+  out <- data.frame(table = c("name", "address"),
+                    orphaned_rows = c(orphan_name, orphan_addr))
+  if (any(out$orphaned_rows > 0)) {
+    msg <- sprintf(
+      "name_derived/address_derived are stale: %s orphaned name row(s), %s orphaned address row(s). Re-run md_build_derived() before trusting anything joined to them.",
+      format(orphan_name, big.mark = ","), format(orphan_addr, big.mark = ","))
+    if (stop_on_stale) stop(msg, call. = FALSE) else warning(msg, call. = FALSE)
+  }
+  invisible(out)
+}
+
 .md_derive_pass <- function(con, src, id, dest, keep, chunk, sig, msg,
                             shape, select) {
   n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s", src))$n

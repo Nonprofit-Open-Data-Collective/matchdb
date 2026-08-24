@@ -158,10 +158,11 @@ md_ingest_efile_header <- function(version = "v2_2", con = NULL) {
   n_addr <- DBI::dbExecute(con, sprintf("
     INSERT INTO address (address_id, ein, name_id, street_raw, city_raw, state,
                          zip5, variant_class, spell_rank, source, source_vintage,
-                         n_obs)
+                         n_obs, first_vintage, last_vintage)
     SELECT %s + row_number() OVER (), ein, NULL, street_raw, city_raw, state, zip5,
            CASE WHEN spell_rank = 0 THEN 'mailing' ELSE 'historical' END,
-           spell_rank, 'efile990', '%s', n_obs
+           spell_rank, 'efile990', '%s', n_obs,
+           first_year::VARCHAR, last_year::VARCHAR
     FROM hdr_addr", format(base_addr, scientific = FALSE), vintage))
   msg("  %s addresses", format(n_addr, big.mark = ","))
 

@@ -17,6 +17,35 @@ that were merely tedious. Each says what to do about it.
 The expensive category. Everything here produced a plausible result that was
 wrong, or a silent loss.
 
+**Re-ingesting a source silently invalidates every derived table keyed on its
+row ids — the single most consequential finding of this pass.** Every
+`md_ingest_*()` is idempotent by deleting its own source's rows and
+re-inserting, and the re-inserted rows get **freshly assigned** ids —
+`base_id <- max(id)` at the moment of insert, not a content-stable key. Fixing
+the `first_year`/`last_year` bug below required re-running four ingests, and
+that alone left `name_derived` (built earlier, keyed on the old ids) matching
+only 6,052,242 of 9,662,561 name rows — every row except the untouched BMF
+ones. `address_derived` lost 4,185,635 rows the same way.
+
+Nothing errored anywhere in the chain. The `LEFT JOIN` in
+`md_build_compact()` degraded a partial match into fewer output rows, and the
+first symptom was a compaction test whose `variant_class` distribution showed
+zero `observed`/`former` names and a year-envelope fill of exactly 0% — a
+result that looked like a data question ("why did the fix not take?") right up
+until the id-count check showed it was a join question instead. See
+`COMPACTION.md` §0 for the full diagnosis.
+
+**Fixed for now** by rebuilding both derived tables, and **guarded going
+forward** by `md_check_derived_fresh()`, which counts orphaned rows on both
+sides and errors before anything is trusted downstream — called at the top of
+`md_build_compact()`. That closes the silent-failure mode but not the root
+cause: **any** future re-ingest reopens the gap until derived tables are
+rebuilt again by hand. The real fix is one of two structural changes, neither
+done yet: give `name_id`/`address_id` a content-stable derivation instead of a
+running counter, so unchanged rows keep their id across a re-ingest, or make
+`md_ingest_*()` invoke `md_build_derived()` itself as a matter of course rather
+than leaving it to whoever remembers.
+
 **Columns dropped at `INSERT`.** `md_ingest_schedi()` and `md_ingest_schedr()`
 compute `first_year` and `last_year` into their staging tables, and the target
 `name` table has no such columns, so the `INSERT` column list omits them and
