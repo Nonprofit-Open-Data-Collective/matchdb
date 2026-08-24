@@ -140,7 +140,8 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
 
   for (tb in list(c("entity", n_entity), c("name", n_name), c("address", n_addr))) {
     md_record_vintage(con, "bmf_unified", version, tb[1], as.integer(tb[2]),
-                      build_note = sprintf("md_ingest_bmf(); active vintage %s", newest))
+                      build_note = sprintf("md_ingest_bmf(); active vintage %s", newest),
+                      content_vintage = newest, content_vintage_rule = "measured")
   }
 
   counts <- stats::setNames(c(n_entity, n_name, n_addr), c("entity", "name", "address"))

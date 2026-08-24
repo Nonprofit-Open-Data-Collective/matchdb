@@ -122,8 +122,9 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
     format(base_name, scientific = FALSE)))
   DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators)
-    SELECT name_id, ein, name_raw, 'observed', 'schedr', '%s', n_obs, n_corroborators
+                      source_vintage, n_obs, n_corroborators, first_year, last_year)
+    SELECT name_id, ein, name_raw, 'observed', 'schedr', '%s', n_obs, n_corroborators,
+           first_year, last_year
     FROM sr_name", vintage))
   msg("  %s observed names", format(n_alias, big.mark = ","))
 

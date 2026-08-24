@@ -22,8 +22,22 @@ compute `first_year` and `last_year` into their staging tables, and the target
 `name` table has no such columns, so the `INSERT` column list omits them and
 DuckDB accepts it without complaint. 1.9M observed names have no time envelope,
 and the recency ranking in `REDUCTION.md` §3c cannot be applied to names at all.
-**Fix:** add the columns to the `name` DDL; add a validation that every column a
-staging table computes is either inserted or explicitly discarded.
+**Fixed** 2026-08-23: `name` gained `first_year`/`last_year`, and
+`md_ingest_schedi()`, `md_ingest_schedr()` and `md_ingest_efile_header()` were
+already computing the values in their staging tables and just needed the
+columns added to the `INSERT` list. Re-running the three (idempotent) backfilled
+9,662,561 name rows with 3,610,319 now carrying a year envelope — every observed
+and former name, only `bmf` legitimately has none, since a snapshot has no
+per-row year to give. Still open: a validation that every column a staging table
+computes is either inserted or explicitly discarded, so the next instance of
+this is caught at ingest time rather than found by inspection.
+
+**`f1023ez` used `mode(name_raw)` directly**, the exact non-deterministic
+tiebreak `md_modal_sql()` was built to replace (see the next entry) — found
+while fixing the entry above, not by the determinism check that caught the
+Schedule I case originally, which is itself worth noting: the check that found
+one instance did not generalize to finding a second. **Fixed** 2026-08-23,
+moved onto `md_modal_sql()`.
 
 **`mode()` is non-deterministic under ties.** Two runs of the Schedule I ingest
 over byte-identical input produced address counts differing by one: a tie between
@@ -132,7 +146,29 @@ missing.
 
 ---
 
-## 5. Standing rules this produced
+## 5. Structural changes this pass produced
+
+**`source_vintage` needed three dates, not one.** `fetched` alone could not
+answer "is this stale?" — the BMF is published 2026-08-11 but its newest
+internal vintage is 2026-07, and that fact was sitting in `build_note` as prose.
+Added `content_vintage`, `content_vintage_rule` (`measured` / `declared` /
+`published`) and `built`. Backfilled from the data actually loaded rather than
+guessed: `bmf_unified` from the known active vintage, `schedi`/`schedr`/
+`efile_header`/`f1023ez`/`efile_orgtext` from `max(last_year)` or `max(tax_year)`
+in the rows already on disk, `address_crosswalk`/`address_geocoded` from their
+own vintage columns. Sources with no row-level year — the local crosswalks —
+are recorded `declared` from the directory version rather than left blank or
+mislabelled `measured`. `built` could not be reconstructed for rows that
+predate the column, so those were set to `fetched` as a stated lower bound, not
+a measurement.
+
+This is a real answer to "does what we've learned change the table structure":
+yes, once, concretely, and the change was cheap because it was additive
+(`ALTER TABLE ... ADD COLUMN`) rather than a rebuild.
+
+---
+
+## 6. Standing rules this produced
 
 1. State `quote`/`escape` on every CSV read; never accept `ignore_errors`.
 2. No tie-breaking aggregate in an ingest — use `md_modal_sql()`.

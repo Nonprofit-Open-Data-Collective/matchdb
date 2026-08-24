@@ -117,9 +117,9 @@ md_ingest_efile_header <- function(version = "v2_2", con = NULL) {
   base_name <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
   n_name <- DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators)
+                      source_vintage, n_obs, n_corroborators, first_year, last_year)
     SELECT %s + row_number() OVER (), ein, name_raw, final_class, 'efile990', '%s',
-           n_obs, NULL
+           n_obs, NULL, first_year, last_year
     FROM hdr_name2", format(base_name, scientific = FALSE), vintage))
 
   shape <- DBI::dbGetQuery(con, "SELECT final_class, count(*) n FROM hdr_name2 GROUP BY 1 ORDER BY n DESC")

@@ -175,9 +175,9 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
 
   DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators)
+                      source_vintage, n_obs, n_corroborators, first_year, last_year)
     SELECT name_id, ein, name_raw, 'observed', 'schedi', '%s',
-           n_obs, n_corroborators
+           n_obs, n_corroborators, first_year, last_year
     FROM si_name", vintage))
 
   ## ---- addresses, carrying the pairing link -----------------------------------
