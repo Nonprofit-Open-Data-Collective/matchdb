@@ -44,18 +44,19 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param path Path to `metadata-group-number.csv`.
+#' @param version Pinned `meta_group_number` version.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_group_meta <- function(con = NULL, path = NULL) {
+md_ingest_group_meta <- function(con = NULL, path = NULL, version = "2023-09") {
   if (is.null(path)) {
-    path <- md_path("sources", "meta_group_number", "2023-09",
+    path <- md_path("sources", "meta_group_number", version,
                     "metadata-group-number.csv")
   }
   if (!file.exists(path)) stop("no group metadata at ", path, call. = FALSE)
 
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  vintage <- "meta_group_number-2023-09"
+  vintage <- paste0("meta_group_number-", version)
   msg <- function(...) message(sprintf(...))
 
   # The GEN arrives as a float string ("155.0") and the BMF holds it
@@ -102,7 +103,7 @@ md_ingest_group_meta <- function(con = NULL, path = NULL) {
       AND p.ein <> m.ein", .md_relation_cols(), format(base, scientific = FALSE), vintage))
   msg("  %s historical group_member pairs added", format(n_new, big.mark = ","))
 
-  md_record_vintage(con, "meta_group_number", "2023-09",
+  md_record_vintage(con, "meta_group_number", version,
                     "ein_relation:group_member_historical", as.integer(n_new),
                     build_note = "md_ingest_group_meta()")
   total <- .md_n(con, "ein_relation")

@@ -43,8 +43,13 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
 
   KEEP <- c("Ein", "Orgname1", "Orgname2", "Address", "City", "State",
             "Zip", "Zippl4", "Nteecode")
+  # The IRS names the workbooks three ways (?md_f1023ez_urls), so each CSV is
+  # named by its year. Keeping the workbook's name would let the underscore
+  # files (2014-2019) miss the glob below and drop out without an error.
   for (b in books) {
-    csv <- sub("[.]xlsx$", ".csv", b)
+    yr <- regmatches(basename(b), regexpr("[0-9]{4}", basename(b)))
+    if (!length(yr)) stop("no year in workbook name: ", basename(b), call. = FALSE)
+    csv <- file.path(dir, sprintf("f1023ez-approvals-%s.csv", yr))
     if (reconvert || !file.exists(csv)) {
       message("converting ", basename(b))
       md_xlsx_to_csv(b, columns = KEEP, out = csv)

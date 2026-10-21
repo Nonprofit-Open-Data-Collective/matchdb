@@ -176,9 +176,11 @@
 #'
 #' @param version Pinned `efile_related` version.
 #' @param con A connection from [md_db()].
+#' @param bmf_version The `bmf_unified` version the group edges are read from.
+#'   `NULL` reads it from `source_vintage`: the version that loaded `entity`.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_relations <- function(version = "v2_2", con = NULL) {
+md_ingest_relations <- function(version = "v2_2", con = NULL, bmf_version = NULL) {
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
   msg <- function(...) message(sprintf(...))
@@ -285,6 +287,7 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
   }
 
   ## ---- group exemption --------------------------------------------------------
+  if (is.null(bmf_version)) bmf_version <- .md_loaded_version(con, "bmf_unified", "entity")
   DBI::dbExecute(con, "DELETE FROM ein_relation WHERE source = 'bmf_gen'")
   DBI::dbExecute(con, "
     CREATE OR REPLACE TEMP TABLE gen AS
@@ -299,19 +302,21 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
     SELECT %s + row_number() OVER (), p.ein, m.ein, NULL, 'group_member',
            'affiliation_code=' || coalesce(m.affiliation_code,'?'),
            'bmf_group_exemption', NULL, NULL, NULL, NULL,
-           'bmf_gen', 'bmf_unified-v2026-08-11'
+           'bmf_gen', 'bmf_unified-%s'
     FROM gen p JOIN gen m ON p.gen = m.gen AND p.ein <> m.ein
     WHERE p.affiliation_code IN ('6','8')
       AND m.affiliation_code IN ('7','9')",
-    .md_relation_cols(), format(base, scientific = FALSE)))
+    .md_relation_cols(), format(base, scientific = FALSE), bmf_version))
 
+  # Parents are 6 or 8, as in the join above; counting only 6 reported the
+  # church groups as parentless.
   orphan <- DBI::dbGetQuery(con, "
     SELECT count(*) AS n FROM (
       SELECT gen FROM gen GROUP BY gen
-      HAVING sum(CASE WHEN affiliation_code = '6' THEN 1 ELSE 0 END) = 0)")$n
+      HAVING sum(CASE WHEN affiliation_code IN ('6','8') THEN 1 ELSE 0 END) = 0)")$n
   msg("  group exemption: %s parent-to-member pairs; %s groups have no coded parent",
       format(n_gen, big.mark = ","), format(orphan, big.mark = ","))
-  md_record_vintage(con, "bmf_unified", "v2026-08-11", "ein_relation:group_member",
+  md_record_vintage(con, "bmf_unified", bmf_version, "ein_relation:group_member",
                     as.integer(n_gen), build_note = "md_ingest_relations()")
 
   total <- .md_n(con, "ein_relation")
@@ -324,4 +329,18 @@ md_ingest_relations <- function(version = "v2_2", con = NULL) {
 #' @export
 md_relations <- function() {
   c("group_parent", "group_member", "affiliate", "dyad_substitutable", "successor")
+}
+
+# The version of `source` that loaded `table_name`, read from the audit table.
+# An ingest that derives rows from another source's table records that source's
+# version, rather than a literal that goes stale at the next release.
+.md_loaded_version <- function(con, source, table_name) {
+  v <- if (DBI::dbExistsTable(con, "source_vintage")) DBI::dbGetQuery(con,
+    "SELECT version FROM source_vintage WHERE source = ? AND table_name = ?
+     ORDER BY built DESC LIMIT 1", params = list(source, table_name))$version
+  if (!length(v)) {
+    stop("no ", source, " load of ", table_name,
+         " in source_vintage - ingest it first", call. = FALSE)
+  }
+  v
 }

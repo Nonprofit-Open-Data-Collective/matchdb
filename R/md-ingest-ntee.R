@@ -51,12 +51,14 @@
 #'
 #' @param version The pinned `bmf_unified` version (for the active-vintage test).
 #' @param crosswalk Path to `ntee_resolved_crosswalk.csv`.
+#' @param crosswalk_version Pinned `ntee_crosswalk` version, used when `crosswalk` is `NULL`.
 #' @param con A connection from [md_db()].
 #' @return A table of rule counts, invisibly.
 #' @export
-md_ingest_ntee <- function(version, crosswalk = NULL, con = NULL) {
+md_ingest_ntee <- function(version, crosswalk = NULL, con = NULL,
+                           crosswalk_version = "2026-08") {
   if (is.null(crosswalk)) {
-    crosswalk <- md_path("sources", "ntee_crosswalk", "2026-08",
+    crosswalk <- md_path("sources", "ntee_crosswalk", crosswalk_version,
                          "ntee_resolved_crosswalk.csv")
   }
   if (!file.exists(crosswalk)) stop("no NTEE crosswalk at ", crosswalk, call. = FALSE)

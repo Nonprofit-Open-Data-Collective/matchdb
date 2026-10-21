@@ -63,16 +63,17 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param dir Directory of `F9-P00-T00-HEADER-*.CSV`.
+#' @param version Pinned `efile_header` version; also names `dir` when it is `NULL`.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_efile_group <- function(con = NULL, dir = NULL) {
-  if (is.null(dir)) dir <- md_path("sources", "efile_header", "v2_2")
+md_ingest_efile_group <- function(con = NULL, dir = NULL, version = "v2_2") {
+  if (is.null(dir)) dir <- md_path("sources", "efile_header", version)
   glob <- file.path(dir, "F9-P00-T00-HEADER-*.CSV")
   if (!length(Sys.glob(glob))) stop("no header files under ", dir, call. = FALSE)
 
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  vintage <- "efile_header-v2_2"
+  vintage <- paste0("efile_header-", version)
   msg <- function(...) message(sprintf(...))
 
   DBI::dbExecute(con, sprintf("
@@ -149,7 +150,7 @@ md_ingest_efile_group <- function(con = NULL, dir = NULL) {
   msg("  %s group_member pairs added, timestamped by filing year",
       format(n_new, big.mark = ","))
 
-  md_record_vintage(con, "efile_header", "v2_2",
+  md_record_vintage(con, "efile_header", version,
                     "ein_relation:group_member_efile", as.integer(n_new),
                     build_note = "md_ingest_efile_group(); line H(c)")
   msg("  ein_relation: %s rows", format(.md_n(con, "ein_relation"), big.mark = ","))

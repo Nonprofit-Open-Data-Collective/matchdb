@@ -65,10 +65,12 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param which One or more of `"disregarded"`, `"partnership"`, `"corporation"`.
+#' @param version Pinned version of the three Schedule R part sources, e.g. `"v3_1"`.
 #' @return Row counts per part, invisibly.
 #' @export
 md_ingest_schedr_parts <- function(con = NULL,
-                                   which = c("disregarded", "partnership", "corporation")) {
+                                   which = c("disregarded", "partnership", "corporation"),
+                                   version = "v2_2") {
   which <- match.arg(which, several.ok = TRUE)
   spec <- list(
     disregarded = list(src = "efile_disregarded",   tbl = "SR-P01-T01-ID-DISREGARDED-ENTITIES",
@@ -88,7 +90,7 @@ md_ingest_schedr_parts <- function(con = NULL,
 
   for (w in which) {
     s <- spec[[w]]
-    glob <- md_path("sources", s$src, "v2_2", paste0(s$tbl, "-*.CSV"))
+    glob <- md_path("sources", s$src, version, paste0(s$tbl, "-*.CSV"))
     files <- Sys.glob(glob)
     if (!length(files)) { msg("  %s: no files, skipped", w); next }
     msg("%s (%d files)", w, length(files))
@@ -131,11 +133,11 @@ md_ingest_schedr_parts <- function(con = NULL,
                    count(*) AS n
             FROM srp GROUP BY ein_a, ein_b)",
       .md_relation_cols(), format(base, scientific = FALSE), s$rel, s$raw, s$ev, s$tag,
-      paste0(s$src, "-v2_2")))
+      paste0(s$src, "-", version)))
     msg("  %s edges added", format(n_new, big.mark = ","))
 
-    md_source_pin(s$src, sort(files), version = "v2_2")
-    md_record_vintage(con, s$src, "v2_2", paste0("ein_relation:", s$rel), as.integer(n_new),
+    md_source_pin(s$src, sort(files), version = version)
+    md_record_vintage(con, s$src, version, paste0("ein_relation:", s$rel), as.integer(n_new),
                       build_note = sprintf("md_ingest_schedr_parts('%s')", w))
     out[[w]] <- c(rows = prof$n, with_ein = prof$with_ein, added = n_new)
   }

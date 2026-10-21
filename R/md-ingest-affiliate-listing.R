@@ -25,12 +25,13 @@
 #' the subordinate's own name, not the parent's, so registering it aliases
 #' nothing. The parent's name is never copied onto a member.
 #'
-#' @section There is no published table for this:
-#' Unlike Schedule R Part II, `AffiliateListing` has **no `RDB_TABLE`** in the
-#' NCCS concordance, so no CSV exists to download. It is reachable only from raw
-#' XML or the `EFILE20xx.duckdb` extracts, and the CSV this function reads is a
-#' derived extract produced from those. It is pinned like any other source, but
-#' its provenance is a local extraction rather than an upstream URL.
+#' @section Two inputs: the published table, or the old extract:
+#' From e-file v2_3 on, the roster is a published table,
+#' `F9-P00-T01-AFFILIATE-LISTING-<year>.CSV`, covering every year (30,143 rows
+#' for 2009-2025 in v3_1). When `sources/efile_affiliate_listing/<version>/`
+#' holds those files, they are read. Otherwise the function falls back to the
+#' earlier derived extract, `affiliate-listing-2009-2013.csv`, produced from raw
+#' XML before the table existed. Both are pinned like any other source.
 #'
 #' @section The element was renamed in 2013:
 #' Returns through TY2012 use `AffiliateListing/Affiliate` with `Name/`,
@@ -58,20 +59,23 @@
 #' source. Rows where a filer lists its own EIN are self-loops and are dropped.
 #'
 #' @param con A connection from [md_db()].
-#' @param path Path to the derived `affiliate-listing-*.csv`.
+#' @param path Path to a derived `affiliate-listing-*.csv`. `NULL` looks in the
+#'   `version` source directory, preferring the published tables.
 #' @param guard Run [md_guard_observed()] on the observed rows of source `efile990`.
+#' @param version Pinned `efile_affiliate_listing` version, e.g. `"v3_1"`.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE) {
-  if (is.null(path)) {
-    path <- md_path("sources", "efile_affiliate_listing", "v2009-2013",
-                    "affiliate-listing-2009-2013.csv")
-  }
-  if (!file.exists(path)) stop("no affiliate listing extract at ", path, call. = FALSE)
+md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE,
+                                        version = "v2009-2013") {
+  src_sql <- .md_roster_source("efile_affiliate_listing", version, path,
+    table = "F9-P00-T01-AFFILIATE-LISTING",
+    extract = "affiliate-listing-2009-2013.csv",
+    cols = c(member_ein = "F9_00_AFFIL_EIN", member_name1 = "F9_00_AFFIL_NAME_L1",
+             member_name2 = "F9_00_AFFIL_NAME_L2"))
 
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  vintage <- "efile_affiliate_listing-v2009-2013"
+  vintage <- paste0("efile_affiliate_listing-", version)
   msg <- function(...) message(sprintf(...))
 
   DBI::dbExecute(con, sprintf("
@@ -86,10 +90,10 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE) {
              nullif(trim(member_name1),'') AS nm1,
              nullif(trim(member_name2),'') AS nm2,
              try_cast(tax_year AS INT)     AS ty
-      FROM read_csv_auto('%s', ALL_VARCHAR=TRUE)
+      FROM %s
       WHERE length(regexp_replace(member_ein,'[^0-9]','','g')) = 9
         AND length(regexp_replace(filer_ein, '[^0-9]','','g')) = 9)
-    WHERE pd <> md", gsub("\\\\", "/", path)))
+    WHERE pd <> md", src_sql))
   msg("  %s roster rows over %s subordinate EINs",
       format(.md_n(con, "afl"), big.mark = ","),
       format(DBI::dbGetQuery(con, "SELECT count(DISTINCT member_ein) n FROM afl")$n,
@@ -139,10 +143,10 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE) {
     WHERE NOT EXISTS (SELECT 1 FROM entity e WHERE e.ein = a.member_ein)")$n
   msg("  %s subordinate EINs are not in `entity` at all", format(unknown, big.mark = ","))
 
-  md_record_vintage(con, "efile_affiliate_listing", "v2009-2013",
+  md_record_vintage(con, "efile_affiliate_listing", version,
                     "ein_relation:group_member", as.integer(n_rel),
                     build_note = "md_ingest_affiliate_listing()")
-  md_record_vintage(con, "efile_affiliate_listing", "v2009-2013",
+  md_record_vintage(con, "efile_affiliate_listing", version,
                     "name:observed", as.integer(n_nm),
                     build_note = "md_ingest_affiliate_listing(); subordinate self-reported names")
   msg("  ein_relation: %s rows | name: %s rows",
@@ -153,4 +157,31 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE) {
   # fiscal-sponsor test reads Schedule I only.
   if (guard) md_guard_observed(con, sources = "efile990")
   invisible(stats::setNames(c(n_rel, novel, n_nm), c("edges", "novel_edges", "names")))
+}
+
+# The FROM clause for a group roster: the published e-file tables when the
+# version directory holds them, else the older derived extract. Either way it
+# yields filer_ein, member_ein, member_name1, member_name2 (maybe NULL) and
+# tax_year as text, which is all the roster ingests read.
+.md_roster_source <- function(source, version, path, table, extract, cols) {
+  if (is.null(path)) {
+    dir <- md_path("sources", source, version)
+    glob <- file.path(dir, paste0(table, "-*.CSV"))
+    if (length(Sys.glob(glob))) {
+      name2 <- if ("member_name2" %in% names(cols)) cols[["member_name2"]] else "NULL"
+      return(sprintf(
+        "(SELECT ORG_EIN AS filer_ein, %s AS member_ein, %s AS member_name1,
+                 %s AS member_name2, TAX_YEAR AS tax_year
+          FROM read_csv_auto('%s', ALL_VARCHAR=TRUE, union_by_name=TRUE,
+                             quote='\"', escape='\"'))",
+        cols[["member_ein"]], cols[["member_name1"]], name2,
+        gsub("\\\\", "/", glob)))
+    }
+    path <- file.path(dir, extract)
+  }
+  if (!file.exists(path)) {
+    stop("no ", source, " input: neither ", table, "-*.CSV nor ", basename(path),
+         " in ", dirname(path), call. = FALSE)
+  }
+  sprintf("read_csv_auto('%s', ALL_VARCHAR=TRUE)", gsub("\\\\", "/", path))
 }
