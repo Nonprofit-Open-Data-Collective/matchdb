@@ -52,28 +52,32 @@ different thing from an EIN that was never disclosed. A consumer joining
 per-source rate is reported on every run.
 }
 
-\section{Why they are all \code{affiliate} rather than new enum values}{
+\section{Part I is a different relation from Parts III and IV}{
 
-\code{relation} is a frozen enumeration (§3a). Adding \code{disregarded_entity} or
-\code{taxable_subsidiary} would be a schema change, and the case for it is not yet
-made - nothing downstream consumes the distinction today. So all three land as
-\code{affiliate}, and the part is carried in \code{evidence}
+See the §4a vocabulary. Parts III and IV describe organisations the filer
+controls, owns a share of, or shares governance with - \code{related_entity}. Part I
+describes an entity with \strong{no separate tax existence at all}, whose activity
+is reported on the filer's own return. That is a tighter tie than any
+disclosure on the rest of the form, so it gets its own value,
+\code{disregarded_entity}.
+
+The part is additionally carried in \code{evidence}
 (\code{schedule_r_part_i_disregarded}, \code{..._part_iii_partnership},
-\code{..._part_iv_corporation}), which is exactly what \code{evidence} is for. Promoting
-any of them to its own relation later is a mapping change, not a re-ingest.
+\code{..._part_iv_corporation}), so the taxable/exempt distinction inside
+\code{related_entity} survives without needing its own enum value.
 }
 
 \section{A deferred question about disregarded entities}{
 
-A disregarded entity has no separate tax existence - its activity is reported
-on the parent's return - so its name is arguably a name the \emph{parent} operates
-under, which would make it closer to a \code{dba} than to an affiliate. That would
-be a \code{name} row on the parent's EIN, not a relation.
+Because a disregarded entity has no separate tax existence, its name is
+arguably a name the \emph{parent} operates under - closer to a \code{dba} than to a
+relation at all. That would be a \code{name} row on the parent's EIN.
 
-It is deliberately \strong{not} done here. §10 forbids casually aliasing an
-affiliate onto a parent, and the difference between "disregarded for tax" and
-"the same organisation for matching" has not been measured. Recording the
-relation keeps the option open; writing the alias would not be reversible.
+It is deliberately \strong{not} done here. §10 forbids casually aliasing one
+organisation's name onto another, and the difference between "disregarded for
+tax" and "the same organisation for matching" has not been measured.
+Recording the relation keeps the option open; writing the alias would not be
+reversible.
 }
 
 \section{An ingest hazard, and it is not the one documented for 527}{

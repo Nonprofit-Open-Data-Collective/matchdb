@@ -1,0 +1,70 @@
+name: excluding 1,576,173 in_care_of rows (not an organisation identity)
+name_compact: 6,254,025 rows from 8,086,388 eligible input rows (22.7% reduction)
+address_compact: 18,546,417 raw -> 13,553,272 after exact dedupe -> 11,121,621 after domination pruning (40.0% total reduction)
+
+build time: 0.6 min 
+------------------------------------------------------------------------------ 
+NAME COMPACT 
+   n_rows    eins
+1 6254025 4016683
+ 
+variant_class after collapsing across sources: 
+  variant_class       n
+1         legal 4042666
+2      observed 1173324
+3           dba  936772
+4        former  101263
+ 
+source_mask popcount (how many sources corroborate one name): 
+  n_sources       n
+1         1 5100858
+2         2  794242
+3         3  303045
+4         4   55657
+5         5     223
+ 
+n_eins_sharing distribution (recomputed on the real name_key): 
+      bucket  n_keys  n_rows
+1 1 (unique) 4416087 4416087
+2        2-3  288108  627402
+3       4-10   48665  264890
+4     11-100   11884  294670
+5       100+    1164  650976
+ 
+year envelope fill (post section-0 fixes): 
+   pct
+1 43.7
+------------------------------------------------------------------------------ 
+ADDRESS COMPACT 
+    n_rows    eins
+1 11121621 4013572
+ 
+source_mask popcount: 
+  n_sources       n
+1         1 7425757
+2         2 2983787
+3         3  589746
+4         4  112699
+5         5    9608
+6         6      24
+ 
+street_key fill after domination pruning (should be much higher than raw): 
+  pct_street
+1       82.4
+  pct_street_raw_before
+1                  76.3
+ 
+vintage_year fill and range (the derived canonical key, section 0's fix): 
+  pct   lo   hi
+1 100 1989 2026
+------------------------------------------------------------------------------ 
+DOMINATION PRUNING: sample of what it caught 
+             ein     city_key state  zip5 survives_as_fuller_row
+1 EIN-47-1421958        LEROY    IL 61752                      4
+2 EIN-47-1432312     PATERSON    NJ 07514                      3
+3 EIN-47-1433249      ORLANDO    FL 32819                      2
+4 EIN-47-1447861 TIMMONSVILLE    SC 29161                      1
+5 EIN-47-1458098    CASTLETON    VT 05735                      2
+6 EIN-47-1461418    TEXARKANA    TX 75503                      2
+------------------------------------------------------------------------------ 
+db size: 7.32 GB 

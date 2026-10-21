@@ -117,9 +117,9 @@ md_ingest_efile_header <- function(version = "v2_2", con = NULL) {
   base_name <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
   n_name <- DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators)
+                      source_vintage, n_obs, n_corroborators, first_year, last_year)
     SELECT %s + row_number() OVER (), ein, name_raw, final_class, 'efile990', '%s',
-           n_obs, NULL
+           n_obs, NULL, first_year, last_year
     FROM hdr_name2", format(base_name, scientific = FALSE), vintage))
 
   shape <- DBI::dbGetQuery(con, "SELECT final_class, count(*) n FROM hdr_name2 GROUP BY 1 ORDER BY n DESC")
@@ -158,10 +158,11 @@ md_ingest_efile_header <- function(version = "v2_2", con = NULL) {
   n_addr <- DBI::dbExecute(con, sprintf("
     INSERT INTO address (address_id, ein, name_id, street_raw, city_raw, state,
                          zip5, variant_class, spell_rank, source, source_vintage,
-                         n_obs)
+                         n_obs, first_vintage, last_vintage)
     SELECT %s + row_number() OVER (), ein, NULL, street_raw, city_raw, state, zip5,
            CASE WHEN spell_rank = 0 THEN 'mailing' ELSE 'historical' END,
-           spell_rank, 'efile990', '%s', n_obs
+           spell_rank, 'efile990', '%s', n_obs,
+           first_year::VARCHAR, last_year::VARCHAR
     FROM hdr_addr", format(base_addr, scientific = FALSE), vintage))
   msg("  %s addresses", format(n_addr, big.mark = ","))
 

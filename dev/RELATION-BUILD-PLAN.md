@@ -6,10 +6,10 @@ order*.
 
 `ein_relation` holds two structures that must not be merged (findings §2):
 
-* **group structure** — `relation IN ('group_parent','group_member')`, sourced
+* **group structure** — `relation = 'group_member'`, sourced
   from the group exemption process. Feeds `group_id`.
-* **related-entity structure** — `relation = 'affiliate'` and the dyad
-  relations, sourced from voluntary disclosure. Feeds `related_entity_id`.
+* **related-entity structure** — `relation IN ('related_entity','disregarded_entity')`, sourced
+  from voluntary disclosure. Feeds `related_entity_id`.
   **Never** enters `group_id` components: unioning them produces a giant
   component across the health and university sectors — 37,163 EINs before this
   build, **117,869 after**.
@@ -19,22 +19,29 @@ order*.
 **Queue cleared 2026-08-22.** Every source in tranches A, B and C is loaded.
 
 ```
-relation     evidence                          rows    ein_a    ein_b
-affiliate    schedule_r_part_ii              863,976   96,955  119,865
-affiliate    schedule_r_part_iii_partnership 412,151   19,394   40,718
-affiliate    schedule_r_part_iv_corporation  342,433   31,487   63,799
-affiliate    schedule_r_part_i_disregarded    64,103   15,603   33,327
-affiliate    irs527_schedule_r                15,891    8,300        0   (ein_b NULL by design)
-affiliate    schedule_c_part_ii_a                886      157      431
-group_member bmf_group_exemption             439,936    3,580  439,936
-group_member efile_group_exemption_number      6,012    1,036    5,972
-group_member nccs_group_metadata_historical    2,913      709    2,913
-group_member efile_affiliate_listing           2,497      135    2,492
-                                            ---------
-  affiliate    1,699,440
-  group_member   451,358
-  TOTAL        2,150,798      (was 1,306,825)
+relation           evidence                          rows    ein_a    ein_b
+related_entity     schedule_r_part_ii              859,843   96,955  119,865
+related_entity     schedule_r_part_iii_partnership 412,151   19,394   40,718
+related_entity     schedule_r_part_iv_corporation  342,433   31,487   63,799
+related_entity     irs527_schedule_r                15,891    8,300        0  (ein_b NULL by design)
+related_entity     schedule_c_part_ii_a                886      157      431
+disregarded_entity schedule_r_part_i_disregarded    64,103   15,603   33,327
+group_member       bmf_group_exemption             439,936    3,580  439,936
+group_member       efile_group_exemption_number      6,012    1,036    5,972
+group_member       nccs_group_metadata_historical    2,913      709    2,913
+group_member       efile_affiliate_listing           2,497      135    2,492
+                                                 ---------
+  related_entity     1,631,204
+  group_member         451,358
+  disregarded_entity    64,103
+  TOTAL              2,146,665      (was 1,306,825)
 ```
+
+Relation values follow the **§4a vocabulary** in `PLAN.md`. An earlier pass in
+this build labelled all six non-group sources `affiliate`; that was a catch-all,
+and wrong — "affiliate" means a federated chapter in sector usage, which is close
+to group structure and nothing like a taxable subsidiary. §4a has the reasoning,
+including why `affiliate` is now precisely defined and holds zero rows.
 
 Derived components, for comparison with `GROUP-STRUCTURE-FINDINGS.md`:
 
@@ -52,15 +59,51 @@ needs a guard before any consumer treats a component as an organisation.
 subordinates' own EINs - the findings §5 item, and the only source of those
 names.
 
-### Two defects surfaced by loading
+### Defects surfaced by loading
 
-* **4,133 self-loops**, all from `md_ingest_relations()` Part II. Every other
-  relation source filters `ein_a = ein_b`; that one does not. One-line fix plus
-  a re-run.
-* **12,519 rows over 6,423 EINs have an `ein_a` not in `entity`**, all from
-  `irs527_sched_r`. Expected, not a bug: 527 political organisations are not in
-  the BMF-derived entity layer because `irs527` itself has not been ingested to
-  `entity` yet. That ingest is the remaining gap.
+**Fixed, in a Part II re-ingest.** Two problems, both in `md_ingest_relations()`,
+both needing the same 863,976-row re-run:
+
+* **4,133 self-loops.** Dropped — an edge from an entity to itself distorts every
+  degree statistic. But the first note calling them "worthless" was wrong:
+  **61.7% disclose a different name under the same EIN** — DBAs
+  (`Backbone Housing Inc (dba Starner Hill)`), former names
+  (`Franciscan Health System FKA ...`), acronyms, and genuinely distinct
+  programmes under one exemption (a union and its 401k plan; a foundation and
+  the school it supports). Exactly the case where IRS reporting structure and
+  operating reality diverge. Nothing is lost, because what is useful is a
+  **name**, and `md_ingest_schedr()` already registers it as an `observed`
+  variant on that EIN — **4,116 of 4,133 (99.6%) were already there**.
+* **`relation_raw` held the wrong column.** It carried the counterparty's
+  *primary activity* (`HOSPITAL`, `low-inc hsng`). It now carries the direct
+  controlling entity, which is the form's actual statement of the relation:
+  688,328 named controllers plus 99,090 explicit `N/A`. Sample values are now
+  `MERCY HOUSING INC`, `TRINITY HEALTH CORPORATION`, `ASCENSION HEALTH`.
+
+Part II: 863,976 → **859,843** rows.
+
+**Still open.** 12,519 rows over 6,423 EINs have an `ein_a` not in `entity`, all
+from `irs527_sched_r`. Expected, not a bug: 527 political organisations are not
+in the BMF-derived entity layer because `irs527` itself has not been ingested to
+`entity` yet. That ingest is the remaining gap.
+
+**Done, in the column-list refactor.** `SR_02_RLTD_ORG_CTRL_512_X` — the
+§512(b)(13) controlled-entity flag — is now the `controlled_512` column. It is
+the best relationship signal the form carries: statutory yes/no, **93.1%
+populated** against 68.8% for the controller name, answering the control
+question directly rather than by inference from a name. It splits
+`related_entity` into controlled-by versus merely-related, which was the point.
+
+Getting there required removing the reason it had been deferred. All eight
+writers used **positional** `INSERT ... SELECT`, so a new column would have
+shifted a value in every one of them without raising an error. They now name
+their columns through a single `.md_relation_cols()` helper — naming them
+separately in each ingest would have recreated the same drift one level up. A
+future column is added in two places (the `CREATE TABLE` and that helper) and
+every ingest keeps working.
+
+Verified by re-running all seven ingests end to end: every source reproduced its
+row count exactly.
 
 ## The queue — all cleared
 
@@ -68,19 +111,19 @@ Ordered as worked: readiness × value.
 
 | # | source | feeds | ingest function | edges added |
 |---|---|---|---|---|
-| A1 | `irs527_related` — 527 Schedule R | affiliate, `ein_b` NULL | `md_ingest_irs527_related()` | 15,891 |
+| A1 | `irs527_related` — 527 Schedule R | related_entity, `ein_b` NULL | `md_ingest_irs527_related()` | 15,891 |
 | A2 | `efile_header` H(c) `GroupExemptionNum` | group_member | `md_ingest_efile_group()` | 6,012 |
-| B1 | `SR-P03` taxable partnerships | affiliate | `md_ingest_schedr_parts("partnership")` | 412,151 |
-| B2 | `SR-P04` taxable corporations/trusts | affiliate | `md_ingest_schedr_parts("corporation")` | 342,433 |
-| B3 | `SR-P01` disregarded entities | affiliate | `md_ingest_schedr_parts("disregarded")` | 64,103 |
+| B1 | `SR-P03` taxable partnerships | related_entity | `md_ingest_schedr_parts("partnership")` | 412,151 |
+| B2 | `SR-P04` taxable corporations/trusts | related_entity | `md_ingest_schedr_parts("corporation")` | 342,433 |
+| B3 | `SR-P01` disregarded entities | disregarded_entity | `md_ingest_schedr_parts("disregarded")` | 64,103 |
 | C1 | e-file `AffiliateListing` | group_member + `observed` names | `md_ingest_affiliate_listing()` | 2,497 + 2,880 names |
-| C2 | e-file `AffiliatedGroupSchedule` (Sch C) | affiliate | `md_ingest_sched_c_affil()` | 886 |
+| C2 | e-file `AffiliatedGroupSchedule` (Sch C) | related_entity | `md_ingest_sched_c_affil()` | 886 |
 
-Measured EIN-resolution rates for the tranche-B counterparties, which settle the
-open question below: **disregarded 8.4%, partnership 5.2%, corporation 9.1%**.
-All comparable to the 527 case (14.8%), all far below Part II. They stay
-`affiliate` with the part carried in `evidence`; the reasoning is in
-`?md_ingest_schedr_parts`.
+Measured EIN-resolution rates for the tranche-B counterparties: **disregarded
+8.4%, partnership 5.2%, corporation 9.1%**. All comparable to the 527 case
+(14.8%), all far below Part II. That rate settled the taxable/exempt question:
+they stay `related_entity` with the part carried in `evidence`. Part I is the
+exception and gets its own value — see §4a and `?md_ingest_schedr_parts`.
 
 ### Deliberately not loaded
 
@@ -125,11 +168,11 @@ a registry row and a download. Each is one `md_ingest_*` against the proven
 Schedule R shape.
 
 Settled by measurement (rates above): Parts III and IV describe related
-*taxable* entities — partnerships and C-corps. Those are not nonprofits and are
-mostly outside the BMF universe, so they behave like the 527 case (`ein_b`
-frequently unresolvable). They do not get a distinct `relation` value - `relation`
-is a frozen enumeration and nothing downstream consumes the distinction yet, so the
-part is carried in `evidence` instead.
+*taxable* entities — partnerships and C-corps, mostly outside the BMF universe,
+so they behave like the 527 case (`ein_b` frequently unresolvable). They are
+still `related_entity` — the tie is control or ownership regardless of the
+counterparty's tax status — with the part carried in `evidence`. Part I is
+different in kind and gets `disregarded_entity` (§4a).
 
 ## Tranche C — requires XML extraction
 

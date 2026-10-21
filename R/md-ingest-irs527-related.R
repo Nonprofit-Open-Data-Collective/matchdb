@@ -16,18 +16,28 @@
 #' that are largely outside the exempt universe altogether. A consumer treating
 #' `related_name` as resolvable should expect roughly one in seven to resolve.
 #'
-#' @section The whole tail maps to `affiliate`, deliberately:
+#' @section The whole tail maps to `related_entity`, deliberately:
 #' `ENTITY_RELATIONSHIP` is free text with 528 distinct values. `Connected`
 #' (54,660) and `Affiliated` (5,801) are 97.4% of rows; the tail runs
 #' `Sponsor` (103), `Partner` (73), `Connected Organization` (56), and on down
 #' to single-occurrence strings.
 #'
-#' Every one of them maps to `relation = 'affiliate'`. The alternative - reading
-#' sub-types out of the free text - would manufacture a taxonomy the filers were
-#' never asked to use, and `Common candidate-CA 33rd Assembly Dist.` is not a
-#' relation type. `relation_raw` keeps the original string, so a later mapping
-#' can be derived without re-ingesting. That is the §4 contract for `relation_raw`
-#' and this is the source it was written for.
+#' Every one of them maps to `relation = 'related_entity'` (§4a). A "connected
+#' organisation" is the body that established, administers or funds the political
+#' organisation - a support and control tie, not loose coordination. That places
+#' it with Schedule R rather than in the `coalition` band, even though the
+#' counterparty is usually a corporation or union rather than a nonprofit.
+#'
+#' The alternative - reading sub-types out of the free text - would manufacture a
+#' taxonomy the filers were never asked to use, and
+#' `Common candidate-CA 33rd Assembly Dist.` is not a relation type.
+#' `relation_raw` keeps the original string, so a later mapping can be derived
+#' without re-ingesting. That is the §4 contract for `relation_raw` and this is
+#' the source it was written for.
+#'
+#' Note what this source is *not*: two organisations that both appear as
+#' connected to the same political organisation are a `coalition`, and that is a
+#' derived co-membership over a shared counterparty, never a stored edge. §4a.
 #'
 #' `None` (42 rows) is kept rather than dropped: the filer still named an entity
 #' on Schedule R and merely declined to characterise the tie. The disclosure is
@@ -92,15 +102,15 @@ md_ingest_irs527_related <- function(con = NULL, path = NULL) {
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
 
   n_new <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
-    SELECT %s + row_number() OVER (), ein_a, NULL, related_name, 'affiliate',
+    INSERT INTO ein_relation (%s)
+    SELECT %s + row_number() OVER (), ein_a, NULL, related_name, 'related_entity',
            relation_raw, 'irs527_schedule_r', NULL,
            NULL, NULL, n_obs, 'irs527_sched_r', '%s'
     FROM (
       SELECT ein_a, related_name, relation_raw, count(*) AS n_obs
       FROM sr527 GROUP BY ein_a, related_name, relation_raw)",
-    format(base, scientific = FALSE), vintage))
-  msg("  %s affiliate rows added (ein_b NULL by construction)",
+    .md_relation_cols(), format(base, scientific = FALSE), vintage))
+  msg("  %s related_entity rows added (ein_b NULL by construction)",
       format(n_new, big.mark = ","))
 
   known <- DBI::dbGetQuery(con, "
@@ -111,7 +121,7 @@ md_ingest_irs527_related <- function(con = NULL, path = NULL) {
       format(known, big.mark = ","), format(n_ein, big.mark = ","))
 
   md_record_vintage(con, "irs527_related", "v2024-11-15",
-                    "ein_relation:affiliate", as.integer(n_new),
+                    "ein_relation:related_entity", as.integer(n_new),
                     build_note = "md_ingest_irs527_related(); ein_b unresolved")
   msg("  ein_relation: %s rows", format(.md_n(con, "ein_relation"), big.mark = ","))
   invisible(stats::setNames(c(n_raw, n_self, n_new),

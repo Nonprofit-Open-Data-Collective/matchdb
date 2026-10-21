@@ -1,6 +1,22 @@
 # matchdb — development plan
 
-**Status: proposal, 2026-08-21. No code written yet.**
+**Status: proposal, 2026-08-21. Updated 2026-10-21: Phase 0 complete; database
+built ahead of the compile step; Phases 1–3 not started.**
+
+> **Where the work stands.** The build has not followed the phase order below.
+> Phase 0 is finished (see `PROCESS.md` §6). Rather than stop at a BMF-only
+> Phase 1, the first pass ingested every planned source, so the archive is
+> already Phase 4 in scope. The ingest functions are in `R/md-ingest-*.R`.
+> All five core tables are populated (`entity` 4.0M, `name` 9.7M, `address`
+> 18.5M, `orgtext` 15.1M rows), and `ein_relation` holds 2.15M edges with every
+> queued source loaded (`RELATION-BUILD-PLAN.md`). `PAIN-POINTS.md` treats this
+> as a deliberate dry run, to be rebuilt once the process is proven robust.
+>
+> In `REDUCTION.md` §8's build order, step 1 (derived columns) is done and step 2
+> (compact form) has been drafted and tested (`COMPACTION.md`). Steps 3–5 are
+> not started: `cluster_id`, `md_spec()`/`md_compile()`, and the named tiers.
+> With no `md_compile()` yet, **neither the Phase 1 gate nor the Phase 2 gate has
+> been run**, and nothing has been published (Phase 3).
 
 This is the design document for `matchdb`, written before implementation so the
 boundaries can be argued about while they are still cheap to move. It was
@@ -382,11 +398,111 @@ EIN-keyed, deliberately outside the name/address selection logic. See §10.
 ein_a               EIN2
 ein_b               EIN2      NULL when the counterparty has no EIN
 related_name        text      the counterparty as written, when ein_b is NULL
-relation            enum      group_parent | group_member | affiliate |
+relation            enum      disregarded_entity | group_member | group_parent |
+                              affiliate | related_entity |
                               dyad_substitutable | successor
 relation_raw        text      the source's own wording, unmapped
+controlled_512      bool      §512(b)(13) controlled entity. Schedule R Part II
+                              only; NULL everywhere else, and NULL for a blank box
 evidence, confidence
 ```
+
+Every writer names its columns via `.md_relation_cols()` rather than relying on
+position. Positional `INSERT ... SELECT` is why this table went five commits
+without a boolean it needed: adding one would have shifted a value in all eight
+writers silently, and a shifted value is not an error. A future column is added
+in two places — the `CREATE TABLE` and that helper — and every ingest keeps
+working.
+
+### 4a. The relation vocabulary
+
+These words already mean specific things in the sector, and an earlier draft of
+this build used `affiliate` as a catch-all for six different disclosures. That
+was wrong: in nonprofit usage "affiliate" means a **federated chapter**, which is
+close to group structure and nothing like a hospital system's taxable subsidiary.
+The enum is ordered by **strength of tie** - how substitutable the two EINs are -
+because that is the axis a matcher acts on.
+
+| relation | definition | sources |
+|---|---|---|
+| `disregarded_entity` | not a separate taxpayer; activity reported on the other's own return | Sch R Part I |
+| `group_member` | IRS group exemption - applied for, GEN-registered, granted by the IRS | BMF GEN, 990 line H(c), NCCS historical, `AffiliateListing` |
+| `affiliate` | federated chapter structure **without** a group exemption | none yet - see below |
+| `related_entity` | control, ownership, or shared governance | Sch R Parts II/III/IV, Sch C Part II-A, 527 Sch R |
+| `coalition` | coordination without control | **derived, never stored** |
+
+`group_parent` remains reserved for the inverse direction and is unused - a row
+already reads "`ein_b` is a `relation` of `ein_a`", and storing both directions
+doubles the table to say nothing new. `dyad_substitutable` and `successor` are
+likewise unused so far.
+
+**`affiliate` is defined and deliberately empty.** The population is real -
+4,774 organisations carry BMF `affiliation_code` 1 or 2 (network parent,
+network intermediate) and **not one of them has a GEN**, which is exactly
+federated structure outside the group exemption process. But the BMF names the
+*parents* and never says which organisations report to them, the same wall
+`md_ingest_relations()` hits with intermediates. So the category is defined,
+holds zero rows, and will until a source states the edges. That is better than
+leaving it as a catch-all: nothing is mislabelled into it now.
+
+**The IRS uses the word differently, which is where the confusion started.** The
+e-file element for a group-return roster is literally `AffiliateListing`, so the
+IRS says "affiliate" where this vocabulary says `group_member`. That source
+correctly produces `group_member` rows despite its name.
+
+**`coalition` is a latent construct, not a disclosure.** Two organisations that
+both support the same 501(c)(4) or 527 coordinate without sharing governance -
+but no filing states that tie. It is inferred from co-membership over a shared
+counterparty, so it is derived at consumption time from the observed relations,
+never materialised. Materialising it would also be a clique, which §4 forbids on
+its own.
+
+Two judgement calls worth recording, because both went against first instinct:
+
+* **Schedule C Part II-A is `related_entity`, not `coalition`.** §4911(f) defines
+  an affiliated group by a *control* test - one organisation bound by another's
+  decisions on legislative issues, or enough board overlap to control them - and
+  834 of its 886 edges (94%) already exist as Schedule R Part II edges. A looser
+  tie would not overlap that heavily.
+* **527 Schedule R is `related_entity`, not `coalition`.** A "connected
+  organisation" established, administers or funds the political organisation.
+  That is a support and control tie. The coalition is the *derived* relation
+  between two organisations connected to the same one.
+
+A `relation` value can be revised without re-ingesting, because `relation_raw`
+and `evidence` preserve what the source actually said. Promotion out of
+`related_entity` - splitting controlled-by from merely-related, say - is a
+mapping change.
+
+**`relation_raw` now carries the controller, not the activity.** An earlier
+version put `SR_02_RLTD_ORG_PRIMARY_ACT` there, so Part II's raw values read
+`HOSPITAL`, `low-inc hsng` - the counterparty's *activity*, which is a property
+of the organisation and not of the relation. It now holds the direct controlling
+entity as written (688,328 rows) or the filer's explicit `N/A` (99,090), so the
+values read `MERCY HOUSING INC`, `TRINITY HEALTH CORPORATION`. Dropping the
+activity costs nothing *here and only here*: Part II counterparties are exempt
+organisations and 119,865 of 119,865 resolve into `entity`, so each one's
+activity is on its own record. Parts III and IV resolve at 5-9% and keep theirs.
+
+Note `relation_raw` is unmapped by contract, so a filer who typed `NA` rather
+than `N/A` appears verbatim as `NA` (65,968 rows). Normalising it would be a
+mapping, which belongs downstream.
+
+**The sharper signal is `controlled_512`.** `SR_02_RLTD_ORG_CTRL_512_X` - is the
+counterparty a §512(b)(13) controlled entity - is a statutory yes/no, **93.1%
+populated** against 68.8% for the controller name, and unlike a controlling-entity
+name it answers the control question directly rather than by inference. It is
+now a column.
+
+Two encoding decisions worth knowing before filtering on it. The source writes
+the flag four ways across schema versions (`0`/`1` and `false`/`true`); both are
+normalised, and **anything else becomes `NULL` rather than `FALSE`** - a blank
+box is silence, not a denial, and coercing it would invent 449,599 assertions
+nobody made. Aggregating to one row per pair uses `bool_or`, so a pair is `TRUE`
+if control was asserted in *any* year; `bool_and` would let a single year with
+the box blank erase a relationship stated in every other year.
+
+It is `NULL` for every source but Part II, because no other disclosure asks.
 
 Where affiliates go. Not the name table. See §10.
 
@@ -426,7 +542,9 @@ mapping onto `relation` can be revised without re-ingesting.
 ### `source_vintage` — the audit table
 
 ```
-vintage_id, source, origin (remote | local), url, fetched,
+vintage_id, source, origin (remote | local), url,
+fetched, built,                                   -- when acquired / when loaded
+content_vintage, content_vintage_rule,            -- what period the data describes
 upstream_etag, upstream_modified, upstream_size,
 local_md5, row_count, rows_added, build_note,
 npmatch_version, normalize_signature
@@ -435,6 +553,47 @@ npmatch_version, normalize_signature
 One row per ingest. This is `np_manifest()` promoted from a CSV of files to a
 table of loads, and it is what makes any compiled reference explainable six
 months later.
+
+**Three dates, not one, because they differ and only one of them answers "is
+this stale?"**
+
+| column | means | example |
+|---|---|---|
+| `content_vintage` | the period the data *describes* | `2026-07` |
+| `upstream_modified` | when the file was *published* | `2026-08-11` |
+| `fetched` | when we *downloaded* it | `2026-08-21` |
+| `built` | when the table was last *loaded* from it | `2026-08-22` |
+
+The BMF makes the case: published 2026-08-11, but the newest vintage inside it
+is **2026-07**. `md_ingest_bmf()` already computes that and puts it in
+`build_note` as prose, where it cannot be queried.
+
+`fetched` and `built` differ too. `fetched` is copied from the pin, so
+re-running an ingest against an unchanged source leaves it untouched — there is
+currently no way to ask when a table was last built, which is exactly the
+question after a bug fix.
+
+**`content_vintage_rule` records how the date was obtained**, on the same
+value/rule/provenance discipline the NTEE triple uses:
+
+| rule | when |
+|---|---|
+| `measured` | read from the data itself — BMF `last_vintage_ym`, e-file `TAX_YEAR`. Preferred, and available more often than expected. |
+| `declared` | supplied by the collector. The only honest option for a hand-delivered file. |
+| `published` | fell back to `Last-Modified`. Recorded as a fallback so a publication date is never mistaken for a content date. |
+
+The fallback matters because it is the common case: **27 of 33 loads have no
+`upstream_modified` at all.** The e-file CSVs, the locally supplied crosswalks
+and anything hand-delivered return no date, so automatic extraction is the
+exception rather than the default. `md_source_pin(content_vintage = )` therefore
+takes an explicit value, and `version` stays what it is — an identifier and a
+directory name, not a claim about time.
+
+`upstream_etag` is not decoration either. The canonical BMF is published at a
+`latest/` key that is overwritten in place, so "the BMF as of latest" is not
+provenance — the ETag is the only thing that identifies *which* BMF a row came
+from. `md_source_pin()` records it; `md_source_moved()` reports whether upstream
+has been replaced since.
 
 `upstream_etag` is not decoration either. The canonical BMF is published at a
 `latest/` key that is overwritten in place, so "the BMF as of latest" is not

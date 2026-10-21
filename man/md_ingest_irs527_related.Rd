@@ -33,19 +33,29 @@ that are largely outside the exempt universe altogether. A consumer treating
 \code{related_name} as resolvable should expect roughly one in seven to resolve.
 }
 
-\section{The whole tail maps to \code{affiliate}, deliberately}{
+\section{The whole tail maps to \code{related_entity}, deliberately}{
 
 \code{ENTITY_RELATIONSHIP} is free text with 528 distinct values. \code{Connected}
 (54,660) and \code{Affiliated} (5,801) are 97.4\% of rows; the tail runs
 \code{Sponsor} (103), \code{Partner} (73), \verb{Connected Organization} (56), and on down
 to single-occurrence strings.
 
-Every one of them maps to \code{relation = 'affiliate'}. The alternative - reading
-sub-types out of the free text - would manufacture a taxonomy the filers were
-never asked to use, and \verb{Common candidate-CA 33rd Assembly Dist.} is not a
-relation type. \code{relation_raw} keeps the original string, so a later mapping
-can be derived without re-ingesting. That is the §4 contract for \code{relation_raw}
-and this is the source it was written for.
+Every one of them maps to \code{relation = 'related_entity'} (§4a). A "connected
+organisation" is the body that established, administers or funds the political
+organisation - a support and control tie, not loose coordination. That places
+it with Schedule R rather than in the \code{coalition} band, even though the
+counterparty is usually a corporation or union rather than a nonprofit.
+
+The alternative - reading sub-types out of the free text - would manufacture a
+taxonomy the filers were never asked to use, and
+\verb{Common candidate-CA 33rd Assembly Dist.} is not a relation type.
+\code{relation_raw} keeps the original string, so a later mapping can be derived
+without re-ingesting. That is the §4 contract for \code{relation_raw} and this is
+the source it was written for.
+
+Note what this source is \emph{not}: two organisations that both appear as
+connected to the same political organisation are a \code{coalition}, and that is a
+derived co-membership over a shared counterparty, never a stored edge. §4a.
 
 \code{None} (42 rows) is kept rather than dropped: the filer still named an entity
 on Schedule R and merely declined to characterise the tie. The disclosure is

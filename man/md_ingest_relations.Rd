@@ -15,7 +15,7 @@ md_ingest_relations(version = "v2_2", con = NULL)
 Row counts, invisibly.
 }
 \description{
-Section 10 is emphatic that affiliate structure belongs in a relation table
+Section 10 is emphatic that group and related-entity structure belongs in a relation table
 rather than the name table: group subordinates and affiliate chapters are
 \emph{distinct EINs with near-identical names}, which is precisely the condition
 that produces false matches. Registering "BOYS AND GIRLS CLUB OF SPRINGFIELD"
@@ -26,6 +26,87 @@ matchdb's job is to record the relation with provenance. What to do with it -
 collapse, veto, or ignore - is a matching decision and lives in \code{pfmatch}
 (\code{R/dyads.R}, \code{R/affiliation.R}).
 }
+\section{Self-references are dropped, and that is not the same as worthless}{
+
+4,133 filers list their own EIN as a related organisation. An edge from an
+entity to itself is meaningless as a graph edge and distorts every degree
+statistic computed over the table, so they are dropped and counted.
+
+But the first version of this note claimed they "carry no information", and
+that was wrong. Checked against the filer's own BMF name, \strong{61.7\% of
+self-references disclose a DIFFERENT name under the same EIN}, and the
+examples are exactly the cases where IRS reporting structure and operating
+reality diverge:
+
+\preformatted{
+  BACKBONE HOUSING INC          -> Backbone Housing Inc (dba Starner Hill)
+  FRANCISCAN HEALTH SYSTEM      -> Franciscan Health System FKA Franciscan ...
+  EMBANKMENT SERVICES INC       -> EMBANKMENT SERVICES INC (ESI)
+  AMERICAN POSTAL WORKERS UNION -> APWU EMPLOYEES' RETIREMENT 401K PLAN
+  ALABAMA SCHOOL OF FINE ARTS FOUNDATION -> Alabama School of Fine Arts
+  Catalight Foundation          -> Impact Together
+}
+
+Those are DBAs, former names, acronyms, and genuinely distinct programmes
+operating under one exemption - a parish and its school, a foundation and the
+school it supports, a union and its benefit plan. Real information, and the
+kind a matcher wants.
+
+It is not lost by dropping the edge, because what is useful about it is a
+\strong{name}, and names are not this function's job. \code{md_ingest_schedr()} already
+writes every Part II counterparty name as an \code{observed} variant on the
+counterparty's EIN - which for a self-reference is the filer's own EIN.
+Measured: \strong{4,116 of the 4,133 (99.6\%) are already registered there}. The
+edge is redundant; the alias is not, and it survives.
+}
+
+\section{\code{relation_raw} carries the controller, not the activity}{
+
+An earlier version put \code{SR_02_RLTD_ORG_PRIMARY_ACT} here, so Part II's raw
+values read \code{HOSPITAL}, \code{HEALTHCARE}, \verb{low-inc hsng}, \code{FUNDRAISING}. That is
+the counterparty's \emph{activity} - a property of the organisation, not of the
+relation - and §4 reserves \code{relation_raw} for the source's own wording of the
+\strong{relation}.
+
+On this form that is the direct controlling entity, with an explicit \code{N/A}
+where the filer states there is none. Population across 2009-2024:
+
+\preformatted{
+  rows                        6,540,823
+  direct controlling entity   4,501,572  (68.8%)
+  explicit 'N/A'                950,837  (14.5%)
+  primary activity            6,226,371  (95.2%)  <- no longer stored
+}
+
+Losing the activity costs nothing here, and only here: Part II counterparties
+are exempt organisations by definition and \strong{119,865 of 119,865 (100\%)
+resolve into \code{entity}}, so each one's activity is available from its own
+record. That is not true of Parts III and IV, whose counterparties resolve at
+5-9\%.
+}
+
+\section{\code{controlled_512} is the sharpest signal the form carries}{
+
+\code{SR_02_RLTD_ORG_CTRL_512_X} - is the counterparty a §512(b)(13) controlled
+entity - is a statutory yes/no, \strong{93.1\% populated} (2.07M true, 4.02M false)
+against 68.8\% for the controller name. It is what splits \code{related_entity}
+into controlled-by versus merely-related, and it is the only column on the
+form that answers that question directly rather than by inference from a name.
+
+It is encoded four ways across schema versions - \code{0}/\code{1} and \code{false}/\code{true} -
+so both forms are normalised. Anything else becomes \code{NULL}: a blank box is
+silence, not a denial, and coercing it to \code{FALSE} would invent 449,599
+assertions nobody made.
+
+Aggregating to one row per pair uses \code{bool_or}, so a pair is \code{TRUE} if the
+filer asserted control in \strong{any} year. The alternative - \code{bool_and} - would
+let one year with the box blank erase a control relationship stated in every
+other year.
+
+Only Part II populates it. It is \code{NULL} for every other source, which is
+honest: no other disclosure asks the question.
+}
+
 \section{Direction is fixed, not doubled}{
 
 A relation row reads \strong{"\code{ein_b} is a \code{relation} of \code{ein_a}"}. Group rows are
@@ -70,7 +151,7 @@ Groups with no coded parent produce no rows rather than a guessed one, and the
 count of those is reported.
 }
 
-\section{Group exemption is not the whole of affiliate structure}{
+\section{Group exemption is not the whole of federated structure}{
 
 Measured on the active BMF, a GEN and a group-exemption role are two encodings
 of one fact: no EIN carries a GEN without a group role, and only nine carry a
@@ -79,7 +160,9 @@ group role without a GEN.
 But \strong{4,500 active organisations are coded \code{1} or \code{2} - network parents and
 intermediates with no group exemption at all}. Affiliate structure does not
 require the group exemption process, and this ingest does not reach it,
-because a network has no GEN and therefore no key to join members on. Worse,
+because a network has no GEN and therefore no key to join members on. This is
+exactly why the \code{affiliate} relation (§4a) is defined and holds zero rows.
+Worse,
 network \emph{subordinates} are not separately coded - only nine subordinates lack
 a GEN - so those 3,459 network parents have members that cannot be identified
 from the BMF at all.

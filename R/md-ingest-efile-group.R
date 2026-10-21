@@ -136,7 +136,7 @@ md_ingest_efile_group <- function(con = NULL, dir = NULL) {
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
 
   n_new <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
+    INSERT INTO ein_relation (%s)
     SELECT %s + row_number() OVER (), p.parent_ein, m.ein, NULL, 'group_member',
            'form990_line_H_c', 'efile_group_exemption_number', NULL,
            m.fy, m.ly, m.n, 'efile_group', '%s'
@@ -145,7 +145,7 @@ md_ingest_efile_group <- function(con = NULL, dir = NULL) {
     JOIN gparent p ON p.gen = m.gen AND p.parent_ein IS NOT NULL
     JOIN entity e ON e.ein = m.ein
     WHERE (e.group_exemption_number IS NULL OR e.group_exemption_number IN ('','0000'))
-      AND p.parent_ein <> m.ein", format(base, scientific = FALSE), vintage))
+      AND p.parent_ein <> m.ein", .md_relation_cols(), format(base, scientific = FALSE), vintage))
   msg("  %s group_member pairs added, timestamped by filing year",
       format(n_new, big.mark = ","))
 

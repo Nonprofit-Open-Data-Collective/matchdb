@@ -138,11 +138,12 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
                 upper(trim(coalesce(state,'')))    AS state_key
       FROM si_clean WHERE trim(name_key) <> ''
     ), agg AS (
-      SELECT ein, name_key, city_key, state_key, zip5, count(*) AS n_obs
+      SELECT ein, name_key, city_key, state_key, zip5, count(*) AS n_obs,
+             min(tax_year)::VARCHAR AS first_vintage, max(tax_year)::VARCHAR AS last_vintage
       FROM k GROUP BY 1,2,3,4,5
     ), %s, %s
     SELECT a.ein, a.name_key, a.city_key, a.state_key, a.zip5,
-           st.street_raw, ct.city_raw, a.n_obs
+           st.street_raw, ct.city_raw, a.n_obs, a.first_vintage, a.last_vintage
     FROM agg a
     JOIN modal_street_raw st USING (ein, name_key, city_key, state_key, zip5)
     JOIN modal_city_raw   ct USING (ein, name_key, city_key, state_key, zip5)
@@ -175,9 +176,9 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
 
   DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators)
+                      source_vintage, n_obs, n_corroborators, first_year, last_year)
     SELECT name_id, ein, name_raw, 'observed', 'schedi', '%s',
-           n_obs, n_corroborators
+           n_obs, n_corroborators, first_year, last_year
     FROM si_name", vintage))
 
   ## ---- addresses, carrying the pairing link -----------------------------------
@@ -185,9 +186,10 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
   n_addr <- DBI::dbExecute(con, sprintf("
     INSERT INTO address (address_id, ein, name_id, street_raw, city_raw, state,
                          zip5, variant_class, spell_rank, source, source_vintage,
-                         n_obs)
+                         n_obs, first_vintage, last_vintage)
     SELECT %s + row_number() OVER (), p.ein, n.name_id, p.street_raw, p.city_raw,
-           p.state_key, p.zip5, 'observed', 0, 'schedi', '%s', p.n_obs
+           p.state_key, p.zip5, 'observed', 0, 'schedi', '%s', p.n_obs,
+           p.first_vintage, p.last_vintage
     FROM si_place p JOIN si_name n USING (ein, name_key)
     WHERE coalesce(p.street_raw,'') <> '' OR coalesce(p.city_raw,'') <> ''",
     format(base_addr, scientific = FALSE), vintage))

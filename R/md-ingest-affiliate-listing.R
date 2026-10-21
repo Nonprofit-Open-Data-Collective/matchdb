@@ -98,14 +98,14 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL) {
   DBI::dbExecute(con, "DELETE FROM ein_relation WHERE source = 'efile_afl'")
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(relation_id),0) AS m FROM ein_relation")$m
   n_rel <- DBI::dbExecute(con, sprintf("
-    INSERT INTO ein_relation
+    INSERT INTO ein_relation (%s)
     SELECT %s + row_number() OVER (), parent_ein, member_ein, nm, 'group_member',
            'AffiliateListingGrp', 'efile_affiliate_listing', NULL,
            fy, ly, n, 'efile_afl', '%s'
     FROM (SELECT parent_ein, member_ein, max(nm1) AS nm,
                  min(ty) AS fy, max(ty) AS ly, count(*) AS n
           FROM afl GROUP BY parent_ein, member_ein)",
-    format(base, scientific = FALSE), vintage))
+    .md_relation_cols(), format(base, scientific = FALSE), vintage))
   msg("  %s group_member edges added", format(n_rel, big.mark = ","))
 
   novel <- DBI::dbGetQuery(con, "

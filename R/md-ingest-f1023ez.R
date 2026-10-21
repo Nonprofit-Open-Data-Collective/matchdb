@@ -121,16 +121,27 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE ez AS SELECT * FROM ez_keep")
 
   ## ---- names ----------------------------------------------------------------
+  # mode(name_raw) was used here previously and is exactly the non-deterministic
+  # tiebreak md_modal_sql() exists to replace (?md_modal_sql; PAIN-POINTS.md #1).
+  DBI::dbExecute(con, "
+    CREATE OR REPLACE TEMP TABLE ez_name_key AS
+    SELECT *, trim(regexp_replace(regexp_replace(upper(name_raw),'[^A-Z0-9 ]','','g'),
+                                  ' +',' ','g')) AS name_key
+    FROM ez WHERE trim(name_raw) <> ''")
   base_name <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
   n_name <- DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators)
-    SELECT %s + row_number() OVER (), ein, name_raw, 'legal', 'f1023ez', '%s',
-           n_obs, NULL
-    FROM (SELECT ein, mode(name_raw) AS name_raw, count(*) AS n_obs
-          FROM ez WHERE trim(name_raw) <> ''
-          GROUP BY ein,
-                   trim(regexp_replace(regexp_replace(upper(name_raw),'[^A-Z0-9 ]','','g'),' +',' ','g')))",
+                      source_vintage, n_obs, n_corroborators, first_year, last_year)
+    WITH agg AS (
+      SELECT ein, name_key, count(*) AS n_obs,
+             min(approval_year) AS first_year, max(approval_year) AS last_year
+      FROM ez_name_key GROUP BY 1,2
+    ), %s
+    SELECT %s + row_number() OVER (), a.ein, s.name_raw, 'legal', 'f1023ez', '%s',
+           a.n_obs, NULL, a.first_year, a.last_year
+    FROM agg a JOIN modal_name_raw s USING (ein, name_key)
+    WHERE s.rk = 1",
+    md_modal_sql("ez_name_key", c("ein", "name_key"), "name_raw"),
     format(base_name, scientific = FALSE), vintage))
   msg("  %s names (variant_class = legal, source = f1023ez)",
       format(n_name, big.mark = ","))
@@ -140,17 +151,30 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   # when it applied, which for a 2014 approval is a decade stale. Treating it as
   # current is how a reference starts matching organisations to addresses they
   # left long ago.
+  # mode(street_raw)/mode(city_raw) were used here previously -- the same
+  # non-deterministic tiebreak fixed in the name block above and in the
+  # Schedule I ingest (PAIN-POINTS.md #1); moved onto md_modal_sql() here too.
   base_addr <- DBI::dbGetQuery(con, "SELECT coalesce(max(address_id),0) AS m FROM address")$m
+  addr_by <- c("ein", "state", "zip5")
   n_addr <- DBI::dbExecute(con, sprintf("
     INSERT INTO address (address_id, ein, name_id, street_raw, city_raw, state,
                          zip5, variant_class, spell_rank, source, source_vintage,
-                         n_obs)
-    SELECT %s + row_number() OVER (), ein, NULL, street_raw, city_raw, state,
-           zip5, 'historical', 1, 'f1023ez', '%s', n_obs
-    FROM (SELECT ein, mode(street_raw) AS street_raw, mode(city_raw) AS city_raw,
-                 state, zip5, count(*) AS n_obs
-          FROM ez WHERE coalesce(street_raw,'') <> ''
-          GROUP BY ein, state, zip5)",
+                         n_obs, first_vintage, last_vintage)
+    WITH agg AS (
+      SELECT ein, state, zip5, count(*) AS n_obs,
+             min(approval_year)::VARCHAR AS first_vintage,
+             max(approval_year)::VARCHAR AS last_vintage
+      FROM ez WHERE coalesce(street_raw,'') <> '' GROUP BY 1,2,3
+    ), %s, %s
+    SELECT %s + row_number() OVER (), a.ein, NULL, st.street_raw, ct.city_raw,
+           a.state, a.zip5, 'historical', 1, 'f1023ez', '%s', a.n_obs,
+           a.first_vintage, a.last_vintage
+    FROM agg a
+    JOIN modal_street_raw st USING (ein, state, zip5)
+    JOIN modal_city_raw   ct USING (ein, state, zip5)
+    WHERE st.rk = 1 AND ct.rk = 1",
+    md_modal_sql("(SELECT * FROM ez WHERE coalesce(street_raw,'') <> '')", addr_by, "street_raw"),
+    md_modal_sql("(SELECT * FROM ez WHERE coalesce(street_raw,'') <> '')", addr_by, "city_raw"),
     format(base_addr, scientific = FALSE), vintage))
   msg("  %s addresses (variant_class = historical)", format(n_addr, big.mark = ","))
 
