@@ -46,10 +46,15 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   # The IRS names the workbooks three ways (?md_f1023ez_urls), so each CSV is
   # named by its year. Keeping the workbook's name would let the underscore
   # files (2014-2019) miss the glob below and drop out without an error.
-  for (b in books) {
-    yr <- regmatches(basename(b), regexpr("[0-9]{4}", basename(b)))
-    if (!length(yr)) stop("no year in workbook name: ", basename(b), call. = FALSE)
-    csv <- file.path(dir, sprintf("f1023ez-approvals-%s.csv", yr))
+  yrs <- .md_f1023ez_year(books)
+  if (anyDuplicated(yrs)) {
+    stop("two 1023-EZ workbooks for one year: ",
+         paste(basename(books[yrs %in% yrs[duplicated(yrs)]]), collapse = ", "),
+         call. = FALSE)
+  }
+  for (i in seq_along(books)) {
+    b <- books[i]
+    csv <- file.path(dir, sprintf("f1023ez-approvals-%s.csv", yrs[i]))
     if (reconvert || !file.exists(csv)) {
       message("converting ", basename(b))
       md_xlsx_to_csv(b, columns = KEEP, out = csv)
@@ -229,4 +234,15 @@ md_ntee_crosscheck <- function(con = NULL) {
     GROUP BY 1 ORDER BY n DESC")
   print(out)
   invisible(out)
+}
+
+# The approval year of each workbook: the four digits right before `.xlsx`.
+# Not the first four digits in the name, which are the 1023 in "f1023ez".
+.md_f1023ez_year <- function(books) {
+  b <- basename(books)
+  ok <- grepl("(19|20)[0-9]{2}[.]xlsx$", b, ignore.case = TRUE)
+  if (!all(ok)) {
+    stop("no year before .xlsx in: ", paste(b[!ok], collapse = ", "), call. = FALSE)
+  }
+  sub("^.*((19|20)[0-9]{2})[.]xlsx$", "\\1", b, ignore.case = TRUE)
 }
