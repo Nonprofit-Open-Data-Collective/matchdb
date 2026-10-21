@@ -54,7 +54,9 @@
 #'   \item an EIN that filed a **group return** under that GEN. A group return is
 #'     filed by the central organisation, so H(a) plus H(c) is a parent claim.
 #'     Covers 96 more.
-#'   \item `gen_parent`, the derived GEN-to-parent table. Covers 37 more.
+#'   \item `gen_parent`, the derived GEN-to-parent table. Covers 37 more. No
+#'     ingest builds it (it was made by hand in the first database), so it is
+#'     used only when the table exists, and a build from scratch skips it.
 #' }
 #'
 #' **860 groups (25%) still have no identifiable parent and produce no rows.**
@@ -106,7 +108,18 @@ md_ingest_efile_group <- function(con = NULL, dir = NULL, version = "v2_2") {
 
   # Parent resolution, most authoritative first. min(ein) only breaks ties
   # deterministically; it is not a seniority claim.
-  DBI::dbExecute(con, "
+  #
+  # gen_parent is not built by any ingest: it was made by hand in the first
+  # database, so a build from scratch does not have it. Use it when present,
+  # and say so when it is not, rather than fail or guess a replacement.
+  gpp_sql <- if (DBI::dbExistsTable(con, "gen_parent")) {
+    "SELECT gen4 AS gen, min(parent_ein2) AS ein FROM gen_parent
+     WHERE parent_ein2 IS NOT NULL GROUP BY 1"
+  } else {
+    msg("  no gen_parent table: the third parent fallback is skipped")
+    "SELECT NULL::VARCHAR AS gen, NULL::VARCHAR AS ein WHERE FALSE"
+  }
+  DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE gparent AS
     WITH g AS (SELECT DISTINCT gen FROM eg),
     bmfp AS (SELECT group_exemption_number AS gen, min(ein) AS ein FROM entity
@@ -116,8 +129,7 @@ md_ingest_efile_group <- function(con = NULL, dir = NULL, version = "v2_2") {
              GROUP BY 1),
     efp AS (SELECT gen, min(ein) AS ein FROM eg
             WHERE grp IN ('TRUE','1','X','Y') GROUP BY 1),
-    gpp AS (SELECT gen4 AS gen, min(parent_ein2) AS ein FROM gen_parent
-            WHERE parent_ein2 IS NOT NULL GROUP BY 1)
+    gpp AS (%s)
     SELECT g.gen,
            coalesce(b.ein, f.ein, p.ein) AS parent_ein,
            CASE WHEN b.ein IS NOT NULL THEN 'bmf_affiliation_code'
@@ -126,7 +138,7 @@ md_ingest_efile_group <- function(con = NULL, dir = NULL, version = "v2_2") {
                 ELSE NULL END AS parent_src
     FROM g LEFT JOIN bmfp b USING (gen)
            LEFT JOIN efp  f USING (gen)
-           LEFT JOIN gpp  p USING (gen)")
+           LEFT JOIN gpp  p USING (gen)", gpp_sql))
   src <- DBI::dbGetQuery(con, "
     SELECT coalesce(parent_src,'(none)') AS parent_src, count(*) AS n
     FROM gparent GROUP BY 1 ORDER BY n DESC")
