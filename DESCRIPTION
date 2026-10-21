@@ -25,7 +25,7 @@ Imports:
     DBI,
     duckdb,
     data.table,
-    npmatch,
+    npmatch (>= 0.1.0.9000),
     stats,
     tools,
     utils

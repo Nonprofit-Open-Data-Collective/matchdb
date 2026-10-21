@@ -38,10 +38,20 @@
 #' @param min_corroborators Drop groups written by fewer than this many distinct
 #'   filers. `1` keeps everything; filtering belongs in the spec, so the default
 #'   loads all of it.
+#' @param guard Run [md_guard_observed()] on the loaded rows. Flags are only as
+#'   good as the first-party names already loaded, so re-run it once the BMF and
+#'   return headers are in.
+#'
+#' @section Wrong names on the right line:
+#' A filer's own EIN written for its grantee, a denomination's central EIN
+#' written for a congregation, a fiscal sponsor's EIN written for its projects,
+#' `000000000` and `SEE SCHEDULE O`: all are on Schedule I, often by many filers.
+#' Rows are kept and flagged by [md_guard_observed()]; see
+#' `dev/OBSERVED-NAME-GUARDS.md` for how many and how corroborated they are.
 #' @return Row counts, invisibly.
 #' @export
 md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
-                             min_corroborators = 1L) {
+                             min_corroborators = 1L, guard = TRUE) {
   dir <- md_path("sources", "schedi", version)
   files <- list.files(dir, pattern = "^SI-P02-T01-GRANTS-US-ORGS-GOVTS-[0-9]{4}[.]CSV$",
                       full.names = TRUE)
@@ -82,7 +92,10 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
     CREATE OR REPLACE TEMP TABLE si_clean AS
     SELECT
       'EIN-' || substr(d,1,2) || '-' || substr(d,3,9) AS ein,
-      filer_ein, tax_year, name_raw, street_raw, city_raw, state, zip5,
+      -- the filer in the same canonical form as ein, so a filer writing its own EIN is a plain equality
+      'EIN-' || substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),1,2) || '-' ||
+                substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),3,9) AS filer_ein,
+      tax_year, name_raw, street_raw, city_raw, state, zip5,
       trim(regexp_replace(regexp_replace(upper(name_raw), '[^A-Z0-9 ]', '', 'g'),
                           ' +', ' ', 'g'))                    AS name_key
     FROM (
@@ -115,6 +128,11 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
       SELECT ein, name_key,
              count(*)                           AS n_obs,
              count(DISTINCT filer_ein)          AS n_corroborators,
+             -- guard inputs (md_guard_observed): filers who wrote their own EIN for
+             -- this name, and the range of the other filers (2+ filers iff lo <> hi)
+             count(DISTINCT filer_ein) FILTER (WHERE filer_ein = ein)  AS n_self_filers,
+             min(filer_ein) FILTER (WHERE filer_ein <> ein)            AS filer_ein_lo,
+             max(filer_ein) FILTER (WHERE filer_ein <> ein)            AS filer_ein_hi,
              min(TRY_CAST(tax_year AS INTEGER)) AS first_year,
              max(TRY_CAST(tax_year AS INTEGER)) AS last_year
       FROM si_clean WHERE trim(name_key) <> ''
@@ -174,11 +192,14 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
     SELECT %s + row_number() OVER () AS name_id, *
     FROM si_alias", format(base_name, scientific = FALSE)))
 
+  .md_name_guard_columns(con)
   DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators, first_year, last_year)
+                      source_vintage, n_obs, n_corroborators, first_year, last_year,
+                      n_self_filers, filer_ein_lo, filer_ein_hi)
     SELECT name_id, ein, name_raw, 'observed', 'schedi', '%s',
-           n_obs, n_corroborators, first_year, last_year
+           n_obs, n_corroborators, first_year, last_year,
+           n_self_filers, filer_ein_lo, filer_ein_hi
     FROM si_name", vintage))
 
   ## ---- addresses, carrying the pairing link -----------------------------------
@@ -205,6 +226,7 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
   }
 
   DBI::dbExecute(con, "DROP VIEW IF EXISTS si_raw")
+  if (guard) md_guard_observed(con, sources = "schedi")
   invisible(stats::setNames(c(n_alias, n_addr, n_new),
                             c("names", "addresses", "new_entities")))
 }

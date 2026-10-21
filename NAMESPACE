@@ -54,6 +54,10 @@ export(md_ingest_efile_group)
 export(md_ingest_irs527_related)
 export(md_ntee_crosscheck)
 export(md_validate_bmf)
+export(md_guard_observed)
+export(md_placeholder_ein)
+export(md_guard_key)
+export(md_name_pair_hit)
 
 S3method(print, md_diff)
 

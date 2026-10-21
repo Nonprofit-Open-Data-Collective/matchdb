@@ -343,11 +343,25 @@ source_vintage      text      "bmf-2026-08", "schedi-2009-2024"
 n_obs               int       times observed (NULL for BMF)
 n_corroborators     int       distinct filers who wrote it (Schedule I trust)
 first_year, last_year
+-- observed rows only; see md_guard_observed() and OBSERVED-NAME-GUARDS.md:
+n_self_filers       int       filers who wrote their OWN EIN for this name
+filer_ein_lo, _hi   EIN2      range of the other filers (2+ filers iff lo <> hi)
+flag_placeholder_ein, flag_placeholder_name, flag_own_ein,
+flag_group_central, flag_multi_name   bool   wrong-EIN guards
+guard_any           bool      any flag_*; the spec filter is NOT guard_any
+name_ein_consistent bool      shares a distinctive word / abbreviation with the
+                              EIN's first-party names (NULL: none to compare)
 -- derived, computed once at build:
 name_key, name_full, name_gen, name_gen_rank, name_nums,
 name_ord, name_dir, name_form, name_acro, name_pre,
 name_tokens         text      cleaned, deduped token set (see §6c)
 ```
+
+Corroboration is not a substitute for the guards: a 2-filer floor drops most
+flagged rows only by dropping 78% of Schedule I, and what it keeps is the
+systematic kind (the PC(USA) EIN written for congregations by 32 filers). The
+guards are flags, not exclusions, so the raw observation stays citable.
+Measured in `OBSERVED-NAME-GUARDS.md`.
 
 `variant_class` × `source` is the selection axis. `n_corroborators` is already
 computed in `pfmatch/dev/build-schedi-db.R` as `n_filers` and is the right trust
