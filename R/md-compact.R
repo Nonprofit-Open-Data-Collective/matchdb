@@ -53,11 +53,28 @@ md_address_sources <- function() {
 #' drift (section 9) — never an in-place reconciliation against tables meant to
 #' stay append-only.
 #'
+#' @section Guarded observed rows:
+#' [md_guard_observed()] flags observed names written for the wrong EIN
+#' (`name.guard_any`). By default those rows, and the observed addresses paired
+#' with them through `name_id`, are left out **before** collapsing. A key also
+#' backed by an unflagged row (the BMF legal name, say) survives, carried by
+#' that row alone; a key backed only by flagged rows disappears. Raw rows in
+#' `name` and `address` are untouched either way.
+#'
+#' With `drop_guarded = FALSE` every row is kept, and `guard_any` on the compact
+#' row is `TRUE` only when **every** row behind it was flagged, so a spec can
+#' still filter on it. In both modes the column exists, so the table's shape
+#' does not depend on the option.
+#'
 #' @param con A connection from [md_db()].
 #' @param what Which compact tables to build.
+#' @param drop_guarded Leave out observed names flagged by
+#'   [md_guard_observed()] and the addresses paired with them. Defaults to
+#'   `TRUE`; a database where the guards never ran has no flags and loses nothing.
 #' @return Row counts, invisibly.
 #' @export
-md_build_compact <- function(con = NULL, what = c("name", "address")) {
+md_build_compact <- function(con = NULL, what = c("name", "address"),
+                             drop_guarded = TRUE) {
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
   msg <- function(...) message(sprintf(...))
@@ -69,19 +86,37 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
   # check costs one query and catches drift before it is trusted either way.
   if ("name" %in% what) md_check_derived_fresh(con)
 
-  if ("name" %in% what) out["name"] <- .md_compact_name(con, msg)
-  if ("address" %in% what) out["address"] <- .md_compact_address(con, msg)
+  if ("name" %in% what) out["name"] <- .md_compact_name(con, msg, drop_guarded)
+  if ("address" %in% what) out["address"] <- .md_compact_address(con, msg, drop_guarded)
   invisible(out)
 }
 
-.md_compact_name <- function(con, msg) {
+# SQL for "this name row is flagged". A database built before the guards (or
+# where they never ran) has no guard_any column: nothing is flagged, rather
+# than an error.
+.md_guarded_sql <- function(con, alias = "n") {
+  if ("guard_any" %in% DBI::dbListFields(con, "name")) {
+    sprintf("coalesce(%s.guard_any, false)", alias)
+  } else {
+    "false"
+  }
+}
+
+.md_compact_name <- function(con, msg, drop_guarded = TRUE) {
   bit_case <- .md_source_bit_case(md_name_sources())
   rank_case <- .md_variant_rank_case()
+  guarded <- .md_guarded_sql(con, "n")
 
   n_excluded <- DBI::dbGetQuery(con,
     "SELECT count(*) AS n FROM name WHERE variant_class = 'in_care_of'")$n
   msg("name: excluding %s in_care_of rows (not an organisation identity)",
       format(n_excluded, big.mark = ","))
+  n_guarded <- DBI::dbGetQuery(con, sprintf(
+    "SELECT count(*) AS n FROM name n WHERE n.variant_class <> 'in_care_of' AND %s",
+    guarded))$n
+  msg("name: %s observed rows flagged by md_guard_observed() %s",
+      format(n_guarded, big.mark = ","),
+      if (drop_guarded) "excluded (drop_guarded = TRUE)" else "kept, marked in guard_any")
 
   DBI::dbExecute(con, "DROP TABLE IF EXISTS name_compact")
   DBI::dbExecute(con, sprintf("
@@ -90,10 +125,11 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
       SELECT n.ein, d.name_key, n.name_raw, n.n_obs, n.n_corroborators,
              n.first_year, n.last_year,
              %s AS source_bit,
-             %s AS variant_rank
+             %s AS variant_rank,
+             %s AS guarded
       FROM name n
       JOIN name_derived d USING (name_id)
-      WHERE d.name_key <> '' AND n.variant_class <> 'in_care_of'
+      WHERE d.name_key <> '' AND n.variant_class <> 'in_care_of' AND %s
     ), %s
     , agg AS (
       SELECT ein, name_key,
@@ -103,17 +139,20 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
              max(last_year) AS last_year,
              bit_or(source_bit) AS source_mask,
              min(variant_rank) AS variant_rank,
-             count(*) AS n_contributing_rows
+             count(*) AS n_contributing_rows,
+             -- flagged only when every row behind the key was flagged
+             bool_and(guarded) AS guard_any
       FROM keyed GROUP BY 1, 2
     )
     SELECT a.ein, a.name_key, s.name_raw, a.variant_rank, a.n_obs,
            a.n_corroborators, a.first_year, a.last_year, a.source_mask,
-           a.n_contributing_rows,
+           a.n_contributing_rows, a.guard_any,
            count(*) OVER (PARTITION BY a.name_key) AS n_eins_sharing
     FROM agg a
     JOIN modal_name_raw s USING (ein, name_key)
     WHERE s.rk = 1",
-    bit_case, rank_case,
+    bit_case, rank_case, guarded,
+    if (drop_guarded) sprintf("NOT %s", guarded) else "TRUE",
     md_modal_sql("keyed", c("ein", "name_key"), "name_raw")))
 
   # variant_rank -> variant_class as a separate UPDATE rather than a CASE
@@ -136,13 +175,24 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
   n
 }
 
-.md_compact_address <- function(con, msg) {
+.md_compact_address <- function(con, msg, drop_guarded = TRUE) {
   bit_case <- .md_source_bit_case(md_address_sources())
+
+  # An observed address was written together with a name (the name_id pairing
+  # link); when that name is flagged as written for the wrong EIN, so is the
+  # address.
+  ga_sql <- sprintf("
+    SELECT a.address_id FROM address a JOIN name n ON n.name_id = a.name_id
+    WHERE %s", .md_guarded_sql(con, "n"))
+  n_guarded <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM (%s)", ga_sql))$n
+  msg("address: %s observed rows paired with a flagged name %s",
+      format(n_guarded, big.mark = ","),
+      if (drop_guarded) "excluded (drop_guarded = TRUE)" else "kept, marked in guard_any")
 
   DBI::dbExecute(con, "DROP TABLE IF EXISTS address_compact")
   DBI::dbExecute(con, sprintf("
     CREATE TABLE address_compact AS
-    WITH keyed AS (
+    WITH ga AS (%s), keyed AS (
       SELECT ein,
              nullif(upper(trim(street_raw)), '') AS street_key,
              nullif(upper(trim(city_raw)), '')   AS city_key,
@@ -151,8 +201,10 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
              n_obs, n_corroborators,
              TRY_CAST(regexp_extract(coalesce(first_vintage,''), '^[0-9]{4}') AS INTEGER) AS vintage_lo,
              TRY_CAST(regexp_extract(coalesce(last_vintage,''),  '^[0-9]{4}') AS INTEGER) AS vintage_hi,
-             %s AS source_bit
+             %s AS source_bit,
+             address_id IN (SELECT address_id FROM ga) AS guarded
       FROM address
+      WHERE %s
     ), agg AS (
       SELECT ein, street_key, city_key, state, zip5,
              sum(n_obs) AS n_obs,
@@ -160,7 +212,8 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
              min(vintage_lo) AS first_vintage_year,
              max(vintage_hi) AS last_vintage_year,
              bit_or(source_bit) AS source_mask,
-             count(*) AS n_contributing_rows
+             count(*) AS n_contributing_rows,
+             bool_and(guarded) AS guard_any
       FROM keyed GROUP BY 1, 2, 3, 4, 5
     ), dominated AS (
       SELECT a.ein, a.street_key, a.city_key, a.state, a.zip5
@@ -181,7 +234,8 @@ md_build_compact <- function(con = NULL, what = c("name", "address")) {
      AND x.city_key   IS NOT DISTINCT FROM a.city_key
      AND x.state       IS NOT DISTINCT FROM a.state
      AND x.zip5        IS NOT DISTINCT FROM a.zip5
-    WHERE x.ein IS NULL", bit_case))
+    WHERE x.ein IS NULL", ga_sql, bit_case,
+    if (drop_guarded) "address_id NOT IN (SELECT address_id FROM ga)" else "TRUE"))
 
   n <- .md_n(con, "address_compact")
   n_in <- .md_n(con, "address")

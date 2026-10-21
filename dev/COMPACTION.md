@@ -393,6 +393,34 @@ which the rule leaves untouched because it never matches on state alone).
 
 ---
 
+## 3a. Guarded observed rows (added 2026-10-21)
+
+`md_guard_observed()` flags Schedule I and Schedule R names written for the
+wrong EIN (`name.guard_any`; see `OBSERVED-NAME-GUARDS.md`). Compaction now
+respects the flag:
+
+- **`drop_guarded = TRUE` (default).** Flagged observed names are filtered out
+  in the `keyed` step, before aggregation, together with observed addresses
+  whose `name_id` points at a flagged name. Filtering before aggregation is
+  what keeps a key that an unflagged row also supports (`BETA CLUB` as both the
+  BMF legal name and a flagged Schedule I row survives, with
+  `n_contributing_rows = 1`). Filtering after would either keep the flagged
+  row's counts or drop the legal name.
+- **`drop_guarded = FALSE`.** Every row is kept; `guard_any` on the compact
+  row is `bool_and` over its contributing rows, so it is `TRUE` only when
+  nothing unflagged stands behind the key.
+- `guard_any` exists on `name_compact` and `address_compact` in both modes,
+  and a database where the guards never ran (no `guard_any` column on `name`)
+  compacts exactly as before.
+
+On the probe database (npmatch core key standing in for `name_key`), the
+default removes 71,565 of 6,116,211 `name_compact` keys and 54,268 of 5,506,439
+`address_compact` keys. In the drop mode the address log line's middle figure
+("after exact dedupe") still counts all raw addresses. Tests:
+`tests/testthat/test-compact-guards.R`.
+
+---
+
 ## 6. What this does not yet do — the honest boundary
 
 **`n_eins_sharing` is not `name_ambiguity`.** It counts sharing, not affiliation.
