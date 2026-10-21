@@ -45,10 +45,19 @@ Placeholder names use **npmatch's** rule, so matchdb and the matcher agree on wh
 is no name. It runs in R on the distinct observed strings (about 1.9M; its
 cleaning step has no SQL counterpart) and is joined back. It replaced a copy of
 networked990's rule, whose "no two letters in a row" test flagged real
-organisations (`1N10 INC`, `S H A R E INC`, `4-H`). The word lists (`NAME_STOP`,
-`NAME_ABBR`, `DENOM_WORDS`) and abbreviation rules are still **copied** from
-networked990 `R/names.R`. npmatch does not export a denomination list, and its
-`abbrev` list differs from networked990's.
+organisations (`1N10 INC`, `S H A R E INC`, `4-H`).
+
+The name key is also npmatch's: `md_guard_key()` is `npmatch::np_name_core()`,
+the same key networked990's `name_key()` now uses. Its SQL twin is generated from
+`npmatch::np_name_rules()` (`abbrev`, `core_stop`), following networked990's
+tested DuckDB port, and a test checks the two agree. npmatch's order is
+abbreviations first, then stop words; it de-accents, deletes initialism periods
+(`F.I.N.D.`), and its abbreviation list adds `NAT`, `DEPT`, `AMER`, `MT`,
+`FNDTN`, `FDTN` and drops `PHYS`. Two things stay **copied** from networked990
+`R/names.R`, because npmatch does not export them: `DENOM_WORDS` and the
+acronym, prefix and abbreviation-sequence match rules (`md_name_pair_hit()`).
+Switching to npmatch's key moved the counts very little (71,572 to 71,512
+flagged Schedule I rows).
 
 Also fixed on the way: `md_ingest_bmf()` created `name` without
 `first_year`/`last_year`, which every later ingest inserts into, so **a fresh
@@ -70,10 +79,10 @@ Schedule I:
 | placeholder EIN | 13,288 | 13,034 | 250 | 4 | 0 | 1.9 |
 | placeholder name | 147 | 140 | 5 | 2 | 0 | 4.8 |
 | own EIN | 5,717 | 5,717 | 0 | 0 | 0 | 0.0 |
-| group central | 12,401 | 11,469 | 846 | 82 | 4 | 7.5 |
-| multi-name | 51,176 | 47,097 | 3,476 | 555 | 48 | 8.0 |
-| **any guard** | **71,572** | 67,010 | 3,924 | 589 | 49 | **6.4** |
-| name inconsistent (not a guard) | 179,553 | 170,781 | 7,773 | 947 | 52 | 4.9 |
+| group central | 12,399 | 11,467 | 846 | 82 | 4 | 7.5 |
+| multi-name | 51,113 | 47,036 | 3,474 | 555 | 48 | 8.0 |
+| **any guard** | **71,512** | 66,952 | 3,922 | 589 | 49 | **6.4** |
+| name inconsistent (not a guard) | 179,345 | 170,579 | 7,767 | 947 | 52 | 4.9 |
 | no first-party names to compare | 423,257 | 387,647 | 31,343 | 4,004 | 263 | 8.4 |
 | all rows | 1,722,804 | 1,339,769 | 276,766 | 95,735 | 10,534 | 22.2 |
 
@@ -84,17 +93,17 @@ Schedule R:
 | placeholder EIN | 694 | 599 | 80 | 14 | 1 | 13.7 |
 | placeholder name | 53 | 51 | 2 | 0 | 0 | 3.8 |
 | own EIN | 592 | 592 | 0 | 0 | 0 | 0.0 |
-| group central | 235 | 201 | 26 | 7 | 1 | 14.5 |
+| group central | 234 | 200 | 26 | 7 | 1 | 14.5 |
 | multi-name | 580 | 468 | 88 | 12 | 12 | 19.3 |
-| **any guard** | **2,004** | 1,775 | 184 | 31 | 14 | **11.4** |
-| name inconsistent (not a guard) | 5,331 | 4,412 | 657 | 195 | 67 | 17.2 |
+| **any guard** | **2,003** | 1,774 | 184 | 31 | 14 | **11.4** |
+| name inconsistent (not a guard) | 5,313 | 4,398 | 654 | 194 | 67 | 17.2 |
 | no first-party names to compare | 24,120 | 18,845 | 4,095 | 927 | 253 | 21.9 |
 | all rows | 186,463 | 124,272 | 35,084 | 17,584 | 9,523 | 33.4 |
 
-Overlap: 11,141 Schedule I rows raise two or more guards (mostly group central
+Overlap: 11,137 Schedule I rows raise two or more guards (mostly group central
 and multi-name together, on the same denominational EINs).
 
-3,409 EINs are multi-name; 226 of them are also group centrals.
+3,405 EINs are multi-name; 225 of them are also group centrals.
 
 ### Does corroboration already screen them?
 
@@ -105,10 +114,10 @@ two or more filers on Schedule I; 11.4% vs 33.4% on Schedule R). So a
 | | Schedule I | Schedule R |
 |---|---:|---:|
 | rows kept at `min_corroborators = 2` | 383,035 | 62,191 |
-| ... of which flagged | 4,562 | 229 |
-| ... of which name-inconsistent | 8,772 | 919 |
+| ... of which flagged | 4,560 | 229 |
+| ... of which name-inconsistent | 8,766 | 915 |
 | rows dropped at `min_corroborators = 2` | 1,339,769 (78%) | 124,272 (67%) |
-| ... of which unflagged | 1,272,759 | 122,497 |
+| ... of which unflagged | 1,272,817 | 122,498 |
 
 1. **It costs most of the source.** It removes 1.27M unflagged Schedule I
    aliases to remove 67K flagged ones. `NOT guard_any` removes the 72K and keeps
@@ -170,5 +179,5 @@ two or more filers on Schedule I; 11.4% vs 33.4% on Schedule R). So a
   `name_derived` stale. They were not rebuilt here. Once rebuilt,
   `name_placeholder` will match `flag_placeholder_name` before the
   consistent-name exemption.
-- matchdb now calls `npmatch::np_name_placeholder()`, which is on npmatch `main`
-  from PR #13. matchdb's DESCRIPTION does not yet require that npmatch version.
+- matchdb now requires `npmatch (>= 0.1.0.9000)` (npmatch `main` since PR #13)
+  for `np_name_core()`, `np_name_placeholder()` and `np_name_rules()`.

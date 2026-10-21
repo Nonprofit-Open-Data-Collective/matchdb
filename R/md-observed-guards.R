@@ -55,8 +55,9 @@
 #' source (BMF, return headers, 1023-EZ). Re-run this after every ingest that
 #' adds them: flags computed before the return headers load see fewer names.
 #'
-#' The word lists and abbreviation rules are copied from networked990
-#' `R/names.R` (2026-10-21), not imported; keep them in step by hand.
+#' The name key, abbreviations, stop words and placeholder rule are npmatch's
+#' ([npmatch::np_name_rules()]). `DENOM_WORDS` and the abbreviation-match rules
+#' (`md_name_pair_hit()`) are copied from networked990 `R/names.R` (2026-10-21).
 #'
 #' @param con A connection from [md_db()].
 #' @param sources `name.source` values to check. `NULL` checks every `observed`
@@ -245,23 +246,19 @@ md_guard_observed <- function(con, sources = NULL, common_min_eins = 2000L,
   invisible(TRUE)
 }
 
-## ---- word lists, copied from networked990 R/names.R (2026-10-21) --------------
+## ---- word lists -----------------------------------------------------------------
+# The key and its abbreviation and stop lists are npmatch's (np_name_core(),
+# np_name_rules()), the same key networked990 now uses. Denomination words are
+# matchdb's own copy of networked990's DENOM_WORDS (R/names.R, 2026-10-21):
+# npmatch has no such list.
 
-.MD_NAME_ABBR <- c(FDN = "FOUNDATION", FND = "FOUNDATION", HOSP = "HOSPITAL", SYS = "SYSTEM", SYST = "SYSTEM",
-                   HLTH = "HEALTH", HLTHCARE = "HEALTHCARE", MED = "MEDICAL", CTR = "CENTER", CNTR = "CENTER",
-                   SVCS = "SERVICES", SVC = "SERVICES", SRVCS = "SERVICES", ASSN = "ASSOCIATION", ASSOC = "ASSOCIATION",
-                   UNIV = "UNIVERSITY", COMM = "COMMUNITY", NATL = "NATIONAL", INTL = "INTERNATIONAL", ST = "SAINT",
-                   MGMT = "MANAGEMENT", PHYS = "PHYSICIANS", REG = "REGIONAL", RGNL = "REGIONAL")
-.MD_NAME_STOP <- c("THE", "INC", "INCORPORATED", "CORP", "CORPORATION", "CO", "LLC", "LTD", "OF", "AND", "A", "AN",
-                   "FOR", "LP", "PC", "DBA")
-.MD_DENOM_WORDS <- c("PRESBYTERIAN", "PRESBYTERY", "CHURCH", "CHURCHES", "USA", "AMERICA", "AMERICAN", "UNITED", "STATES", "METHODIST",
+.MD_DENOM_WORDS <-c("PRESBYTERIAN", "PRESBYTERY", "CHURCH", "CHURCHES", "USA", "AMERICA", "AMERICAN", "UNITED", "STATES", "METHODIST",
                      "CATHOLIC", "ROMAN", "BAPTIST", "BAPTISTS", "CONVENTION", "LUTHERAN", "EVANGELICAL", "EPISCOPAL", "PROTESTANT", "SYNOD",
                      "DIOCESE", "ARCHDIOCESE", "DIOCESAN", "CONFERENCE", "GENERAL", "ASSEMBLY", "ASSEMBLIES", "COUNCIL", "REFORMED",
                      "CHRISTIAN", "CHRIST", "GOD", "NAZARENE", "ADVENTIST", "SEVENTH", "DAY", "ORTHODOX", "BRETHREN", "MENNONITE",
                      "DISCIPLES", "CONGREGATIONAL", "CONGREGATION", "FELLOWSHIP", "MINISTRIES", "MINISTRY", "MISSION", "MISSIONS",
                      "MISSIONARY", "NATIONAL", "SOUTHERN", "NORTHERN", "NORTH", "SOUTH", "BISHOPS", "BISHOP", "PARISH", "PARENT", "GEN",
                      "CENTRAL", "ORGANIZATION", "OFFICE", "BOARD", "WORLD", "GLOBAL", "INTERNATIONAL")
-.MD_APOS_RE <- "['`\u2019]"
 .MD_PLACEHOLDER_EINS <-c(sprintf("%s", strrep(0:9, 9)), "123456789", "987654321")
 
 #' Placeholder EINs
@@ -278,36 +275,45 @@ md_placeholder_ein <- function(x) {
   ifelse(is.na(d), NA, d %in% .MD_PLACEHOLDER_EINS | as.numeric(d) < 1e6)
 }
 
-#' Name key used by the guards: uppercase, & to AND, punctuation to spaces, stop
-#' words dropped, common abbreviations expanded (networked990's `name_key()`).
+#' Name key used by the guards
+#'
+#' npmatch's exact-lookup key, [npmatch::np_name_core()]: upper case, accents
+#' removed, `&` to `AND`, apostrophes and initialism periods deleted
+#' (`ST MARY'S` = `SAINT MARYS`), other punctuation to spaces, abbreviations
+#' expanded, then connector words and legal forms dropped.
 #' @param x Names.
 #' @return Character keys, `""` for `NA`.
 #' @export
 md_guard_key <- function(x) {
-  x[is.na(x)] <- ""
-  x <- toupper(x); x <- gsub(.MD_APOS_RE, "", x)   # ST MARY'S = ST MARYS
-  x <- gsub("&", " AND ", x, fixed = TRUE); x <- gsub("[^A-Z0-9 ]", " ", x)
-  vapply(strsplit(trimws(gsub("\\s+", " ", x)), " "), function(t) {
-    t <- t[nzchar(t) & !t %in% .MD_NAME_STOP]
-    i <- t %in% names(.MD_NAME_ABBR); t[i] <- .MD_NAME_ABBR[t[i]]
-    paste(t, collapse = " ")
-  }, character(1))
+  k <- npmatch::np_name_core(x)
+  k[is.na(k)] <- ""
+  k
 }
 
-# SQL counterparts. md_guard_key(s) must equal md_guard_key() in R (tested).
+# SQL counterparts, generated from npmatch::np_name_rules(). md_guard_key(s)
+# must equal npmatch::np_name_core() (tested). The cleaning steps mirror
+# networked990's g_name_clean(), its tested port of npmatch's: the period rule
+# runs twice because each pass removes every other period of F.I.N.D.
 .md_guard_macros <- function(con) {
   q <- function(x) gsub("'", "''", x)
-  stop_sql <- paste0("[", paste(sprintf("'%s'", .MD_NAME_STOP), collapse = ", "), "]")
-  abbr_sql <- paste(sprintf("WHEN '%s' THEN '%s'", names(.MD_NAME_ABBR), .MD_NAME_ABBR), collapse = " ")
+  rules <- npmatch::np_name_rules()
+  stop_sql <- paste0("[", paste(sprintf("'%s'", q(rules$core_stop)), collapse = ", "), "]")
+  abbr_sql <- paste(sprintf("WHEN '%s' THEN '%s'", q(names(rules$abbrev)), q(rules$abbrev)),
+                    collapse = " ")
+  apos_sql <- q("['\u2018\u2019\u02bc\u00b4`]")
+  DBI::dbExecute(con, sprintf("
+    CREATE OR REPLACE TEMP MACRO md_guard_clean(s) AS trim(regexp_replace(
+      regexp_replace(regexp_replace(
+        regexp_replace(replace(strip_accents(upper(COALESCE(CAST(s AS VARCHAR), ''))), '&', ' AND '), '%s', '', 'g'),
+        '([A-Z0-9])\\.([A-Z0-9])', '\\1\\2', 'g'), '([A-Z0-9])\\.([A-Z0-9])', '\\1\\2', 'g'),
+      '[^A-Z0-9]+', ' ', 'g'))", apos_sql))
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_guard_key(s) AS COALESCE(array_to_string(
-      list_transform(
-        list_filter(string_split(trim(regexp_replace(regexp_replace(replace(
-                      regexp_replace(upper(COALESCE(CAST(s AS VARCHAR), '')), '%s', '', 'g'), '&', ' AND '),
-                                                                    '[^A-Z0-9 ]', ' ', 'g'), '\\s+', ' ', 'g')), ' '),
-                    t -> t <> '' AND NOT list_contains(%s, t)),
-        t -> CASE t %s ELSE t END),
-      ' '), '')", q(.MD_APOS_RE), stop_sql, abbr_sql))
+      list_filter(
+        list_transform(list_filter(string_split(md_guard_clean(s), ' '), t -> t <> ''),
+                       t -> CASE t %s ELSE t END),
+        t -> NOT list_contains(%s, t)),
+      ' '), '')", abbr_sql, stop_sql))
   ph_ein <- paste(sprintf("'%s'", .MD_PLACEHOLDER_EINS), collapse = ", ")
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_placeholder_ein(e) AS

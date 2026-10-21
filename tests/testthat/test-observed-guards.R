@@ -38,10 +38,13 @@ test_that("the SQL key and placeholder-EIN rules agree with the R ones", {
   matchdb:::.md_guard_macros(con)
   x <- c("The Alpha Hosp. Fdn, Inc.", "A & B Svcs", "SEE SCHEDULE O", "N/A", "100",
          "St. Mary's Church", "St Mary\u2019s", "SAME AS ABOVE", "Habitat for Humanity",
-         "1N10 INC", "S H A R E INC", "P33")
+         "1N10 INC", "S H A R E INC", "P33", "F.I.N.D. Inc", "Y.M.C.A. of Greater Boston",
+         "Amer Natl Red Cross", "Mt Sinai Dept of Medicine", "Le Caf\u00e9 Fndtn",
+         "Saint Clare\u02bcs Community Care", "", "  ")
   DBI::dbWriteTable(con, "x", data.frame(s = x))
   got <- DBI::dbGetQuery(con, "SELECT s, md_guard_key(s) AS k FROM x")
   expect_equal(got$k[match(x, got$s)], md_guard_key(x))
+  expect_equal(md_guard_key(x), {k <- npmatch::np_name_core(x); k[is.na(k)] <- ""; k})
   e <- c("EIN-00-0000000", "EIN-12-3456789", "EIN-00-0019818", "EIN-53-0196605")
   DBI::dbWriteTable(con, "e", data.frame(e = e))
   got <- DBI::dbGetQuery(con, "SELECT e, md_placeholder_ein(e) AS p FROM e")
