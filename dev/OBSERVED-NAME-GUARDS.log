@@ -1,0 +1,214 @@
+duckdb is storing downloaded extensions and secrets under ~/.duckdb:
+ℹ C:\Users\jlecy/.duckdb
+This persists across sessions and is shared with the DuckDB CLI and other clients.
+ℹ Run duckdb(shared_home = FALSE) to use a temporary directory instead.
+ℹ See ?duckdb_storage for details and alternatives.
+bmf_unified probe - newest vintage in file: 2026-07
+  entity  3,698,197 rows
+  name    6,052,352 rows
+  address 3,077,392 rows
+[  0.2 min] bmf
+efile header: 16 year files
+  5,981,036 filings
+  16,493 filer EINs new to the database (layer = filer_only)
+  1,188,546 names: legal 787,936, former 197,252, in_care_of 145,385, dba  57,973
+  1,365,799 addresses
+[  0.3 min] headers
+schedule I: 16 year files
+  8,241,525 grant rows with a usable recipient EIN and name
+  1,722,804 distinct (ein, name) aliases
+  277,627 recipient EINs new to the database (layer = filer_only)
+  1,722,804 observed names, 2,086,192 observed addresses
+[  0.5 min] schedule I
+schedule R: 16 year files
+  6,093,138 disclosures with a usable EIN and name
+  12,302 related EINs new to the database (layer = filer_only)
+  186,463 observed names
+  220,923 observed addresses
+  corroboration: 1 filer 124,272, 2-4  35,084, 5-19  17,584, 20+   9,523
+[  0.6 min] schedule R
+  guards schedi   1,722,804 rows: placeholder EIN 13,288, placeholder name 147, own EIN 5,717, group central 12,401, multi-name 51,176 (any 71,572); name inconsistent 179,553, no names to compare 423,257
+  guards schedr   186,463 rows: placeholder EIN 694, placeholder name 53, own EIN 592, group central 235, multi-name 580 (any 2,004); name inconsistent 5,331, no names to compare 24,120
+  3,409 multi-name (fiscal-sponsor) EINs
+[  1.2 min] guards
+
+== flagged rows by guard, source and n_corroborators ==
+             guard source    rows      c1   c2-4 c5-19  c20+ pct_2plus
+   placeholder_ein schedi   13288   13034    250     4     0       1.9
+  placeholder_name schedi     147     140      5     2     0       4.8
+           own_ein schedi    5717    5717      0     0     0       0.0
+     group_central schedi   12401   11469    846    82     4       7.5
+        multi_name schedi   51176   47097   3476   555    48       8.0
+         any_guard schedi   71572   67010   3924   589    49       6.4
+ name_inconsistent schedi  179553  170781   7773   947    52       4.9
+          no_names schedi  423257  387647  31343  4004   263       8.4
+          all_rows schedi 1722804 1339769 276766 95735 10534      22.2
+   placeholder_ein schedr     694     599     80    14     1      13.7
+  placeholder_name schedr      53      51      2     0     0       3.8
+           own_ein schedr     592     592      0     0     0       0.0
+     group_central schedr     235     201     26     7     1      14.5
+        multi_name schedr     580     468     88    12    12      19.3
+         any_guard schedr    2004    1775    184    31    14      11.4
+ name_inconsistent schedr    5331    4412    657   195    67      17.2
+          no_names schedr   24120   18845   4095   927   253      21.9
+          all_rows schedr  186463  124272  35084 17584  9523      33.4
+
+== overlap: rows by number of guards raised ==
+ source n_guards       n
+ schedi        0 1651232
+ schedi        1   60431
+ schedi        2   11126
+ schedi        3      14
+ schedi        4       1
+ schedr        0  184459
+ schedr        1    1854
+ schedr        2     150
+
+== what a min_corroborators = 2 spec would keep, by guard (rows) ==
+ source kept_all kept_flagged kept_inconsistent
+ schedi   383035         4562              8772
+ schedr    62191          229               919
+
+== most corroborated rows: flag_placeholder_ein ==
+ source            ein                                                    name_raw n_corroborators n_self_filers legal_name
+ schedr EIN-00-0160881                   INTERMOUNTAIN MEDICAL HOLDINGS NEVADA INC              21             0       <NA>
+ schedr EIN-99-9999999                      EMPATH COMMUNITY SERVICES DIVISION INC              12             0       <NA>
+ schedr EIN-99-9999999 EMPATH ELDER SERVICES DIVISION INC DBA EMPATH COMPLETE CARE              12             0       <NA>
+ schedr EIN-99-9999999                        EMPATH MEDICAL SERVICES DIVISION INC              12             0       <NA>
+ schedr EIN-11-1111111                               Friends of Cathedral Basilica              12             0       <NA>
+ schedr EIN-99-9999999                                            1260 HOUSING LLC               9             0       <NA>
+ schedi EIN-99-9999999                                                     VARIOUS               9             0       <NA>
+ schedi EIN-00-0000000                                                     Various               9             0       <NA>
+ schedr EIN-11-1111111          FRIENDS OF THE CATHEDRAL BASILICA OF STSPETER&PAUL               7             0       <NA>
+ schedi EIN-99-9999999                                       VARIOUS ORGANIZATIONS               7             0       <NA>
+ schedr EIN-00-0101949                    BOSTON HOUSING DEVELOPMENT CORPORATION I               6             0       <NA>
+ schedr EIN-00-0105501                   BOSTON HOUSING DEVELOPMENT CORPORATION II               6             0       <NA>
+
+== most corroborated rows: flag_placeholder_name ==
+ source            ein                    name_raw n_corroborators n_self_filers                                         legal_name
+ schedi EIN-99-9999999                     VARIOUS               9             0                                               <NA>
+ schedi EIN-00-0000000                     Various               9             0                                               <NA>
+ schedr EIN-34-4429276 See Attached Affiliate List               4             0                            UNITED CHURCH HOMES INC
+ schedi EIN-00-0000000              NOT APPLICABLE               2             0                                               <NA>
+ schedi EIN-99-9999999                SEE ATTACHED               2             0                                               <NA>
+ schedi EIN-00-0000000           SEE ATTACHED LIST               2             0                                               <NA>
+ schedr EIN-99-9999999       SEE ATTACHED SCHEDULE               2             0                                               <NA>
+ schedi EIN-99-9999999             SEE STATEMENT 1               2             0                                               <NA>
+ schedi EIN-39-1715104                     VARIOUS               2             1   AMERICAN MEDICAL SOCIETY FOR SPORTS MEDICINE INC
+ schedi EIN-99-1107743                         #NA               1             0                                               <NA>
+ schedi EIN-99-2170102                         #NA               1             0                                               <NA>
+ schedi EIN-03-0348364                         #NA               1             0 UNITED CHILDRENS SERVICES OF BENNINGTON COUNTY INC
+
+== most corroborated rows: flag_own_ein ==
+ source            ein                                            name_raw n_corroborators n_self_filers                                                      legal_name
+ schedi EIN-54-6051298 10 OTHER COLLEGES LESS 3000 EA HEALTH CAREER FIELDS               1             1                                           LEWIS-GALE FOUNDATION
+ schedi EIN-85-4015096                                          100 ACTION               1             1                                         STATE POWER ACTION FUND
+ schedi EIN-85-0455682                           100 San Juan County-CFSNM               1             1                 THE COMMUNITY FOUNDATION OF SOUTHERN NEW MEXICO
+ schedi EIN-41-6023143                                      1000 BOOKS B4K               1             1                               UNITED WAY OF SOUTHWEST MINNESOTA
+ schedi EIN-54-1950727                                     100WOMEN STRONG               1             1 COMMUNITY FOUNDATION FOR LOUDOUN AND NORTHERN FAUQUIER COUNTIES
+ schedi EIN-15-0532073  1011 DESIGNATIONS TO OTHER 501(C)(3) ORGANIZATIONS               1             1                              UNITED WAY OF CENTRAL NEW YORK INC
+ schedi EIN-20-1173824                              104 INDIANA UNIVERSITY               1             1                                     ST BALDRICKS FOUNDATION INC
+ schedi EIN-94-3136771                                         10POWERSHEO               1             1                               PHILANTHROPIC VENTURES FOUNDATION
+ schedi EIN-95-4302067                               10TH STREET PRESCHOOL               1             1                                              COMMUNITY PARTNERS
+ schedi EIN-15-0532073  1112 DESIGNATIONS TO OTHER 501(C)(3) ORGANIZATIONS               1             1                              UNITED WAY OF CENTRAL NEW YORK INC
+ schedi EIN-22-2456238                         11TH & PIKE - MOBILE DIRECT               1             1                                 HELPING HARVEST FRESH FOOD BANK
+ schedi EIN-22-2456238                           11TH & PIKE MOBILE - CSFP               1             1                                 HELPING HARVEST FRESH FOOD BANK
+
+== most corroborated rows: flag_group_central ==
+ source            ein                         name_raw n_corroborators n_self_filers                                                  legal_name
+ schedi EIN-95-6006173                              CRU              77             0                               CAMPUS CRUSADE FOR CHRIST INC
+ schedr EIN-65-0665009                            EHDOC              38             0                            ELDERLY HOUSING DEV & OPERATIONS
+ schedi EIN-23-6393377        FIRST PRESBYTERIAN CHURCH              32             0                                     PRESBYTERIAN CHURCH USA
+ schedi EIN-53-0088380                  IBEW UNITY FUND              27             0             INTERNATIONAL BROTHERHOOD OF ELECTRICAL WORKERS
+ schedi EIN-53-0196617               CATHOLIC CHARITIES              21             0                           UNITED STATES CATHOLIC CONFERENCE
+ schedi EIN-44-0577787 ASSEMBLIES OF GOD WORLD MISSIONS              18             0                THE GENERAL COUNCIL OF THE ASSEMBLIES OF GOD
+ schedi EIN-02-6000937              KEENE STATE COLLEGE              18             0                          UNIVERSITY SYSTEM OF NEW HAMPSHIRE
+ schedi EIN-13-1610451           USO WORLD HEADQUARTERS              18             0                            UNITED SERVICE ORGANIZATIONS INC
+ schedi EIN-43-0653365         LUTHERAN HOUR MINISTRIES              16             0                       INTERNATIONAL LUTHERAN LAYMENS LEAGUE
+ schedi EIN-31-1629166       ST PAUL'S EPISCOPAL CHURCH              12             0 PROTESTANT EPISCOPAL CHURCH IN THE UNITED STATES OF AMERICA
+ schedi EIN-31-1813333    FIRST UNITED METHODIST CHURCH              11             0           GENERAL COUNCIL ON FINANCE & ADMINS OF THE UNITED
+ schedi EIN-04-3230035   MASSACHUSETTS GENERAL HOSPITAL              11             0                           MASS GENERAL BRIGHAM INCORPORATED
+
+== most corroborated rows: flag_multi_name ==
+ source            ein                             name_raw n_corroborators n_self_filers                     legal_name
+ schedi EIN-74-6000203        UNIVERSITY OF TEXAS AT AUSTIN             251             0                      THETA TAU
+ schedi EIN-74-6000203    THE UNIVERSITY OF TEXAS AT AUSTIN             165             0                      THETA TAU
+ schedi EIN-42-6004224                IOWA STATE UNIVERSITY             158             0       SOCIETY FOR NEUROSCIENCE
+ schedr EIN-68-0233835                         Walnut Grove             140             1    MERCY PROPERTIES CALIFORNIA
+ schedi EIN-57-6000722 MEDICAL UNIVERSITY OF SOUTH CAROLINA             135             0 PHI CHI MEDICAL FRATERNITY INC
+ schedi EIN-56-6000403             EAST CAROLINA UNIVERSITY             133             0       SOCIETY FOR NEUROSCIENCE
+ schedr EIN-68-0233835     Osocales (McIntosh Mobile Homes)              96             1    MERCY PROPERTIES CALIFORNIA
+ schedr EIN-68-0233835                       Richmond Hills              96             1    MERCY PROPERTIES CALIFORNIA
+ schedr EIN-68-0233835                         Santa Monica              96             1    MERCY PROPERTIES CALIFORNIA
+ schedr EIN-68-0233835                         Sierra Vista              96             1    MERCY PROPERTIES CALIFORNIA
+ schedr EIN-68-0233835          Sycamore Center (Red Bluff)              96             1    MERCY PROPERTIES CALIFORNIA
+ schedr EIN-68-0233835                            The Haven              96             1    MERCY PROPERTIES CALIFORNIA
+
+== placeholder EINs: distinct EINs and rows ==
+ source            ein names corr
+ schedi EIN-99-9999999  5792 5910
+ schedi EIN-00-0000000  5619 5798
+ schedi EIN-12-3456789   748  753
+ schedi EIN-11-1111111   549  552
+ schedr EIN-99-9999999   426  563
+ schedi EIN-55-5555555   217  219
+ schedr EIN-00-0000000   176  195
+ schedi EIN-88-8888888   155  155
+ schedi EIN-00-0000001    24   24
+ schedr EIN-11-1111111    16   34
+ schedi EIN-22-2222222    12   12
+ schedr EIN-66-6666666    10   12
+
+== multi-name (fiscal-sponsor) EINs, largest ==
+            ein affiliation_code flagged_names corr                                                  legal_name
+ EIN-53-0196617                8          3211 3880                           UNITED STATES CATHOLIC CONFERENCE
+ EIN-31-1813333                8           611  656           GENERAL COUNCIL ON FINANCE & ADMINS OF THE UNITED
+ EIN-23-7290968                3           432  434                      COMMUNITY FOUNDATION OF THE OZARKS INC
+ EIN-44-0577787                8           392  422                THE GENERAL COUNCIL OF THE ASSEMBLIES OF GOD
+ EIN-74-6000203             <NA>           389 1116                                                   THETA TAU
+ EIN-41-1568278                8           346  368                      EVANGELICAL LUTHERAN CHURCH IN AMERICA
+ EIN-52-0643036                8           285  293                 GENERAL CONFERENCE OF SEVENTH DAY ADVENTIST
+ EIN-23-1352685                3           226  286                  TRUSTEES OF THE UNIVERSITY OF PENNSYLVANIA
+ EIN-13-4148824                3           217  218                                           CHARITY NAVIGATOR
+ EIN-14-6013200             <NA>           205  310                                               SKILLSUSA INC
+ EIN-13-1837418                3           195  196                                                      CANDID
+ EIN-95-1642394                3           190  261                           UNIVERSITY OF SOUTHERN CALIFORNIA
+ EIN-24-6000376             <NA>           181  241                               PENNSYLVANIA STATE UNIVERSITY
+ EIN-51-6000279             <NA>           177  218                                           STATE OF DELAWARE
+ EIN-04-3167352                9           170  240                                 UNIVERSITY OF MASSACHUSETTS
+ EIN-23-7343119                3           167  168                     GREATER WASHINGTON COMMUNITY FOUNDATION
+ EIN-47-4070026                3           167  167                                              BRIGHTER BITES
+ EIN-31-1629166                8           165  179 PROTESTANT EPISCOPAL CHURCH IN THE UNITED STATES OF AMERICA
+ EIN-36-2167731                9           162  167                           SOUTHBEND UNITED METHODIST CHURCH
+ EIN-23-6393377                8           161  166                                     PRESBYTERIAN CHURCH USA
+ EIN-38-6006309                3           158  183                       REGENTS OF THE UNIVERSITY OF MICHIGAN
+ EIN-43-0658188                8           157  168                              LUTHERAN CHURCH MISSOURI SYNOD
+ EIN-94-3213100                3           152  208                                                TIDES CENTER
+ EIN-04-6002284             <NA>           152  223   COMMONWEALTH OF MASSACHUSETTS OFFICE OF STATE COMPTROLLER
+ EIN-13-5562308                3           151  302                                         NEW YORK UNIVERSITY
+ multi_name_eins also_central
+            3409          226
+
+== most corroborated inconsistent names (not otherwise flagged) ==
+ source            ein                                   name_raw n_corroborators                                      legal_name
+ schedr EIN-54-0928241                          VIRGINIA BEACH MR             214             VOLUNTEERS OF AMERICA HAMPTON ROADS
+ schedr EIN-42-1348035                             MERCY AUXILARY             193                         MERCY AUXILIARY-CLINTON
+ schedr EIN-95-2625490             RIVERSIDE CONGREGATIONAL HOMES             144                    BALDWIN PARK RHF HOUSING INC
+ schedr EIN-95-3544877               PH&S FOUNDATIONSFVSA & SCVSA             111         PROVIDENCE HEALTH & SERVICES FOUNDATION
+ schedr EIN-45-0226553                MERCY HEALTHCARE FOUNDATION             105                                  MERCY HOSPITAL
+ schedr EIN-95-1643324                       ST JUDE HOSPITAL INC             101                   FLINTRIDGE PREPARATORY SCHOOL
+ schedr EIN-48-1253246                St Joseph Memorial Hospital             100            PAWNEE VALLEY COMMUNITY HOSPITAL INC
+ schedr EIN-86-0772987                                  Los Arcos              95                        MERCY PROPERTIES ARIZONA
+ schedr EIN-86-0772987                                Mercy Court              95                        MERCY PROPERTIES ARIZONA
+ schedr EIN-68-0378674                      Mercy Timbercreek LLC              95                MERCY BOND PROPERTIES NEBRASKA I
+ schedr EIN-94-3286321                              Franconia LLC              94                MERCY BOND PROPERTIES COLORADO I
+ schedr EIN-94-3081666                     MHC NSP LLC (NSP MHCL)              94                        MERCY HOUSING CALIFORNIA
+ schedr EIN-36-2276984 Bert Fish Medical Center Inc (10110-63011)              91                        ADVENTIST MIDWEST HEALTH
+ schedr EIN-27-2239991   Kane County Neighborhood Stabilization C              91                       MERCY HOUSING WHEATON NFP
+ schedr EIN-26-4002114                        MPS Community I LLC              85                        MERCY PORTFOLIO SERVICES
+ schedr EIN-77-0117473                            Downtown Villas              84               CENTRAL COAST HOUSING CORPORATION
+ schedr EIN-52-1466304                     Liberty Medical Center              73                       LIBERTY HEALTH SYSTEM INC
+ schedr EIN-47-3111453     CPHCH INC DBA BILH AT HOME - WATERTOWN              62     CAREGROUP PARMENTER HOME CARE & HOSPICE INC
+ schedr EIN-43-1012492                      SSM Health Ministries              50                      FRANCISCAN SISTERS OF MARY
+ schedr EIN-91-1303277          The John Gabriel Ryan Association              49 PROVIDENCE HEALTH & SERVICES WESTERN WASHINGTON
+[  1.2 min] done

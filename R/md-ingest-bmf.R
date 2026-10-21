@@ -102,7 +102,11 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       'bmf'                     AS source,
       '%s'                      AS source_vintage,
       CAST(NULL AS INTEGER)     AS n_obs,
-      CAST(NULL AS INTEGER)     AS n_corroborators
+      CAST(NULL AS INTEGER)     AS n_corroborators,
+      -- every later ingest inserts these; without them a fresh build fails at
+      -- the first one (the return headers)
+      CAST(NULL AS INTEGER)     AS first_year,
+      CAST(NULL AS INTEGER)     AS last_year
     FROM v", vintage))
   n_name <- .md_n(con, "name")
   msg("  name    %s rows", format(n_name, big.mark = ","))

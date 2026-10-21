@@ -59,9 +59,10 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param path Path to the derived `affiliate-listing-*.csv`.
+#' @param guard Run [md_guard_observed()] on the observed rows of source `efile990`.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_affiliate_listing <- function(con = NULL, path = NULL) {
+md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE) {
   if (is.null(path)) {
     path <- md_path("sources", "efile_affiliate_listing", "v2009-2013",
                     "affiliate-listing-2009-2013.csv")
@@ -118,7 +119,8 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL) {
   ## ---- observed names on the subordinate's own EIN -----------------------------
   DBI::dbExecute(con, sprintf("DELETE FROM name WHERE source_vintage = '%s'", vintage))
   nbase <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
-  n_nm <- DBI::dbExecute(con, sprintf("
+  .md_name_guard_columns(con)
+  n_nm <-DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
                       source_vintage, n_obs, n_corroborators)
     SELECT %s + row_number() OVER (), ein, nm, 'observed', 'efile990', '%s',
@@ -146,5 +148,9 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL) {
   msg("  ein_relation: %s rows | name: %s rows",
       format(.md_n(con, "ein_relation"), big.mark = ","),
       format(.md_n(con, "name"), big.mark = ","))
+  # Placeholder EINs and names, and names unlike the member's own, are flagged
+  # here as on Schedule I. Own-EIN rows were dropped above (self-loops), and the
+  # fiscal-sponsor test reads Schedule I only.
+  if (guard) md_guard_observed(con, sources = "efile990")
   invisible(stats::setNames(c(n_rel, novel, n_nm), c("edges", "novel_edges", "names")))
 }

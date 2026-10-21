@@ -45,9 +45,13 @@
 #' @param con A connection from [md_db()].
 #' @param min_corroborators Minimum distinct filers. Defaults to 1; see above for
 #'   how corroboration actually distributes here.
+#' @param guard Run [md_guard_observed()] on the loaded rows (see
+#'   [md_ingest_schedi()]). A filer listing itself as a related organisation
+#'   under a different name is the own-EIN case here.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1L) {
+md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1L,
+                             guard = TRUE) {
   dir <- md_path("sources", "efile_related", version)
   files <- list.files(dir, pattern = "^SR-P02-T01-.*[.]CSV$", full.names = TRUE)
   if (!length(files)) stop("no Schedule R files in ", dir, call. = FALSE)
@@ -62,7 +66,10 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
     CREATE OR REPLACE TEMP TABLE sr_clean AS
     SELECT
       'EIN-' || substr(d,1,2) || '-' || substr(d,3,9) AS ein,
-      filer_ein, tax_year, name_raw, street_raw, city_raw, state, zip5,
+      -- the filer in the same canonical form as ein, so a filer writing its own EIN is a plain equality
+      'EIN-' || substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),1,2) || '-' ||
+                substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),3,9) AS filer_ein,
+      tax_year, name_raw, street_raw, city_raw, state, zip5,
       trim(regexp_replace(regexp_replace(upper(name_raw),'[^A-Z0-9 ]','','g'),
                           ' +',' ','g')) AS name_key
     FROM (
@@ -104,6 +111,11 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
       SELECT ein, name_key,
              count(*)                  AS n_obs,
              count(DISTINCT filer_ein) AS n_corroborators,
+             -- guard inputs (md_guard_observed): filers who wrote their own EIN for
+             -- this name, and the range of the other filers (2+ filers iff lo <> hi)
+             count(DISTINCT filer_ein) FILTER (WHERE filer_ein = ein)  AS n_self_filers,
+             min(filer_ein) FILTER (WHERE filer_ein <> ein)            AS filer_ein_lo,
+             max(filer_ein) FILTER (WHERE filer_ein <> ein)            AS filer_ein_hi,
              min(tax_year) AS first_year, max(tax_year) AS last_year
       FROM sr_clean WHERE trim(name_key) <> ''
       GROUP BY 1,2 HAVING count(DISTINCT filer_ein) >= %d
@@ -120,11 +132,13 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
     CREATE OR REPLACE TEMP TABLE sr_name AS
     SELECT %s + row_number() OVER () AS name_id, * FROM sr_alias",
     format(base_name, scientific = FALSE)))
+  .md_name_guard_columns(con)
   DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source,
-                      source_vintage, n_obs, n_corroborators, first_year, last_year)
+                      source_vintage, n_obs, n_corroborators, first_year, last_year,
+                      n_self_filers, filer_ein_lo, filer_ein_hi)
     SELECT name_id, ein, name_raw, 'observed', 'schedr', '%s', n_obs, n_corroborators,
-           first_year, last_year
+           first_year, last_year, n_self_filers, filer_ein_lo, filer_ein_hi
     FROM sr_name", vintage))
   msg("  %s observed names", format(n_alias, big.mark = ","))
 
@@ -180,6 +194,7 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
                       build_note = sprintf("md_ingest_schedr(min_corroborators=%d)",
                                            as.integer(min_corroborators)))
   }
+  if (guard) md_guard_observed(con, sources = "schedr")
   invisible(stats::setNames(c(n_alias, n_addr, n_new),
                             c("names", "addresses", "new_entities")))
 }
