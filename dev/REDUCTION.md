@@ -307,6 +307,43 @@ cluster identifier. One integer per entity replaces traversing 1.3M pairs, and i
 answers in O(1) the question `pfmatch/R/dyads.R` currently recomputes: *are these
 two candidates the same family?*
 
+**Built 2026-10-21 as `group_id`**, the name `PLAN.md` §4 uses. The function is
+`md_build_groups()` (`R/md-groups.R`) and the output is the derived table
+`entity_group`. Only `group_member` edges form the components: with
+`related_entity` edges included, one component grows to 117,869 EINs. The
+derived table has one row per grouped EIN, with `group_id`, `group_size`,
+`role`, `n_parents` and `group_central_ein`. The `group_id` is `GRP-` plus the
+smallest member EIN, so it is stable across rebuilds and adding a group never
+renumbers the others.
+
+Measured on the BMF group-exemption edges alone (`dev/probes/probe-groups.R`;
+the NCCS historical, e-file and affiliate-listing edges were not loaded):
+
+```
+edges 439,774   EINs 443,353 (12.0% of 3,698,197)   groups 3,579
+median 17, largest 17,179 (US Catholic Conference)   3 passes, 0.6 s
+```
+
+This is consistent with `GROUP-STRUCTURE-FINDINGS.md` §1 (3,643 groups,
+446,492 EINs, max 17,179 with the historical edges). The BMF edges are pure
+stars: no member has two parents and no group has two parents, so components
+add nothing over the stars yet. They will start to matter once the e-file and
+affiliate-listing edges are loaded.
+
+Two limits that §6b has to plan around:
+
+* **A group covers only part of a shared name.** 21,154 EINs carry the legal
+  name `TOASTMASTERS INTERNATIONAL`, but only 7,831 (37%) are in a group, and
+  those fall into 2 groups. `KNIGHTS OF COLUMBUS`: 8,587 of 12,764, 2 groups.
+  `AMERICAN LEGION`: 7,290 of 11,975, 3 groups. Read off `group_id` alone,
+  `name_ambiguity` would call these `cross_family`.
+* **204,270 EINs carry a GEN but get no group**, because their GEN has no coded
+  parent (1,540 GENs, reported by `md_ingest_relations()`). A fallback that
+  groups them by GEN alone would cover them, at the cost of the "GEN is not the
+  key" rule. Not decided.
+
+`n_eins_at_address` (§6c) is not built yet.
+
 ### 6b. `name_ambiguity` — turning a count into a structural claim
 
 For each `(name_key)`, compare the clusters of the EINs holding it:
@@ -383,6 +420,8 @@ Each step is cheap, and each one makes the next cheaper.
 3. **Precompute the structural columns.** `cluster_id`, `n_eins_sharing`,
    `n_eins_at_address`. All are single passes; all are database properties rather
    than spec properties, so they are computed once rather than per compile.
+   *Status 2026-10-21:* `cluster_id` is built as `group_id` (§6a) and
+   `n_eins_sharing` is on `name_compact`. `n_eins_at_address` is not built yet.
 
 4. **`md_spec()` and `md_compile()`.** With the above in place, a compile is a
    filtered read plus the §8 pairing join — seconds, not minutes.

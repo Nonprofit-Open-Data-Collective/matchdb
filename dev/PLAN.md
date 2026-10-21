@@ -13,8 +13,10 @@ built ahead of the compile step; Phases 1–3 not started.**
 > as a deliberate dry run, to be rebuilt once the process is proven robust.
 >
 > In `REDUCTION.md` §8's build order, step 1 (derived columns) is done and step 2
-> (compact form) has been drafted and tested (`COMPACTION.md`). Steps 3–5 are
-> not started: `cluster_id`, `md_spec()`/`md_compile()`, and the named tiers.
+> (compact form) has been drafted and tested (`COMPACTION.md`). Step 3 is partly
+> done: `cluster_id` is built as `group_id` (`md_build_groups()`, `REDUCTION.md`
+> §6a), and `n_eins_at_address` is not built yet. Steps 4–5 are not started:
+> `md_spec()`/`md_compile()` and the named tiers.
 > With no `md_compile()` yet, **neither the Phase 1 gate nor the Phase 2 gate has
 > been run**, and nothing has been published (Phase 3).
 
