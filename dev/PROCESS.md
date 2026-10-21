@@ -1,6 +1,8 @@
 # matchdb — build process
 
-**Status: proposal, 2026-08-21. Companion to [`PLAN.md`](PLAN.md).**
+**Status: proposal, 2026-08-21. Companion to [`PLAN.md`](PLAN.md). Updated
+2026-10-21: Phase 0 (0a–0d) is complete. The next gate is Phase 1, which waits on
+`md_compile()` (§6, §8).**
 
 `PLAN.md` decides *what* to build and in what order. This document decides *how
 the work is actually conducted*: what has to be true before the first line of
@@ -205,9 +207,15 @@ that drifts between runs. It does not drift.
 Still untested: a second platform and R version. Nothing suggests risk, but one
 confirming run is worth taking when a second machine is available.
 
-This pins the *benchmark*, not the *baseline* — 0a's manifest is still to be
-produced. What the check establishes is that such a baseline will be
-reproducible once taken.
+This pins the *benchmark*, not the *baseline*. What the check establishes is that
+such a baseline will be reproducible once taken.
+
+**Manifest: done.** `pfmatch/dev/BASELINE-2026-08/` (`MANIFEST.md`,
+`manifest.csv`, pinned column lists, both 1k benchmark outputs), built by
+`pfmatch/dev/build-baseline.R`. It was re-frozen as revision 2 on 2026-08-22
+(`pfmatch@3891c62`) after `npmatch@f14f1d9` changed tie-breaking to `.ein`. In
+that re-freeze no tier moved and every reference hash and the normalizer
+signature stayed the same; only which of several tied EINs is reported changed.
 
 ### 0b. Land `np_normalize_signature()` *(npmatch, ~1 day)*
 
@@ -216,13 +224,11 @@ the functions in `R/normalize.R` that feed the derived columns. Exported, tested
 for stability across a no-op edit and for change across a real one. Nothing in
 matchdb can be safely cached until this exists.
 
-**Built and pushed, awaiting merge** — `npmatch@9427304` on branch
-`feature/normalize-signature`. The PR is not yet opened (`gh` is not installed
-on the build machine):
-<https://github.com/Nonprofit-Open-Data-Collective/npmatch/pull/new/feature/normalize-signature>
+**Done, merged.** `npmatch@9427304`, merged to `main` as PR #5
+(`npmatch@d658486`).
 
 Signature at `npmatch@fd17637` is **`v1-421e1e2a6afb024e`** over 36 components.
-Record that value in the 0a manifest: it is what a Phase 1 artifact will be
+It is recorded in the 0a manifest. It is what a Phase 1 artifact will be
 stamped with, and the first thing to compare if a later gate reports a diff
 nobody expected.
 
@@ -343,6 +349,11 @@ The measurement is banked.
 `R/`, `tests/testthat/`, and the verification harness below. No ingest, no
 schema, no compile.
 
+**Done** (`matchdb@16937cc`). `dev/verify/run-gate.R --selftest` runs the
+baseline against itself and must report three zeros. It also runs a negative
+control that flips one verdict, which the harness must catch, and it refuses to
+run if the installed normalizer signature differs from the baseline's.
+
 ---
 
 ## 5. The verification harness — a first-class deliverable
@@ -384,9 +395,24 @@ Phases are the plan's; the gate column is what this document adds.
 
 | phase | repo | gate — passes when |
 |---|---|---|
-| **0a** baseline | pfmatch | manifest committed; ~~benchmark verified deterministic~~ **determinism done** (`pfmatch@eacd5c3`, thread-independent) — manifest outstanding |
-| **0b** signature | npmatch | ~~exported and tested~~ **built** (`npmatch@9427304`, `v1-421e1e2a6afb024e`) — merge outstanding |
-| **0c** vocabulary + A/B | pfmatch | ~~enums frozen; four-number decomposition~~ **done** (`matchdb@08c1fc0`, `pfmatch@4d4837a`) — four arms, aliases carry the whole gain |
+**Status at 2026-10-21:**
+
+| phase | repo | status |
+|---|---|---|
+| **0a** baseline | pfmatch | **done.** Deterministic (`pfmatch@eacd5c3`); manifest in `pfmatch/dev/BASELINE-2026-08/`, revision 2 (`pfmatch@3891c62`) |
+| **0b** signature | npmatch | **done.** Merged as PR #5 (`npmatch@d658486`); `v1-421e1e2a6afb024e` |
+| **0c** vocabulary + A/B | pfmatch | **done** (`matchdb@08c1fc0`, `pfmatch@4d4837a`). Four arms; aliases carry the whole gain |
+| **0d** scaffold | matchdb | **done** (`matchdb@16937cc`). The selftest reports three zeros and the negative control catches the flipped verdict |
+| **1** entity + name + address, BMF | matchdb | **not run.** BMF ingest exists; `md_compile()` does not |
+| **2** Schedule I as `observed` | matchdb | **not run.** Schedule I ingest exists; waits on `md_compile()` |
+| **3** publication | matchdb | **not started** |
+| **4** remaining layers | matchdb | **ingested ahead of order** as a dry run. Row-budget and shape-report checks can't run until `md_compile()` exists |
+
+| phase | repo | gate — passes when |
+|---|---|---|
+| **0a** baseline | pfmatch | manifest committed; benchmark verified deterministic |
+| **0b** signature | npmatch | exported and tested |
+| **0c** vocabulary + A/B | pfmatch | enums frozen; four-number decomposition |
 | **0d** scaffold | matchdb | package skeleton; harness runs baseline-vs-itself and reports three zeros |
 | **1** entity + name + address, BMF | matchdb | harness: `md_compile(active-legal)` vs `REF-active.rds` → three zeros; 1k benchmark exact |
 | **2** Schedule I as `observed` | matchdb | vs the row-count-resolved augmented BMF (0a) → three zeros; 1k reproduces 0c's measured delta |
@@ -473,6 +499,13 @@ a shape summary that reads as a clean bill of health.
 
 ~~Commit the untracked evidence in `pfmatch/dev/`~~ — done, `pfmatch@daa4b03`.
 ~~Run 0a's determinism check~~ — done and passed, `pfmatch@eacd5c3`.
+
+> **Superseded 2026-10-21.** The baseline manifest below has been taken
+> (`pfmatch/dev/BASELINE-2026-08/`), and all of Phase 0 is done. The immediate
+> next step is now `REDUCTION.md` §8 steps 3–4: `cluster_id`, then
+> `md_spec()`/`md_compile()`. That makes it possible to run the Phase 1 gate
+> with `dev/verify/run-gate.R` against the frozen baseline. The original text
+> follows for the record.
 
 So: **take the 0a baseline manifest**, and do it before the `variant_class` fix
 lands. The determinism result says a baseline will be reproducible once taken; it

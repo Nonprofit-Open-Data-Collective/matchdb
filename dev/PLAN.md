@@ -1,6 +1,22 @@
 # matchdb — development plan
 
-**Status: proposal, 2026-08-21. No code written yet.**
+**Status: proposal, 2026-08-21. Updated 2026-10-21: Phase 0 complete; database
+built ahead of the compile step; Phases 1–3 not started.**
+
+> **Where the work stands.** The build has not followed the phase order below.
+> Phase 0 is finished (see `PROCESS.md` §6). Rather than stop at a BMF-only
+> Phase 1, the first pass ingested every planned source, so the archive is
+> already Phase 4 in scope. The ingest functions are in `R/md-ingest-*.R`.
+> All five core tables are populated (`entity` 4.0M, `name` 9.7M, `address`
+> 18.5M, `orgtext` 15.1M rows), and `ein_relation` holds 2.15M edges with every
+> queued source loaded (`RELATION-BUILD-PLAN.md`). `PAIN-POINTS.md` treats this
+> as a deliberate dry run, to be rebuilt once the process is proven robust.
+>
+> In `REDUCTION.md` §8's build order, step 1 (derived columns) is done and step 2
+> (compact form) has been drafted and tested (`COMPACTION.md`). Steps 3–5 are
+> not started: `cluster_id`, `md_spec()`/`md_compile()`, and the named tiers.
+> With no `md_compile()` yet, **neither the Phase 1 gate nor the Phase 2 gate has
+> been run**, and nothing has been published (Phase 3).
 
 This is the design document for `matchdb`, written before implementation so the
 boundaries can be argued about while they are still cheap to move. It was
