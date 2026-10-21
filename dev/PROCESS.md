@@ -186,6 +186,33 @@ Produce, from a single pinned `(npmatch, pfmatch)` commit pair, a
 | `PF_SET=1k` tiered output | both benchmarks |
 | md5 of each, row counts, the two commit SHAs, R and package versions | reproducibility |
 
+**Frozen, 2026-08-21** — `pfmatch@45a5040`, `pfmatch/dev/BASELINE-2026-08/`,
+built by `dev/build-baseline.R`. 357 KB tracked; the four large artifacts stay
+in gitignored `data-dev/` and are pinned by hash.
+
+| artifact | md5 | rows |
+|---|---|---:|
+| `REF-active.rds` | `51954557f721bc282d1523884fa38ee2` | 1,924,822 |
+| `REF-unified.rds` | `9d486da3e5e29dcb6f8ad6324f1aa19b` | 3,687,435 |
+| `REF-augmented.rds` | `74eb9b4a6875b671f64d8aadd48a36d5` | 3,880,431 |
+| `BMF-AUGMENTED-unified-fixed.csv` | `dac8ff11b176beb31a7bc4da5d548caf` | 3,880,431 |
+| `benchmark-1k-active.rds` | `aec9fb37d8b486bb6d9b4930003db48e` | 4,733 |
+| `benchmark-1k-augmented.rds` | `75d4cf833cd0df70d022883c6468ba5d` | 4,793 |
+
+Pinned at `pfmatch@d02a458`, `npmatch@d658486`, normalizer signature
+**`v1-421e1e2a6afb024e`**. Verdicts: active 2821/1006/906, augmented
+3015/1041/737 — both reproducing runs already on record (the three determinism
+runs and 0c arms D and B), so the freeze records numbers four separate processes
+agree on rather than a single run.
+
+Two things worth carrying forward. The benchmark outputs are **163 KB and
+165 KB**, not the 9.65/16.64 MB a naive save produces: `as.data.frame()` does
+not drop a subclassed frame's attributes and `np_cascade()` attaches the scored
+pair table, 194 MB of a 198 MB object. Strip `attr(x, "pairs")` before
+persisting anything. And the augmented CSV is `-unified-fixed.csv`, resolved by
+row count at 100% EIN alignment — not the artifact behind `REF-PERFORMANCE.md`'s
+published figure. See `BASELINE-2026-08/MANIFEST.md`.
+
 **Determinism check first.** ~~Run the 1k benchmark twice from a cold cache and
 confirm the outputs are identical.~~
 
@@ -208,14 +235,14 @@ Still untested: a second platform and R version. Nothing suggests risk, but one
 confirming run is worth taking when a second machine is available.
 
 This pins the *benchmark*, not the *baseline*. What the check establishes is that
-such a baseline will be reproducible once taken.
+such a baseline will be reproducible once taken. The baseline itself is the
+freeze recorded above.
 
-**Manifest: done.** `pfmatch/dev/BASELINE-2026-08/` (`MANIFEST.md`,
-`manifest.csv`, pinned column lists, both 1k benchmark outputs), built by
-`pfmatch/dev/build-baseline.R`. It was re-frozen as revision 2 on 2026-08-22
-(`pfmatch@3891c62`) after `npmatch@f14f1d9` changed tie-breaking to `.ein`. In
-that re-freeze no tier moved and every reference hash and the normalizer
-signature stayed the same; only which of several tied EINs is reported changed.
+**Re-frozen as revision 2, 2026-08-22** (`pfmatch@3891c62`), after
+`npmatch@f14f1d9` changed tie-breaking to `.ein`. No tier moved, and every
+reference hash and the normalizer signature stayed the same. Only which of
+several tied EINs is reported changed (498 of 4,733 identities). See
+`BASELINE-2026-08/MANIFEST.md`.
 
 ### 0b. Land `np_normalize_signature()` *(npmatch, ~1 day)*
 
@@ -349,10 +376,33 @@ The measurement is banked.
 `R/`, `tests/testthat/`, and the verification harness below. No ingest, no
 schema, no compile.
 
-**Done** (`matchdb@16937cc`). `dev/verify/run-gate.R --selftest` runs the
-baseline against itself and must report three zeros. It also runs a negative
-control that flips one verdict, which the harness must catch, and it refuses to
-run if the installed normalizer signature differs from the baseline's.
+**Done, 2026-08-21** — `matchdb@16937cc`. `DBI`, `duckdb` and `arrow` went to
+*Suggests* rather than Imports: nothing needs them until Phase 1, and a skeleton
+that cannot install without a 200 MB dependency chain is a worse skeleton.
+
+The harness is `R/verify.R`, the runner `dev/verify/run-gate.R` with exit status
+as the gate. Two decisions worth recording:
+
+* **`md_normal_form()` requires an explicit column list and refuses to default.**
+  Reading `np_fields` at run time is the trap §5 identifies — 0c adds
+  `variant_class` to it — so the argument is mandatory rather than
+  conveniently defaulted. It also carries a within-key occurrence index, so a
+  key appearing 3 times in the baseline and twice in the candidate registers as
+  a difference instead of matching.
+* **`md_compare_tiered()` implements 0c's union-align rule**, marking absent
+  identities `NONE` and keeping that distinct from a scored `NO`.
+
+`run-gate.R` refuses to run when the installed normalizer signature differs from
+the baseline's — the §9 guard, wired in from the first commit. **It is live**:
+0b merged as `npmatch@d658486` while 0a was being frozen, so the gate now
+enforces rather than warns, and reports `signature matches:
+v1-421e1e2a6afb024e` against the baseline.
+
+24 harness tests pass, and the gate itself passes against the real baseline —
+three zeros on both the active and augmented benchmarks, with the negative
+control detecting a single flipped verdict in each. The negative control is the
+part that matters: three zeros alone would also be what a harness that measures
+nothing reports.
 
 ---
 
@@ -393,16 +443,14 @@ makes "stop and reconsider" a decision someone can actually take.
 
 Phases are the plan's; the gate column is what this document adds.
 
-| phase | repo | gate — passes when |
-|---|---|---|
 **Status at 2026-10-21:**
 
 | phase | repo | status |
 |---|---|---|
-| **0a** baseline | pfmatch | **done.** Deterministic (`pfmatch@eacd5c3`); manifest in `pfmatch/dev/BASELINE-2026-08/`, revision 2 (`pfmatch@3891c62`) |
-| **0b** signature | npmatch | **done.** Merged as PR #5 (`npmatch@d658486`); `v1-421e1e2a6afb024e` |
+| **0a** baseline | pfmatch | **done.** Frozen at `pfmatch@45a5040`, `dev/BASELINE-2026-08/`, then re-frozen as revision 2 (`pfmatch@3891c62`). Deterministic and thread-independent (`eacd5c3`) |
+| **0b** signature | npmatch | **done.** Merged as PR #5 (`npmatch@d658486`); signature `v1-421e1e2a6afb024e` |
 | **0c** vocabulary + A/B | pfmatch | **done** (`matchdb@08c1fc0`, `pfmatch@4d4837a`). Four arms; aliases carry the whole gain |
-| **0d** scaffold | matchdb | **done** (`matchdb@16937cc`). The selftest reports three zeros and the negative control catches the flipped verdict |
+| **0d** scaffold | matchdb | **done** (`matchdb@16937cc`). The gate selftest gives three zeros on both baselines, and the negative control catches the flipped verdict |
 | **1** entity + name + address, BMF | matchdb | **not run.** BMF ingest exists; `md_compile()` does not |
 | **2** Schedule I as `observed` | matchdb | **not run.** Schedule I ingest exists; waits on `md_compile()` |
 | **3** publication | matchdb | **not started** |
