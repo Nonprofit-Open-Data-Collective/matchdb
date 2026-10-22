@@ -6,13 +6,16 @@
 \usage{
 md_ingest_schedr_parts(
   con = NULL,
-  which = c("disregarded", "partnership", "corporation")
+  which = c("disregarded", "partnership", "corporation"),
+  version = "v2_2"
 )
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
 \item{which}{One or more of \code{"disregarded"}, \code{"partnership"}, \code{"corporation"}.}
+
+\item{version}{Pinned version of the three Schedule R part sources, e.g. \code{"v3_1"}.}
 }
 \value{
 Row counts per part, invisibly.

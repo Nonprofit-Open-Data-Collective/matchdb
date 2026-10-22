@@ -4,12 +4,14 @@
 \alias{md_ingest_efile_group}
 \title{Add group membership from what filers report on Form 990 line H}
 \usage{
-md_ingest_efile_group(con = NULL, dir = NULL)
+md_ingest_efile_group(con = NULL, dir = NULL, version = "v2_2")
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
 \item{dir}{Directory of \verb{F9-P00-T00-HEADER-*.CSV}.}
+
+\item{version}{Pinned \code{efile_header} version; also names \code{dir} when it is \code{NULL}.}
 }
 \value{
 Row counts, invisibly.
@@ -76,7 +78,9 @@ needs a parent. Three sources are tried in order, most authoritative first:
 \item an EIN that filed a \strong{group return} under that GEN. A group return is
 filed by the central organisation, so H(a) plus H(c) is a parent claim.
 Covers 96 more.
-\item \code{gen_parent}, the derived GEN-to-parent table. Covers 37 more.
+\item \code{gen_parent}, the derived GEN-to-parent table. Covers 37 more. No
+ingest builds it (it was made by hand in the first database), so it is
+used only when the table exists, and a build from scratch skips it.
 }
 
 \strong{860 groups (25\%) still have no identifiable parent and produce no rows.}

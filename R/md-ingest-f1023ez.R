@@ -42,7 +42,7 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   if (!length(books)) stop("no 1023-EZ workbooks in ", dir, call. = FALSE)
 
   KEEP <- c("Ein", "Orgname1", "Orgname2", "Address", "City", "State",
-            "Zip", "Zippl4", "Nteecode")
+            "Zip", "Zippl4", "Nteecode", "Orgurl")
   # The IRS names the workbooks three ways (?md_f1023ez_urls), so each CSV is
   # named by its year. Keeping the workbook's name would let the underscore
   # files (2014-2019) miss the glob below and drop out without an error.
@@ -55,7 +55,11 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   for (i in seq_along(books)) {
     b <- books[i]
     csv <- file.path(dir, sprintf("f1023ez-approvals-%s.csv", yrs[i]))
-    if (reconvert || !file.exists(csv)) {
+    # A CSV converted before a column was added to KEEP lacks it; reconvert
+    # rather than read a file that silently has no such column.
+    stale <- file.exists(csv) && !all(tolower(KEEP) %in% tolower(
+      strsplit(gsub("\"", "", readLines(csv, n = 1L)), ",", fixed = TRUE)[[1]]))
+    if (reconvert || stale || !file.exists(csv)) {
       message("converting ", basename(b))
       md_xlsx_to_csv(b, columns = KEEP, out = csv)
     }

@@ -4,12 +4,14 @@
 \alias{md_ingest_group_meta}
 \title{Add historical group membership from the NCCS group metadata}
 \usage{
-md_ingest_group_meta(con = NULL, path = NULL)
+md_ingest_group_meta(con = NULL, path = NULL, version = "2023-09")
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
 \item{path}{Path to \code{metadata-group-number.csv}.}
+
+\item{version}{Pinned \code{meta_group_number} version.}
 }
 \value{
 Row counts, invisibly.

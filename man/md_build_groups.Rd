@@ -47,6 +47,34 @@ several GENs links them all, and a member listed under two parents joins
 their groups, which a GEN key would miss.
 }
 
+\section{One bad edge joins two families, so evidence is ranked}{
+
+Connected components are only as good as the weakest edge: a single member
+listed under two parents joins their groups. In the first full build that
+happened through self-reported evidence. A filer writes another group's GEN
+on line H(c), by typo or from an old ruling, and a high-school orchestra
+became a member of both a youth soccer league and Parent Booster USA. The
+result was one component of 25,739 EINs joining the US Catholic Conference,
+the Mayo Clinic, a sorority and a motorcycle club.
+
+So each member's edges are filtered before the components are taken. Only
+its best-ranked evidence counts, in this order:
+
+\enumerate{
+\item \code{bmf_group_exemption} - the IRS's own coding.
+\item \code{efile_affiliate_listing} - the parent's own roster on its group return.
+\item \code{nccs_group_metadata_historical} - an older GEN assignment.
+\item \code{efile_group_exemption_number} - the member's own line H(c).
+\item anything else.
+}
+
+The first two are kept whole: a member the IRS or its parent places in two
+groups is a real link. From the self-reported ranks a member keeps one
+parent, the one it reported in the most filings (then the latest, then the
+smallest EIN). The set-aside edges stay in \code{ein_relation}; only the
+components ignore them.
+}
+
 \section{How \code{group_id} is named}{
 
 \code{group_id} is \code{"GRP-"} followed by the digits of the smallest EIN in the

@@ -4,7 +4,12 @@
 \alias{md_ingest_ntee}
 \title{Fill the resolved NTEE triple on entity}
 \usage{
-md_ingest_ntee(version, crosswalk = NULL, con = NULL)
+md_ingest_ntee(
+  version,
+  crosswalk = NULL,
+  con = NULL,
+  crosswalk_version = "2026-08"
+)
 }
 \arguments{
 \item{version}{The pinned \code{bmf_unified} version (for the active-vintage test).}
@@ -12,6 +17,8 @@ md_ingest_ntee(version, crosswalk = NULL, con = NULL)
 \item{crosswalk}{Path to \code{ntee_resolved_crosswalk.csv}.}
 
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
+
+\item{crosswalk_version}{Pinned \code{ntee_crosswalk} version, used when \code{crosswalk} is \code{NULL}.}
 }
 \value{
 A table of rule counts, invisibly.

@@ -4,12 +4,15 @@
 \alias{md_ingest_relations}
 \title{Build ein_relation from Schedule R and the group exemption structure}
 \usage{
-md_ingest_relations(version = "v2_2", con = NULL)
+md_ingest_relations(version = "v2_2", con = NULL, bmf_version = NULL)
 }
 \arguments{
 \item{version}{Pinned \code{efile_related} version.}
 
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
+
+\item{bmf_version}{The \code{bmf_unified} version the group edges are read from.
+\code{NULL} reads it from \code{source_vintage}: the version that loaded \code{entity}.}
 }
 \value{
 Row counts, invisibly.

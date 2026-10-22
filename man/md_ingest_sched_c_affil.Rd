@@ -4,12 +4,15 @@
 \alias{md_ingest_sched_c_affil}
 \title{Add the Schedule C affiliated-group roster}
 \usage{
-md_ingest_sched_c_affil(con = NULL, path = NULL)
+md_ingest_sched_c_affil(con = NULL, path = NULL, version = "v2009-2013")
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
-\item{path}{Path to the derived \verb{sched-c-affiliated-group-*.csv}.}
+\item{path}{Path to a derived \verb{sched-c-affiliated-group-*.csv}. \code{NULL} looks
+in the \code{version} source directory, preferring the published tables.}
+
+\item{version}{Pinned \code{efile_sched_c_affil} version, e.g. \code{"v3_1"}.}
 }
 \value{
 Row counts, invisibly.
@@ -57,10 +60,13 @@ filing is a stronger claim than either alone, and only this ingest can say so.
 Loading it to inflate the row count would be the wrong reason.
 }
 
-\section{There is no published table, and the element was renamed in 2013}{
-
-Like \code{AffiliateListing}, this has no \code{RDB_TABLE} in the NCCS concordance, so
-it comes from a local extract of raw XML. Through TY2012 the element is
+\section{Two inputs}{
+ the published table, or the old extract:
+From e-file v2_3 on, this is the published table
+\verb{SC-P02-T01-AFFILIATED-GROUP-<year>.CSV} (21,091 rows for 2009-2025 in v3_1),
+read when \verb{sources/efile_sched_c_affil/<version>/} holds it. Otherwise the
+function falls back to the earlier local extract of raw XML, described below.
+Through TY2012 the element is
 \code{AffiliatedGroupSchedule/AffiliatedSchedule} with \verb{AddressUS/}; from TY2013 it
 is \code{AffiliatedScheduleGrp} with \verb{USAddress/}. The extract matches on field
 suffix to serve both.

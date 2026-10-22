@@ -4,7 +4,12 @@
 \alias{md_ingest_schedr}
 \title{Ingest Schedule R related organisations as observed names and addresses}
 \usage{
-md_ingest_schedr(version = "v2_2", con = NULL, min_corroborators = 1L)
+md_ingest_schedr(
+  version = "v2_2",
+  con = NULL,
+  min_corroborators = 1L,
+  guard = TRUE
+)
 }
 \arguments{
 \item{version}{Pinned \code{efile_related} version.}
@@ -13,6 +18,10 @@ md_ingest_schedr(version = "v2_2", con = NULL, min_corroborators = 1L)
 
 \item{min_corroborators}{Minimum distinct filers. Defaults to 1; see above for
 how corroboration actually distributes here.}
+
+\item{guard}{Run \code{\link[=md_guard_observed]{md_guard_observed()}} on the loaded rows (see
+\code{\link[=md_ingest_schedi]{md_ingest_schedi()}}). A filer listing itself as a related organisation
+under a different name is the own-EIN case here.}
 }
 \value{
 Row counts, invisibly.

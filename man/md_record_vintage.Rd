@@ -4,7 +4,16 @@
 \alias{md_record_vintage}
 \title{Record an ingest in the audit table}
 \usage{
-md_record_vintage(con, source, version, table_name, row_count, build_note = "")
+md_record_vintage(
+  con,
+  source,
+  version,
+  table_name,
+  row_count,
+  build_note = "",
+  content_vintage = NULL,
+  content_vintage_rule = NULL
+)
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
@@ -14,6 +23,21 @@ md_record_vintage(con, source, version, table_name, row_count, build_note = "")
 \item{table_name, row_count}{What was written.}
 
 \item{build_note}{Free text.}
+
+\item{content_vintage}{What period the loaded data describes (e.g. \code{"2026-07"}
+for a BMF release whose newest internal vintage differs from its publish
+date), as distinct from \code{fetched} (when we downloaded it) and
+\code{upstream_modified} (when the file was published). \code{NULL} falls back to
+\code{upstream_modified} under \code{content_vintage_rule = "published"} — a weaker
+claim, recorded as such rather than presented as equivalent to a measured
+value. See \code{PLAN.md} section 4.}
+
+\item{content_vintage_rule}{How \code{content_vintage} was obtained: \code{"measured"}
+(read from the data itself), \code{"declared"} (supplied by the caller because
+nothing in the data says it), or \code{"published"} (fell back to
+\code{upstream_modified}). Inferred as \code{"declared"} when \code{content_vintage} is
+supplied without an explicit rule, \code{"published"} when it falls back, and
+\code{NA} when neither is available.}
 }
 \description{
 Writes one \code{source_vintage} row per load, carrying the pin (§4). Nothing else
