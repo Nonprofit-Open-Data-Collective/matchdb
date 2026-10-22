@@ -134,6 +134,8 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE,
              trim(nm1 || coalesce(' ' || nm2, '')) AS nm,
              count(*) AS n_obs, count(DISTINCT parent_ein) AS n_corr
       FROM afl WHERE nm1 IS NOT NULL
+        -- a name needs an entity to belong to; see the count reported below
+        AND member_ein IN (SELECT ein FROM entity)
       GROUP BY member_ein, trim(nm1 || coalesce(' ' || nm2, '')))",
     format(nbase, scientific = FALSE), vintage))
   msg("  %s observed names written to the subordinates' own EINs", format(n_nm, big.mark = ","))
@@ -141,7 +143,7 @@ md_ingest_affiliate_listing <- function(con = NULL, path = NULL, guard = TRUE,
   unknown <- DBI::dbGetQuery(con, "
     SELECT count(DISTINCT member_ein) AS n FROM afl a
     WHERE NOT EXISTS (SELECT 1 FROM entity e WHERE e.ein = a.member_ein)")$n
-  msg("  %s subordinate EINs are not in `entity` at all", format(unknown, big.mark = ","))
+  msg("  %s subordinate EINs are not in `entity`; their names are held back", format(unknown, big.mark = ","))
 
   md_record_vintage(con, "efile_affiliate_listing", version,
                     "ein_relation:group_member", as.integer(n_rel),

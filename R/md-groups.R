@@ -23,6 +23,32 @@
 #' several GENs links them all, and a member listed under two parents joins
 #' their groups, which a GEN key would miss.
 #'
+#' @section One bad edge joins two families, so evidence is ranked:
+#' Connected components are only as good as the weakest edge: a single member
+#' listed under two parents joins their groups. In the first full build that
+#' happened through self-reported evidence. A filer writes another group's GEN
+#' on line H(c), by typo or from an old ruling, and a high-school orchestra
+#' became a member of both a youth soccer league and Parent Booster USA. The
+#' result was one component of 25,739 EINs joining the US Catholic Conference,
+#' the Mayo Clinic, a sorority and a motorcycle club.
+#'
+#' So each member's edges are filtered before the components are taken. Only
+#' its best-ranked evidence counts, in this order:
+#'
+#' \enumerate{
+#'   \item `bmf_group_exemption` - the IRS's own coding.
+#'   \item `efile_affiliate_listing` - the parent's own roster on its group return.
+#'   \item `nccs_group_metadata_historical` - an older GEN assignment.
+#'   \item `efile_group_exemption_number` - the member's own line H(c).
+#'   \item anything else.
+#' }
+#'
+#' The first two are kept whole: a member the IRS or its parent places in two
+#' groups is a real link. From the self-reported ranks a member keeps one
+#' parent, the one it reported in the most filings (then the latest, then the
+#' smallest EIN). The set-aside edges stay in `ein_relation`; only the
+#' components ignore them.
+#'
 #' @section How `group_id` is named:
 #' `group_id` is `"GRP-"` followed by the digits of the smallest EIN in the
 #' component, e.g. `GRP-01-0347504`. It depends only on the component's
@@ -70,14 +96,45 @@ md_build_groups <- function(con = NULL, max_iter = 100L) {
          call. = FALSE)
   }
 
-  DBI::dbExecute(con, "
-    CREATE OR REPLACE TEMP TABLE grp_edge AS
-    SELECT DISTINCT ein_a, ein_b
+  # One member's edges: only its best-ranked evidence, and from self-reported
+  # evidence only its most-reported parent (see the section on bridges).
+  flds <- DBI::dbListFields(con, "ein_relation")
+  col <- function(f, default) if (f %in% flds) f else default
+  rank_case <- paste0("CASE ", col("evidence", "NULL"), " ",
+    paste(sprintf("WHEN '%s' THEN %d", names(.md_group_evidence_rank),
+                  .md_group_evidence_rank), collapse = " "),
+    " ELSE ", if ("evidence" %in% flds) length(.md_group_evidence_rank) + 1L else 1L,
+    " END")
+  DBI::dbExecute(con, sprintf("
+    CREATE OR REPLACE TEMP TABLE grp_edge_all AS
+    SELECT ein_a, ein_b, %s AS rk,
+           coalesce(%s, 0) AS n_obs, coalesce(%s, 0) AS last_year
     FROM ein_relation
     WHERE relation = 'group_member'
       AND ein_a IS NOT NULL AND ein_b IS NOT NULL
-      AND ein_a <> ein_b")
+      AND ein_a <> ein_b",
+    rank_case, col("n_obs", "NULL"), col("last_year", "NULL")))
+  DBI::dbExecute(con, sprintf("
+    CREATE OR REPLACE TEMP TABLE grp_edge AS
+    WITH best AS (SELECT ein_b, min(rk) AS rk FROM grp_edge_all GROUP BY 1),
+    kept AS (
+      SELECT e.ein_a, e.ein_b, e.rk, sum(e.n_obs) AS n_obs, max(e.last_year) AS ly
+      FROM grp_edge_all e JOIN best b ON b.ein_b = e.ein_b AND b.rk = e.rk
+      GROUP BY 1, 2, 3
+    ), pick AS (
+      SELECT *, row_number() OVER (PARTITION BY ein_b
+                                   ORDER BY n_obs DESC, ly DESC, ein_a) AS pk
+      FROM kept
+    )
+    SELECT DISTINCT ein_a, ein_b FROM pick
+    WHERE rk <= %d OR pk = 1",
+    .md_group_curated_rank))
+  n_all <- DBI::dbGetQuery(con,
+    "SELECT count(*) AS n FROM (SELECT DISTINCT ein_a, ein_b FROM grp_edge_all)")$n
   n_edge <- DBI::dbGetQuery(con, "SELECT count(*) AS n FROM grp_edge")$n
+  msg("group_member edges: %s, of which %s are used and %s set aside as weaker evidence for a member that has better",
+      format(n_all, big.mark = ","), format(n_edge, big.mark = ","),
+      format(n_all - n_edge, big.mark = ","))
 
   # Undirected adjacency, and every node labelled with itself.
   DBI::dbExecute(con, "
@@ -152,7 +209,7 @@ md_build_groups <- function(con = NULL, max_iter = 100L) {
     LEFT JOIN central c USING (label)
     ORDER BY group_id, ein")
 
-  for (t in c("grp_edge", "grp_adj", "grp_label")) {
+  for (t in c("grp_edge_all", "grp_edge", "grp_adj", "grp_label")) {
     DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s", t))
   }
 
@@ -173,3 +230,12 @@ md_build_groups <- function(con = NULL, max_iter = 100L) {
       format(out$median, big.mark = ","), format(out$largest, big.mark = ","))
   invisible(out)
 }
+
+# Evidence for a group_member edge, most authoritative first. Ranks up to
+# .md_group_curated_rank are kept whole; above it a member keeps one parent.
+.md_group_evidence_rank <- c(
+  bmf_group_exemption            = 1L,
+  efile_affiliate_listing        = 2L,
+  nccs_group_metadata_historical = 3L,
+  efile_group_exemption_number   = 4L)
+.md_group_curated_rank <- 2L
