@@ -166,11 +166,23 @@ two or more filers on Schedule I; 11.4% vs 33.4% on Schedule R). So a
 - The affiliate-listing ingest runs the guards, but was not measured (no extract
   in the probe).
 
+## Compaction
+
+`md_build_compact(drop_guarded = TRUE)`, the default, leaves out flagged
+observed names, and the observed addresses written with them, before
+collapsing. A key also backed by an unflagged row survives on that row alone.
+With `drop_guarded = FALSE` everything is kept, and `guard_any` on the compact
+row is `TRUE` only when every row behind it was flagged. See `COMPACTION.md`
+section 3a.
+
+Measured on the probe database, using npmatch's core key in place of
+`name_derived.name_key` (close to it, not identical): 73,515 flagged name rows
+(Schedule I and R) remove **71,565** `name_compact` keys. Only 1,950 flagged rows
+shared a key with an unflagged row. 76,432 paired addresses remove **54,268**
+`address_compact` keys.
+
 ## Not done (follow-ups)
 
-- **`md_build_compact()` merges observed rows into `name_compact` and drops the
-  flags.** Until it filters on or carries `guard_any`, flagged rows reach the
-  compacted reference as ordinary observed names.
 - The spec filter (`NOT guard_any`) is not wired into a spec or into npmatch's
   `np_fields`.
 - **matchdb's derived tables are stale.** npmatch now adds `name_core` and
