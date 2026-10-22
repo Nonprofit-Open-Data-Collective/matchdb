@@ -36,9 +36,12 @@
 #' filing is a stronger claim than either alone, and only this ingest can say so.
 #' Loading it to inflate the row count would be the wrong reason.
 #'
-#' @section There is no published table, and the element was renamed in 2013:
-#' Like `AffiliateListing`, this has no `RDB_TABLE` in the NCCS concordance, so
-#' it comes from a local extract of raw XML. Through TY2012 the element is
+#' @section Two inputs: the published table, or the old extract:
+#' From e-file v2_3 on, this is the published table
+#' `SC-P02-T01-AFFILIATED-GROUP-<year>.CSV` (21,091 rows for 2009-2025 in v3_1),
+#' read when `sources/efile_sched_c_affil/<version>/` holds it. Otherwise the
+#' function falls back to the earlier local extract of raw XML, described below.
+#' Through TY2012 the element is
 #' `AffiliatedGroupSchedule/AffiliatedSchedule` with `AddressUS/`; from TY2013 it
 #' is `AffiliatedScheduleGrp` with `USAddress/`. The extract matches on field
 #' suffix to serve both.
@@ -54,19 +57,20 @@
 #' }
 #'
 #' @param con A connection from [md_db()].
-#' @param path Path to the derived `sched-c-affiliated-group-*.csv`.
+#' @param path Path to a derived `sched-c-affiliated-group-*.csv`. `NULL` looks
+#'   in the `version` source directory, preferring the published tables.
+#' @param version Pinned `efile_sched_c_affil` version, e.g. `"v3_1"`.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_sched_c_affil <- function(con = NULL, path = NULL) {
-  if (is.null(path)) {
-    path <- md_path("sources", "efile_sched_c_affil", "v2009-2013",
-                    "sched-c-affiliated-group-2009-2013.csv")
-  }
-  if (!file.exists(path)) stop("no Schedule C extract at ", path, call. = FALSE)
+md_ingest_sched_c_affil <- function(con = NULL, path = NULL, version = "v2009-2013") {
+  src_sql <- .md_roster_source("efile_sched_c_affil", version, path,
+    table = "SC-P02-T01-AFFILIATED-GROUP",
+    extract = "sched-c-affiliated-group-2009-2013.csv",
+    cols = c(member_ein = "SC_02_AFFIL_EIN", member_name1 = "SC_02_AFFIL_NAME_L1"))
 
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  vintage <- "efile_sched_c_affil-v2009-2013"
+  vintage <- paste0("efile_sched_c_affil-", version)
   msg <- function(...) message(sprintf(...))
 
   DBI::dbExecute(con, sprintf("
@@ -81,10 +85,10 @@ md_ingest_sched_c_affil <- function(con = NULL, path = NULL) {
              try_cast(tax_year AS INT) AS ty,
              (lpad(regexp_replace(filer_ein,'[^0-9]','','g'),9,'0') =
               lpad(regexp_replace(member_ein,'[^0-9]','','g'),9,'0')) AS self
-      FROM read_csv_auto('%s', ALL_VARCHAR=TRUE)
+      FROM %s
       WHERE length(regexp_replace(member_ein,'[^0-9]','','g')) = 9
         AND length(regexp_replace(filer_ein, '[^0-9]','','g')) = 9)",
-    gsub("\\\\", "/", path)))
+    src_sql))
   n_self <- DBI::dbGetQuery(con, "SELECT count(*) AS n FROM scaf WHERE self")$n
   msg("  %s roster rows, of which %s are self-references and are dropped",
       format(.md_n(con, "scaf"), big.mark = ","), format(n_self, big.mark = ","))
@@ -110,7 +114,7 @@ md_ingest_sched_c_affil <- function(con = NULL, path = NULL) {
                       OR (r.ein_a = s.ein_b AND r.ein_b = s.ein_a)))")$n
   msg("  %s of them are corroborations of a Schedule R Part II edge", format(dup, big.mark = ","))
 
-  md_record_vintage(con, "efile_sched_c_affil", "v2009-2013",
+  md_record_vintage(con, "efile_sched_c_affil", version,
                     "ein_relation:related_entity", as.integer(n_new),
                     build_note = "md_ingest_sched_c_affil(); 501(h) affiliated group")
   msg("  ein_relation: %s rows", format(.md_n(con, "ein_relation"), big.mark = ","))

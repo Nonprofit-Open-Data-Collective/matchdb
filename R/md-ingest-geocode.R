@@ -38,11 +38,12 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param path Path to the geocoded CSV.
+#' @param version Pinned `address_geocoded` version.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_geocode <- function(con = NULL, path = NULL) {
+md_ingest_geocode <- function(con = NULL, path = NULL, version = "2026-08") {
   if (is.null(path)) {
-    path <- md_path("sources", "address_geocoded", "2026-08",
+    path <- md_path("sources", "address_geocoded", version,
                     "metadata-address-geocoded.csv")
   }
   if (!file.exists(path)) stop("no geocoded file at ", path, call. = FALSE)
@@ -129,7 +130,7 @@ md_ingest_geocode <- function(con = NULL, path = NULL) {
       format(sum(qual$n[qual$geocode_type %in% c("Postal", "PostalExt")]),
              big.mark = ","))
 
-  md_record_vintage(con, "address_geocoded", "2026-08", "address:geography",
+  md_record_vintage(con, "address_geocoded", version, "address:geography",
                     as.integer(n_matched), build_note = "md_ingest_geocode()")
   invisible(stats::setNames(c(n_geo, n_matched), c("parsed", "matched")))
 }

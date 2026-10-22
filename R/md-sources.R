@@ -24,31 +24,31 @@ md_sources <- function() {
       "csv", "FALSE", NA, "1.6 GB",
       "monthly active BMF; 1,924,822 rows in the 2026-01 vintage"),
     c("schedi",            "name, address (observed)",
-      ef("SI-P02-T01-GRANTS-US-ORGS-GOVTS"), "csv", "FALSE", "2009:2024", "3.5 GB",
+      ef("SI-P02-T01-GRANTS-US-ORGS-GOVTS"), "csv", "FALSE", "2009:2025", "3.5 GB",
       "Schedule I Part II: (name, address) -> EIN as written by grantmakers"),
     c("efile_header",      "entity (filer_only), name, address",
-      ef("F9-P00-T00-HEADER"), "csv", "FALSE", "2009:2024", "3.5 GB",
+      ef("F9-P00-T00-HEADER"), "csv", "FALSE", "2009:2025", "3.5 GB",
       "one row per 990 filing: filer EIN, name, address"),
     c("efile_orgtext",     "orgtext",
-      ef("F9-P03-T00-MISSION"), "csv", "FALSE", "2009:2024", "7.3 GB",
+      ef("F9-P03-T00-MISSION"), "csv", "FALSE", "2009:2025", "7.3 GB",
       "mission and program text. Five tables share this entry: MISSION, PROGRAM-ONE/TWO/THREE and PROGRAMS-EZ; the url column names only the first. See ?md_ingest_orgtext"),
     c("efile_related",     "ein_relation",
-      ef("SR-P02-T01-ID-RLTD-TAX-EXEMPED-ORGS"), "csv", "FALSE", "2009:2024", NA,
+      ef("SR-P02-T01-ID-RLTD-TAX-EXEMPED-ORGS"), "csv", "FALSE", "2009:2025", NA,
       "Schedule R Part II: related tax-exempt organisations"),
     c("efile_affiliate_listing", "ein_relation, name (observed)",
-      NA, "csv", "FALSE", "2009:2013", "1 MB",
-      "Group-return rosters. NO PUBLISHED TABLE - no RDB_TABLE in the concordance, so this is a local extract from raw XML. The only source of a subordinate's OWN name; the BMF gives 75.2% of them the parent's. See ?md_ingest_affiliate_listing"),
+      ef("F9-P00-T01-AFFILIATE-LISTING"), "csv", "FALSE", "2009:2025", "12 MB",
+      "Group-return rosters, published from e-file v2_3 (earlier builds used a local 2009-2013 extract from raw XML). The only source of a subordinate's OWN name; the BMF gives 75.2% of them the parent's. See ?md_ingest_affiliate_listing"),
     c("efile_sched_c_affil", "ein_relation",
-      NA, "csv", "FALSE", "2009:2013", "1 MB",
-      "Schedule C Part II-A affiliated-group rosters (501(h) lobbying). NO PUBLISHED TABLE - local extract. Reciprocal, and 91.6% redundant with Schedule R Part II. See ?md_ingest_sched_c_affil"),
+      ef("SC-P02-T01-AFFILIATED-GROUP"), "csv", "FALSE", "2009:2025", "9 MB",
+      "Schedule C Part II-A affiliated-group rosters (501(h) lobbying), published from e-file v2_3 (earlier builds used a local extract). Reciprocal, and 91.6% redundant with Schedule R Part II. See ?md_ingest_sched_c_affil"),
     c("efile_disregarded", "ein_relation",
-      ef("SR-P01-T01-ID-DISREGARDED-ENTITIES"), "csv", "FALSE", "2009:2024", "130 MB",
+      ef("SR-P01-T01-ID-DISREGARDED-ENTITIES"), "csv", "FALSE", "2009:2025", "130 MB",
       "Schedule R Part I: disregarded entities. Carries counterparty EIN and name, unlike the 527 case"),
     c("efile_related_ptr", "ein_relation",
-      ef("SR-P03-T01-ID-RLTD-ORGS-TAXABLE-PARTNERSHIP"), "csv", "FALSE", "2009:2024", "900 MB",
+      ef("SR-P03-T01-ID-RLTD-ORGS-TAXABLE-PARTNERSHIP"), "csv", "FALSE", "2009:2025", "900 MB",
       "Schedule R Part III: related organisations taxable as a partnership. TAXABLE entities, mostly outside the BMF - see ?md_ingest_schedr_taxable"),
     c("efile_related_corp","ein_relation",
-      ef("SR-P04-T01-ID-RLTD-ORGS-TAXABLE-CORPORATION"), "csv", "FALSE", "2009:2024", "1.2 GB",
+      ef("SR-P04-T01-ID-RLTD-ORGS-TAXABLE-CORPORATION"), "csv", "FALSE", "2009:2025", "1.2 GB",
       "Schedule R Part IV: related organisations taxable as a corporation or trust. See ?md_ingest_schedr_taxable"),
     c("meta_names",        "name (former, in_care_of, dba)",
       meta("metadata-names"), "csv", "FALSE", NA, "393 MB",
@@ -103,7 +103,9 @@ md_sources <- function() {
   #   unrecorded  a real gap: the source exists upstream and we have not found
   #            or written down where.
   local   <- c("ntee_crosswalk", "address_crosswalk", "address_geocoded")
-  derived <- c("efile_affiliate_listing", "efile_sched_c_affil")
+  # The two group rosters were derived until e-file v2_3 published them as
+  # tables; nothing is derived now, but the category stays for the next one.
+  derived <- character(0)
   out$origin <- ifelse(!is.na(out$url), "remote",
                 ifelse(out$source %in% local,   "local",
                 ifelse(out$source %in% derived, "derived", "unrecorded")))
@@ -142,9 +144,9 @@ md_sources <- function() {
 NULL
 
 # e-file release currently published. Bump deliberately: a new release is a new
-# set of pinned source versions, not an in-place update. v2_2 carries tax years
-# through 2024; the v2_0 DuckDB build stopped at 2023.
-.md_efile_base <- "https://nccs-efile.s3.us-east-1.amazonaws.com/public/efile_v2_2/"
+# set of pinned source versions, not an in-place update. v3_1 carries tax years
+# 2009-2025; v2_2 stopped at 2024 and the v2_0 DuckDB build at 2023.
+.md_efile_base <- "https://nccs-efile.s3.us-east-1.amazonaws.com/public/efile_v3_1/"
 
 #' URLs for a year-partitioned source
 #'

@@ -60,18 +60,19 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param path Path to `2024-11-POL-ORGS-SCHED-R.csv`.
+#' @param version Pinned `irs527_related` version.
 #' @return Row counts, invisibly.
 #' @export
-md_ingest_irs527_related <- function(con = NULL, path = NULL) {
+md_ingest_irs527_related <- function(con = NULL, path = NULL, version = "v2024-11-15") {
   if (is.null(path)) {
-    path <- md_path("sources", "irs527_related", "v2024-11-15",
+    path <- md_path("sources", "irs527_related", version,
                     "2024-11-POL-ORGS-SCHED-R.csv")
   }
   if (!file.exists(path)) stop("no 527 Schedule R at ", path, call. = FALSE)
 
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  vintage <- "irs527_related-v2024-11-15"
+  vintage <- paste0("irs527_related-", version)
   msg <- function(...) message(sprintf(...))
 
   # ALL_VARCHAR because EIN is a zero-padded identifier, not a number. The
@@ -120,7 +121,7 @@ md_ingest_irs527_related <- function(con = NULL, path = NULL) {
   msg("  %s of %s disclosing EINs are already in `entity`",
       format(known, big.mark = ","), format(n_ein, big.mark = ","))
 
-  md_record_vintage(con, "irs527_related", "v2024-11-15",
+  md_record_vintage(con, "irs527_related", version,
                     "ein_relation:related_entity", as.integer(n_new),
                     build_note = "md_ingest_irs527_related(); ein_b unresolved")
   msg("  ein_relation: %s rows", format(.md_n(con, "ein_relation"), big.mark = ","))

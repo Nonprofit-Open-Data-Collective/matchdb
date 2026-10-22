@@ -154,3 +154,70 @@ test_that("an empty edge set builds an empty table", {
   expect_equal(out$groups, 0)
   expect_equal(nrow(groups(con)), 0)
 })
+
+# --- evidence ranking: a self-reported edge must not join two families --------
+
+ev_db <- function(rows) {
+  con <- DBI::dbConnect(duckdb::duckdb())
+  DBI::dbExecute(con, "CREATE TABLE ein_relation (ein_a VARCHAR, ein_b VARCHAR,
+    relation VARCHAR, evidence VARCHAR, n_obs INTEGER, last_year INTEGER)")
+  DBI::dbAppendTable(con, "ein_relation", rows)
+  con
+}
+ev <- function(a, b, evidence, n_obs = NA, last_year = NA) {
+  data.frame(ein_a = a, ein_b = b, relation = "group_member", evidence = evidence,
+             n_obs = as.integer(n_obs), last_year = as.integer(last_year),
+             stringsAsFactors = FALSE)
+}
+
+test_that("a member's own H(c) report does not override its BMF parent", {
+  skip_if_not_installed("duckdb")
+  # e(3) is coded under e(1) by the BMF, and wrote e(10)'s GEN on its 990
+  con <- ev_db(rbind(ev(e(1), e(c(2, 3)), "bmf_group_exemption"),
+                     ev(e(10), e(11), "bmf_group_exemption"),
+                     ev(e(10), e(3), "efile_group_exemption_number", 1, 2022)))
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  out <- suppressMessages(md_build_groups(con))
+  g <- groups(con)
+  expect_equal(out$groups, 2)
+  expect_equal(g$group_id[g$ein == e(3)], "GRP-00-0000001")
+  expect_equal(g$n_parents[g$ein == e(3)], 1)
+})
+
+test_that("from self-reported evidence a member keeps its most-reported parent", {
+  skip_if_not_installed("duckdb")
+  # e(5) has no BMF parent; it reported e(1)'s GEN in 3 filings, e(10)'s in 1
+  con <- ev_db(rbind(ev(e(1), e(2), "bmf_group_exemption"),
+                     ev(e(10), e(11), "bmf_group_exemption"),
+                     ev(e(1), e(5), "efile_group_exemption_number", 3, 2023),
+                     ev(e(10), e(5), "efile_group_exemption_number", 1, 2025)))
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  out <- suppressMessages(md_build_groups(con))
+  g <- groups(con)
+  expect_equal(out$groups, 2)
+  expect_equal(g$group_id[g$ein == e(5)], g$group_id[g$ein == e(1)])
+  expect_false(g$group_id[g$ein == e(5)] == g$group_id[g$ein == e(10)])
+})
+
+test_that("curated evidence is kept whole, so a real two-parent member still joins", {
+  skip_if_not_installed("duckdb")
+  # the parent's own roster places e(3) under e(10) as well as the BMF parent;
+  # both are rank-1 or rank-2 evidence, so the families join
+  con <- ev_db(rbind(ev(e(1), e(c(2, 3)), "bmf_group_exemption"),
+                     ev(e(10), e(3), "bmf_group_exemption"),
+                     ev(e(10), e(11), "efile_affiliate_listing", 1, 2015)))
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  out <- suppressMessages(md_build_groups(con))
+  expect_equal(out$groups, 1)
+  expect_equal(groups(con)$n_parents[groups(con)$ein == e(3)], 2)
+})
+
+test_that("weaker edges are set aside, not deleted from ein_relation", {
+  skip_if_not_installed("duckdb")
+  con <- ev_db(rbind(ev(e(1), e(2), "bmf_group_exemption"),
+                     ev(e(10), e(2), "nccs_group_metadata_historical")))
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  expect_message(md_build_groups(con), "1 set aside")
+  expect_equal(DBI::dbGetQuery(con, "SELECT count(*) n FROM ein_relation")$n, 2)
+  expect_false(e(10) %in% groups(con)$ein)
+})

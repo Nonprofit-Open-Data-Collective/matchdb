@@ -41,18 +41,19 @@
 #'
 #' @param con A connection from [md_db()].
 #' @param path Path to the crosswalk CSV.
+#' @param version Pinned `address_crosswalk` version.
 #' @return Row count, invisibly.
 #' @export
-md_ingest_address_crosswalk <- function(con = NULL, path = NULL) {
+md_ingest_address_crosswalk <- function(con = NULL, path = NULL, version = "2026-08") {
   if (is.null(path)) {
-    path <- md_path("sources", "address_crosswalk", "2026-08",
+    path <- md_path("sources", "address_crosswalk", version,
                     "address_resolved_crosswalk.csv")
   }
   if (!file.exists(path)) stop("no address crosswalk at ", path, call. = FALSE)
 
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  vintage <- "address_crosswalk-2026-08"
+  vintage <- paste0("address_crosswalk-", version)
   msg <- function(...) message(sprintf(...))
 
   DBI::dbExecute(con, sprintf("
@@ -107,7 +108,7 @@ md_ingest_address_crosswalk <- function(con = NULL, path = NULL) {
       format(n_addr, big.mark = ","), format(shape$eins, big.mark = ","),
       shape$pct_street, shape$deepest)
 
-  md_record_vintage(con, "address_crosswalk", "2026-08", "address:historical",
+  md_record_vintage(con, "address_crosswalk", version, "address:historical",
                     as.integer(n_addr),
                     build_note = "md_ingest_address_crosswalk()")
   invisible(n_addr)
