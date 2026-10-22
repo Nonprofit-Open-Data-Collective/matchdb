@@ -4,12 +4,14 @@
 \alias{md_ingest_geocode}
 \title{Attach census geography to the addresses it actually describes}
 \usage{
-md_ingest_geocode(con = NULL, path = NULL)
+md_ingest_geocode(con = NULL, path = NULL, version = "2026-08")
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
 \item{path}{Path to the geocoded CSV.}
+
+\item{version}{Pinned \code{address_geocoded} version.}
 }
 \value{
 Row counts, invisibly.

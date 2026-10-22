@@ -8,7 +8,8 @@ md_ingest_schedi(
   version = "v2_2",
   years = NULL,
   con = NULL,
-  min_corroborators = 1L
+  min_corroborators = 1L,
+  guard = TRUE
 )
 }
 \arguments{
@@ -21,6 +22,10 @@ md_ingest_schedi(
 \item{min_corroborators}{Drop groups written by fewer than this many distinct
 filers. \code{1} keeps everything; filtering belongs in the spec, so the default
 loads all of it.}
+
+\item{guard}{Run \code{\link[=md_guard_observed]{md_guard_observed()}} on the loaded rows. Flags are only as
+good as the first-party names already loaded, so re-run it once the BMF and
+return headers are in.}
 }
 \value{
 Row counts, invisibly.
@@ -63,5 +68,14 @@ is the \strong{most frequently written raw form} within the group, so the databa
 still holds a string a filer actually typed rather than a normalised
 reconstruction. \code{np_normalize()} derived columns are built from that raw
 string later, exactly as for BMF rows.
+}
+
+\section{Wrong names on the right line}{
+
+A filer's own EIN written for its grantee, a denomination's central EIN
+written for a congregation, a fiscal sponsor's EIN written for its projects,
+\code{000000000} and \verb{SEE SCHEDULE O}: all are on Schedule I, often by many filers.
+Rows are kept and flagged by \code{\link[=md_guard_observed]{md_guard_observed()}}; see
+\code{dev/OBSERVED-NAME-GUARDS.md} for how many and how corroborated they are.
 }
 

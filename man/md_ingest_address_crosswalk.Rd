@@ -4,12 +4,14 @@
 \alias{md_ingest_address_crosswalk}
 \title{Ingest the resolved address crosswalk as historical spells}
 \usage{
-md_ingest_address_crosswalk(con = NULL, path = NULL)
+md_ingest_address_crosswalk(con = NULL, path = NULL, version = "2026-08")
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
 \item{path}{Path to the crosswalk CSV.}
+
+\item{version}{Pinned \code{address_crosswalk} version.}
 }
 \value{
 Row count, invisibly.

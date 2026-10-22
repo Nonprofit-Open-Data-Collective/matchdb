@@ -4,12 +4,22 @@
 \alias{md_ingest_affiliate_listing}
 \title{Add group-return rosters: the subordinate names the BMF throws away}
 \usage{
-md_ingest_affiliate_listing(con = NULL, path = NULL)
+md_ingest_affiliate_listing(
+  con = NULL,
+  path = NULL,
+  guard = TRUE,
+  version = "v2009-2013"
+)
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
-\item{path}{Path to the derived \verb{affiliate-listing-*.csv}.}
+\item{path}{Path to a derived \verb{affiliate-listing-*.csv}. \code{NULL} looks in the
+\code{version} source directory, preferring the published tables.}
+
+\item{guard}{Run \code{\link[=md_guard_observed]{md_guard_observed()}} on the observed rows of source \code{efile990}.}
+
+\item{version}{Pinned \code{efile_affiliate_listing} version, e.g. \code{"v3_1"}.}
 }
 \value{
 Row counts, invisibly.
@@ -42,13 +52,14 @@ the subordinate's own name, not the parent's, so registering it aliases
 nothing. The parent's name is never copied onto a member.
 }
 
-\section{There is no published table for this}{
-
-Unlike Schedule R Part II, \code{AffiliateListing} has \strong{no \code{RDB_TABLE}} in the
-NCCS concordance, so no CSV exists to download. It is reachable only from raw
-XML or the \code{EFILE20xx.duckdb} extracts, and the CSV this function reads is a
-derived extract produced from those. It is pinned like any other source, but
-its provenance is a local extraction rather than an upstream URL.
+\section{Two inputs}{
+ the published table, or the old extract:
+From e-file v2_3 on, the roster is a published table,
+\verb{F9-P00-T01-AFFILIATE-LISTING-<year>.CSV}, covering every year (30,143 rows
+for 2009-2025 in v3_1). When \verb{sources/efile_affiliate_listing/<version>/}
+holds those files, they are read. Otherwise the function falls back to the
+earlier derived extract, \verb{affiliate-listing-2009-2013.csv}, produced from raw
+XML before the table existed. Both are pinned like any other source.
 }
 
 \section{The element was renamed in 2013}{

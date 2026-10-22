@@ -4,12 +4,14 @@
 \alias{md_ingest_irs527_related}
 \title{Add related entities disclosed on 527 Schedule R}
 \usage{
-md_ingest_irs527_related(con = NULL, path = NULL)
+md_ingest_irs527_related(con = NULL, path = NULL, version = "v2024-11-15")
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
 \item{path}{Path to \code{2024-11-POL-ORGS-SCHED-R.csv}.}
+
+\item{version}{Pinned \code{irs527_related} version.}
 }
 \value{
 Row counts, invisibly.
