@@ -31,8 +31,10 @@ Imports:
     utils
 Suggests:
     openxlsx,
+    peopleparser,
     arrow,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Remotes:
-    Nonprofit-Open-Data-Collective/npmatch
+    Nonprofit-Open-Data-Collective/npmatch,
+    Nonprofit-Open-Data-Collective/peopleparser
