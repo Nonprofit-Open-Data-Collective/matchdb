@@ -185,31 +185,60 @@ md_ingest_websites <- function(con = NULL, efile_version = NULL,
   "godaddysites.com", "square.site", "webs.com", "yolasite.com", "jimdo.com",
   "eventbrite.com", "gofundme.com", "paypal.com", "meetup.com",
   "givebutter.com", "networkforgood.org", "classy.org", "guidestar.org",
-  "charitynavigator.org", "nextdoor.com", "yelp.com", "github.io")
+  "charitynavigator.org", "nextdoor.com", "yelp.com", "github.io",
+  "leaguelineup.com", "eteamz.com", "e-clubhouse.org", "sportngin.com",
+  "teamsnap.com", "bluesombrero.com", "stacksports.com", "ourchurch.com")
+
+# Platforms that give each page its own subdomain. There the subdomain is the
+# identity, and the path (often just /home) is not.
+.md_web_subdomain_platforms <- c("wixsite.com", "weebly.com", "wordpress.com",
+  "blogspot.com", "godaddysites.com", "square.site", "webs.com", "yolasite.com",
+  "jimdo.com", "github.io", "sportngin.com",
+  "squarespace.com", "teamsnap.com", "stacksports.com", "ourchurch.com")
+
+# First path segments that name a kind of page, not the page: on these the
+# identity is the segment after (sites.google.com/view/troop12,
+# facebook.com/groups/123). Measured: sites.google.com/view alone was 897 EINs.
+.md_web_generic_segments <- c("view", "site", "sites", "a", "groups", "pages", "page",
+  "pg", "share", "p", "people", "profile.php", "events", "org", "u", "c",
+  "channel", "user", "company", "school", "in")
 
 # A SELECT over `tbl` that keeps every column and adds host, url, kind,
 # is_platform and site_key, all NULL when `col` is not a website. Pure SQL, so
 # it is testable on a small table.
 .md_website_clean_sql <- function(tbl, col) {
   q <- function(v) paste0("'", v, "'", collapse = ", ")
+  # a subdomain of a platform that hosts each page on its own subdomain
+  plat_sub <- paste(sprintf("(w_h LIKE '%%.%s')", .md_web_subdomain_platforms), collapse = " OR ")
   plat_match <- paste(sprintf("(w_h = '%s' OR w_h LIKE '%%.%s')", .md_web_platforms,
                               .md_web_platforms), collapse = " OR ")
   sprintf("
-    SELECT * EXCLUDE (w_u0, w_u, w_h, w_p, w_kind, w_seg, w_plat, w_ok),
+    SELECT * EXCLUDE (w_u0, w_u, w_h, w_p, w_kind, w_seg, w_plat, w_plat_sub, w_ok),
            CASE WHEN w_ok THEN w_h END AS host,
            CASE WHEN w_ok THEN rtrim(w_h || w_p, '/') END AS url,
            CASE WHEN w_ok THEN w_kind END AS kind,
            CASE WHEN w_ok THEN w_plat END AS is_platform,
            CASE WHEN NOT w_ok THEN NULL
+                -- a page on its own subdomain (mylodge.wixsite.com): the host is the identity
+                WHEN w_plat_sub THEN w_h
                 WHEN w_plat AND w_seg = '' THEN NULL
                 WHEN w_plat THEN w_h || '/' || w_seg
                 ELSE w_h END AS site_key
     FROM (
-      SELECT *, (%s) AS w_plat,
+      SELECT *, (%s) AS w_plat, (%s) AS w_plat_sub,
              coalesce(regexp_matches(w_h, '^([a-z0-9]([a-z0-9-]*[a-z0-9])?[.])+[a-z]{2,24}$')
                       AND NOT (w_kind = 'email' AND w_h IN (%s)), FALSE) AS w_ok
       FROM (
-        SELECT *, coalesce(lower(regexp_extract(w_p, '^/+([^/?#]+)', 1)), '') AS w_seg
+        SELECT * EXCLUDE (w_s1, w_s2),
+               -- a page file or a search page names no organisation
+               CASE WHEN regexp_matches(w_s1, '[.](aspx?|php|html?|cfm|jsp|cgi)$')
+                      OR w_s1 IN ('search', 'home', 'index') THEN ''
+                    WHEN w_s1 IN (%s) AND w_s2 <> '' THEN w_s1 || '/' || w_s2
+                    WHEN w_s1 IN (%s) THEN ''
+                    ELSE w_s1 END AS w_seg
+        FROM (
+        SELECT *, coalesce(lower(regexp_extract(w_p, '^/+([^/?#]+)', 1)), '') AS w_s1,
+                  coalesce(lower(regexp_extract(w_p, '^/+[^/?#]+/+([^/?#]+)', 1)), '') AS w_s2
         FROM (
           SELECT *,
                  CASE WHEN w_kind = 'email' THEN regexp_extract(w_u, '@(.*)$', 1)
@@ -220,10 +249,11 @@ md_ingest_websites <- function(con = NULL, efile_version = NULL,
           FROM (
             SELECT *,
                    regexp_replace(regexp_replace(w_u0, '^[a-z][a-z0-9+.-]*://', ''),
-                                  '^www[0-9]?[.]', '') AS w_u,
+                                  '^(www[0-9]?|m|mobile|web|business)[.]', '') AS w_u,
                    CASE WHEN regexp_matches(w_u0, '^[^@/ ]+@[^@/ ]+$') THEN 'email'
                         ELSE 'url' END AS w_kind
             FROM (SELECT *, replace(replace(lower(trim(%s)), ',', '.'), chr(92), '/') AS w_u0
-                  FROM %s)))))",
-    plat_match, q(.md_mail_providers), col, tbl)
+                  FROM %s))))))",
+    plat_match, plat_sub, q(.md_mail_providers), q(.md_web_generic_segments),
+    q(.md_web_generic_segments), col, tbl)
 }

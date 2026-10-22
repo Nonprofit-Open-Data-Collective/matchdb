@@ -44,8 +44,8 @@ test_that("a platform page is keyed by its first path segment", {
   got <- clean(c("https://www.facebook.com/HullsCove/", "facebook.com",
                  "mylodge.wixsite.com/home", "linktr.ee/friends_of_x",
                  "https://sites.google.com/view/troop12"))
-  expect_equal(got$site_key, c("facebook.com/hullscove", NA, "mylodge.wixsite.com/home",
-                               "linktr.ee/friends_of_x", "sites.google.com/view"))
+  expect_equal(got$site_key, c("facebook.com/hullscove", NA, "mylodge.wixsite.com",
+                               "linktr.ee/friends_of_x", "sites.google.com/view/troop12"))
   expect_true(all(got$is_platform[!is.na(got$site_key)]))
 })
 
@@ -53,4 +53,30 @@ test_that("other columns pass through untouched", {
   got <- clean(c("kdp.org", "nope"))
   expect_equal(got$i, 1:2)
   expect_equal(got$v, c("kdp.org", "nope"))
+})
+
+test_that("a generic first segment on a platform takes the next one as the identity", {
+  got <- clean(c("https://sites.google.com/view/troop12/home", "sites.google.com/view",
+                 "facebook.com/groups/123456/", "www.facebook.com/pages/Hulls-Cove/99",
+                 "leaguelineup.com/eastsideyouth", "e-clubhouse.org/sites/mainelions"))
+  expect_equal(got$site_key, c("sites.google.com/view/troop12", NA,
+                               "facebook.com/groups/123456", "facebook.com/pages/hulls-cove",
+                               "leaguelineup.com/eastsideyouth",
+                               "e-clubhouse.org/sites/mainelions"))
+})
+
+test_that("a platform page file or search page is not an identity", {
+  got <- clean(c("leaguelineup.com/welcome.asp?url=eastside", "tshq.bluesombrero.com/default.aspx",
+                 "facebook.com/search/top?q=lions", "elks.org/default.aspx"))
+  # bluesombrero subdomains (tshq, clubs, leagues) are shared by hundreds of
+  # leagues; the league is in the query string, so these pages name no one
+  expect_equal(got$site_key, c(NA, NA, NA, "elks.org"))
+})
+
+test_that("a page on its own platform subdomain is keyed by the subdomain", {
+  got <- clean(c("eastsidelions.weebly.com/about", "eastsidelions.weebly.com",
+                 "m.facebook.com/hullscove",
+                 "weebly.com"))
+  expect_equal(got$site_key, c("eastsidelions.weebly.com", "eastsidelions.weebly.com",
+                               "facebook.com/hullscove", NA))
 })
