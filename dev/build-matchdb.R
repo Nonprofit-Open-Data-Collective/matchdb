@@ -119,6 +119,9 @@ step("websites", md_ingest_websites(con = con, efile_version = V$efile,
 step("derived columns", md_build_derived(con = con))
 step("compact tables", md_build_compact(con = con))
 step("groups", md_build_groups(con = con))
+# After compaction and websites, which they read.
+step("identifier keys", md_build_ein_key(con = con))
+step("clusters", md_build_clusters(con = con))
 
 ## ---- summary ----------------------------------------------------------------------
 cat("\n==== table row counts\n")

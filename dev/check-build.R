@@ -24,7 +24,8 @@ check <- function(label, ok, detail = "") {
 ## every core and derived table exists and is non-empty
 tabs <- c("entity", "name", "address", "orgtext", "ein_relation", "source_vintage",
           "name_derived", "address_derived", "name_compact", "address_compact",
-          "entity_group", "website")
+          "entity_group", "website", "ein_key", "ein_key_layer", "cluster",
+          "cluster_member", "cluster_footprint")
 for (t in tabs) {
   n <- if (DBI::dbExistsTable(con, t)) .md_n(con, t) else NA
   check(sprintf("%s is non-empty", t), !is.na(n) && n > 0,
@@ -37,7 +38,7 @@ check("derived tables are fresh", all(fresh$orphaned_rows == 0),
       paste(fresh$table, fresh$orphaned_rows, collapse = ", "))
 
 ## every row's EIN is a known entity
-for (t in c("name", "address", "website")) {
+for (t in c("name", "address", "website", "ein_key", "cluster_member")) {
   n <- q(sprintf("SELECT count(*) AS n FROM %s x ANTI JOIN entity e USING (ein)", t))$n
   check(sprintf("every %s EIN is in entity", t), n == 0, format(n, big.mark = ","))
 }
@@ -77,6 +78,18 @@ check("website has all three sources", isTRUE(r$n == 3), r$n)
 r <- q("SELECT count(*) AS n FROM website WHERE site_key IN ('n/a', 'none', 'na', 'tbd')
           OR site_key NOT LIKE '%.%'")
 check("no website key is a placeholder", isTRUE(r$n == 0), r$n)
+
+## the identifier and cluster layers are internally consistent
+r <- q("SELECT count(*) AS n FROM (SELECT kind, key, any_value(n_eins_sharing) AS w FROM ein_key GROUP BY 1, 2) k
+        JOIN (SELECT kind, key, sum(n_eins) AS s FROM ein_key_layer GROUP BY 1, 2) l USING (kind, key)
+        WHERE k.w <> l.s")
+check("ein_key_layer sums to n_eins_sharing", isTRUE(r$n == 0), r$n)
+r <- q("SELECT count(*) AS n FROM cluster c JOIN (SELECT cluster_id, count(*) AS m FROM cluster_member GROUP BY 1) m
+        USING (cluster_id) WHERE c.size <> m.m OR c.size < 2")
+check("every cluster has size >= 2 and matches its members", isTRUE(r$n == 0), r$n)
+r <- q("SELECT count(DISTINCT cluster_type) AS n, max(size) FILTER (WHERE cluster_type = 'brand') AS b FROM cluster")
+check("all six cluster types, and no runaway brand", isTRUE(r$n == 6 && r$b < 50000),
+      sprintf("%s types, largest brand %s", r$n, format(r$b, big.mark = ",")))
 
 ## groups use only group_member edges
 r <- q("SELECT max(group_size) AS m, count(DISTINCT group_id) AS g FROM entity_group")
