@@ -24,7 +24,8 @@ V <- list(
   address_crosswalk = "v2026-07",      # nccsdata crosswalks/address-resolved/v2026_07
   address_geocoded  = "v2024-05",      # nccsdata meta/metadata-address-geocoded.csv
   meta_group_number = "v2023-09",      # nccsdata meta/metadata-group-number.csv
-  irs527_related    = "v2024-11-15"    # nccsdata public/pacs/2024-11-POL-ORGS-SCHED-R.csv
+  irs527_related    = "v2024-11-15",   # nccsdata public/pacs/2024-11-POL-ORGS-SCHED-R.csv
+  e_postcard        = "v2026-07"       # nccsdata raw/e-postcard/2026-07-E-POSTCARD.csv
 )
 EFILE_SOURCES <- c("efile_header", "schedi", "efile_related", "efile_disregarded",
                    "efile_related_ptr", "efile_related_corp", "efile_orgtext",
@@ -68,6 +69,8 @@ step("pin sources", {
                 V$meta_group_number)
   md_source_pin("irs527_related",
                 src_files("irs527_related", V$irs527_related, "[.]csv$"), V$irs527_related)
+  md_source_pin("e_postcard",
+                src_files("e_postcard", V$e_postcard, "E-POSTCARD[.]csv$"), V$e_postcard)
   for (s in EFILE_SOURCES) {
     md_source_pin(s, src_files(s, V$efile, "[0-9]{4}[.]CSV$"), V$efile)
   }
@@ -106,6 +109,11 @@ step("Schedule C affiliated groups", md_ingest_sched_c_affil(con = con, version 
 step("mission and program text", md_ingest_orgtext(V$efile, con = con))
 # Geography last among ingests, so it attaches to every address loaded above.
 step("census geography", md_ingest_geocode(con = con, version = V$address_geocoded))
+# Websites after 1023-EZ, whose converted CSVs it reads, and after every
+# entity source, since a website is kept only for a known EIN.
+step("websites", md_ingest_websites(con = con, efile_version = V$efile,
+                                    f1023ez_version = V$f1023ez,
+                                    e_postcard_version = V$e_postcard))
 
 ## ---- derived tables --------------------------------------------------------------
 step("derived columns", md_build_derived(con = con))

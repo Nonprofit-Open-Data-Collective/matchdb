@@ -24,7 +24,7 @@ check <- function(label, ok, detail = "") {
 ## every core and derived table exists and is non-empty
 tabs <- c("entity", "name", "address", "orgtext", "ein_relation", "source_vintage",
           "name_derived", "address_derived", "name_compact", "address_compact",
-          "entity_group")
+          "entity_group", "website")
 for (t in tabs) {
   n <- if (DBI::dbExistsTable(con, t)) .md_n(con, t) else NA
   check(sprintf("%s is non-empty", t), !is.na(n) && n > 0,
@@ -37,7 +37,7 @@ check("derived tables are fresh", all(fresh$orphaned_rows == 0),
       paste(fresh$table, fresh$orphaned_rows, collapse = ", "))
 
 ## every row's EIN is a known entity
-for (t in c("name", "address")) {
+for (t in c("name", "address", "website")) {
   n <- q(sprintf("SELECT count(*) AS n FROM %s x ANTI JOIN entity e USING (ein)", t))$n
   check(sprintf("every %s EIN is in entity", t), n == 0, format(n, big.mark = ","))
 }
@@ -66,10 +66,17 @@ need <- c("bmf_unified", "f1023ez", "efile_header", "schedi", "efile_related",
           "efile_disregarded", "efile_related_ptr", "efile_related_corp",
           "efile_orgtext", "efile_affiliate_listing", "efile_sched_c_affil",
           "address_crosswalk", "address_geocoded", "meta_group_number",
-          "irs527_related")
+          "irs527_related", "e_postcard")
 have <- q("SELECT DISTINCT source FROM source_vintage")$source
 check("every source is in source_vintage", all(need %in% have),
       paste(setdiff(need, have), collapse = ", "))
+
+## websites come from all three sources, and no placeholder survived as a key
+r <- q("SELECT count(DISTINCT source) AS n FROM website")
+check("website has all three sources", isTRUE(r$n == 3), r$n)
+r <- q("SELECT count(*) AS n FROM website WHERE site_key IN ('n/a', 'none', 'na', 'tbd')
+          OR site_key NOT LIKE '%.%'")
+check("no website key is a placeholder", isTRUE(r$n == 0), r$n)
 
 ## groups use only group_member edges
 r <- q("SELECT max(group_size) AS m, count(DISTINCT group_id) AS g FROM entity_group")

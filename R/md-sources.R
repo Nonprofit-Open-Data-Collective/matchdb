@@ -82,6 +82,14 @@ md_sources <- function() {
       "https://nccsdata.s3.us-east-1.amazonaws.com/public/pacs/2024-11-POL-ORGS-FM-8871.csv",
       "csv", "FALSE", NA, "37 MB",
       "IRS Form 8871. 68,365 filings / 51,542 EINs; key is FORM_ID_NUMBER, not EIN. See ?md_irs527_shape"),
+    c("e_postcard",        "website (and, not yet ingested, name, address, entity)",
+      "https://nccsdata.s3.us-east-1.amazonaws.com/raw/e-postcard/%s-E-POSTCARD.csv",
+      "csv", "FALSE", NA, "374 MB",
+      "Form 990-N e-Postcard, one row per EIN: its latest postcard (tax years 2007-2025 in the 2026-07 file, 1,534,620 EINs). Monthly snapshot; the url's %s is the YYYY-MM version. Officer name and address describe a person and are not read."),
+    c("revocations",       "not yet ingested: entity status, name, address",
+      "https://nccsdata.s3.us-east-1.amazonaws.com/raw/revocations/%s-REVOCATIONS-ORGS.csv",
+      "csv", "FALSE", NA, "214 MB",
+      "IRS automatic revocations: revocation, posting and reinstatement dates per EIN (1,187,367 EINs, 2010-2026 in the 2026-07 file). Monthly snapshot; the url's %s is the YYYY-MM version."),
     c("irs527_related",    "ein_relation (ein_b unresolved)",
       "https://nccsdata.s3.us-east-1.amazonaws.com/public/pacs/2024-11-POL-ORGS-SCHED-R.csv",
       "csv", "FALSE", NA, "12 MB",
@@ -232,6 +240,13 @@ md_source_pin <- function(source, file, version = NULL) {
     ), dirname(file[1])))
   }
 
+  # A monthly snapshot's url names its month with %s; fill it from the version
+  # (v2026-07 -> 2026-07) so the pin records, and HEADs, the file actually read.
+  if (!is.na(row$url) && grepl("%s", row$url, fixed = TRUE)) {
+    if (is.null(version)) stop(source, " needs an explicit version to name its url",
+                               call. = FALSE)
+    row$url <- sprintf(row$url, sub("^v", "", version))
+  }
   head <- if (is.na(row$url)) NULL else md_source_head(row$url)
   if (is.null(version)) {
     lm <- if (!is.null(head)) head[["last_modified"]] else NA_character_
