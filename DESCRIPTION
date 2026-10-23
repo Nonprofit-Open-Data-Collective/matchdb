@@ -25,7 +25,9 @@ Imports:
     DBI,
     duckdb,
     data.table,
+    jsonlite,
     npmatch (>= 0.1.0.9000),
+    stringr,
     stats,
     tools,
     utils

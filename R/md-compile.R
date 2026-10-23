@@ -130,7 +130,10 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
     WHERE r.variant_class IN (%s)
       AND (r.variant_class <> 'observed' OR coalesce(a.n_corroborators, 1) >= %d)
       AND %s",
-    md_modal_sql("cp_name0", c("ein", "name_key"), "name_raw"),
+    # the spelling is voted on by the rows of the key's strongest class only: a
+    # dba that normalizes like the legal name must not lend it its spelling
+    md_modal_sql("(SELECT * FROM (SELECT *, min(vrank) OVER (PARTITION BY ein, name_key) AS kv
+                   FROM cp_name0) WHERE vrank = kv)", c("ein", "name_key"), "name_raw"),
     .md_band_sql("r.variant_class", "a.n_corroborators"),
     paste(sprintf("(%s, '%s')", base::names(.md_rank_to_variant), .md_rank_to_variant),
           collapse = ", "),
@@ -187,7 +190,8 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
     FROM cp_addr_sel s
     JOIN address_derived d ON CAST(d.address_id AS BIGINT) = s.address_id
     LEFT JOIN cp_addr_link l ON l.address_id = s.address_id
-    WHERE coalesce(d.street_key, '') <> ''")
+    -- no street is fine when the ZIP or state still places it
+    WHERE coalesce(d.street_key, '') <> '' OR s.zip5 <> '' OR coalesce(s.state, '') <> ''")
   x("DROP TABLE cp_addr_sel"); x("DROP TABLE cp_addr_link")
   # one row per place: the most common spelling, the strongest class
   x("CREATE OR REPLACE TEMP TABLE cp_addr AS
@@ -289,6 +293,12 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
       "LEFT JOIN name_derived nd ON nd.name_id = n.name_id
        LEFT JOIN address_derived ad ON ad.address_id = a.address_id"))
   ref <- cbind(.id = seq_len(nrow(ref)), ref)
+  # the hygiene np_reference() applies to every text field, so a frame from
+  # md_compile() and one from np_reference() agree on the same strings
+  for (col in c(".ein", "name", "dba", "division", "street", "unit", "city", "county",
+                "state", "zip5", "zip_plus4")) {
+    ref[[col]] <- stringr::str_squish(as.character(ref[[col]]))
+  }
   if (derive == "normalize") {
     ref <- npmatch::np_normalize(ref[, setdiff(names(ref), c(".dba_key", ".has_address"))])
   } else if (stored) {
@@ -302,6 +312,7 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
   ## ---- statistics ----------------------------------------------------------------
   st <- .md_compile_name_stats(con, spec)
   fs <- if (derive != "none") .md_frame_stats(con, nrow(ref)) else NULL
+  class(ref) <- c("np_reference", "data.frame")
   out <- list(reference = ref,
               name_freq = if (derive != "none") fs$name_freq else NULL,
               token_idf = if (derive != "none") fs$token_idf else NULL,

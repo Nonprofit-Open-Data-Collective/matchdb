@@ -1,0 +1,7 @@
+pfmatch          pfmatch-0ad8f7a (git archive at C:/Users/jlecy/AppData/Local/Temp/claude/C--Users-jlecy-Dropbox-00---URBAN-00-GITHUB-matchdb/e134bde0-6a3d-46eb-92b2-e5682780db20/scratchpad/pfmatch-0ad8f7a)
+matchdb          4eef00b
+npmatch          0.1.0.9000
+normalizer sig   v1-b42811fe6601afe6
+BMF              bmf_unified v2026-09-21, md5 636badf26f808aea70750e4932b443b9
+R                R version 4.5.3 (2026-03-11 ucrt)
+built            2026-10-22T23:16:38-0700

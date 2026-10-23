@@ -136,7 +136,10 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       geo_lat AS lat, geo_lon AS lon, geo_county AS county,
       geo_metro_area AS cbsa
     FROM bmf_src
-    WHERE org_addr_street_raw IS NOT NULL AND org_addr_street_raw <> ''", vintage))
+    -- a place without a street (city, state or ZIP only) is still a place: the
+    -- pfmatch reference keeps it, and a ZIP alone still blocks and scores
+    WHERE coalesce(trim(org_addr_street_raw), '') <> '' OR coalesce(trim(org_addr_city_raw), '') <> ''
+       OR coalesce(trim(org_addr_state), '') <> '' OR coalesce(trim(org_addr_zip5), '') <> ''", vintage))
   n_addr <- .md_n(con, "address")
   msg("  address %s rows", format(n_addr, big.mark = ","))
 

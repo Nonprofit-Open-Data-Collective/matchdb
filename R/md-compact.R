@@ -154,7 +154,10 @@ md_build_compact <- function(con = NULL, what = c("name", "address"),
     WHERE s.rk = 1",
     bit_case, rank_case, guarded,
     if (drop_guarded) sprintf("NOT %s", guarded) else "TRUE",
-    md_modal_sql("keyed", c("ein", "name_key"), "name_raw")))
+    # spelling voted on by the strongest class's rows only, so a dba that
+    # normalizes like the legal name cannot lend the legal name its spelling
+    md_modal_sql("(SELECT * FROM (SELECT *, min(variant_rank) OVER (PARTITION BY ein, name_key) AS kv
+                   FROM keyed) WHERE variant_rank = kv)", c("ein", "name_key"), "name_raw")))
 
   # variant_rank -> variant_class as a separate UPDATE rather than a CASE
   # inline above: DuckDB does not let a column alias from one SELECT level
