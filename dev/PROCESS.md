@@ -1,8 +1,8 @@
 # matchdb — build process
 
 **Status: proposal, 2026-08-21. Companion to [`PLAN.md`](PLAN.md). Updated
-2026-10-21: Phase 0 (0a–0d) is complete. The next gate is Phase 1, which waits on
-`md_compile()` (§6, §8).**
+2026-10-23: Phase 0 is complete; Phases 1–3 have been run on a from-scratch
+build (§6). Phase 1 passes but for 4 cells traced to an npmatch defect.**
 
 `PLAN.md` decides *what* to build and in what order. This document decides *how
 the work is actually conducted*: what has to be true before the first line of
@@ -443,18 +443,18 @@ makes "stop and reconsider" a decision someone can actually take.
 
 Phases are the plan's; the gate column is what this document adds.
 
-**Status at 2026-10-21:**
+**Status at 2026-10-23** (build `matchdb@bb68531`, normalizer `v1-b42811fe6601afe6`):
 
 | phase | repo | status |
 |---|---|---|
-| **0a** baseline | pfmatch | **done.** Frozen at `pfmatch@45a5040`, `dev/BASELINE-2026-08/`, then re-frozen as revision 2 (`pfmatch@3891c62`). Deterministic and thread-independent (`eacd5c3`) |
-| **0b** signature | npmatch | **done.** Merged as PR #5 (`npmatch@d658486`); signature `v1-421e1e2a6afb024e` |
+| **0a** baseline | pfmatch | **done.** Frozen at `pfmatch@45a5040`, `dev/BASELINE-2026-08/`, then re-frozen as revision 2 (`pfmatch@3891c62`). Deterministic and thread-independent (`eacd5c3`). Superseded for Phase 1 by `matchdb/dev/BASELINE-2026-10` (2026-09-21 BMF, current normalizer) |
+| **0b** signature | npmatch | **done.** Merged as PR #5 (`npmatch@d658486`); signature `v1-421e1e2a6afb024e`, now `v1-b42811fe6601afe6` |
 | **0c** vocabulary + A/B | pfmatch | **done** (`matchdb@08c1fc0`, `pfmatch@4d4837a`). Four arms; aliases carry the whole gain |
 | **0d** scaffold | matchdb | **done** (`matchdb@16937cc`). The gate selftest gives three zeros on both baselines, and the negative control catches the flipped verdict |
-| **1** entity + name + address, BMF | matchdb | **not run.** BMF ingest exists; `md_compile()` does not |
-| **2** Schedule I as `observed` | matchdb | **not run.** Schedule I ingest exists; waits on `md_compile()` |
-| **3** publication | matchdb | **not started** |
-| **4** remaining layers | matchdb | **ingested ahead of order** as a dry run. Row-budget and shape-report checks can't run until `md_compile()` exists |
+| **1** entity + name + address, BMF | matchdb | **passed, with one upstream defect.** Rows: 0 / 0 only-in-one-side. Cells: 4 of 1,974,830 rows, all `street_name` where the street is missing (npmatch writes `"NA"`). Statistics identical. 1k benchmark identical (0 of 4,715). Not a gate: raw BMF strings give +41 YES over the processed strings pfmatch reads today |
+| **2** Schedule I as `observed` | matchdb | **measured.** The three-zero half cannot run: 0a's augmented BMF predates the 2026-09-21 BMF and the current normalizer. 1k delta, `active-legal` → `active-observed`: **+146 YES** (295 gained, 149 lost), the direction 0c measured (+199). One-filer aliases: −527 YES |
+| **3** publication | matchdb | **done.** `md_publish()` / `md_reference()`; the stamp check and an md5 tamper check error by test; `latest.json` rollback exercised by test. Four tiers published (2.75M, 2.89M, 4.98M, 5.14M rows) |
+| **4** remaining layers | matchdb | **ingested**, including the e-Postcard, revocations and officer keys. Shape and absence reports are emitted by `md_compile()` |
 
 | phase | repo | gate — passes when |
 |---|---|---|

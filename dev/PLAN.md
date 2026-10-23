@@ -1,24 +1,45 @@
 # matchdb — development plan
 
-**Status: proposal, 2026-08-21. Updated 2026-10-21: Phase 0 complete; database
-built ahead of the compile step; Phases 1–3 not started.**
+**Status: proposal, 2026-08-21. Updated 2026-10-23: Phases 0–3 run; the Phase 1
+gate passes but for 4 cells traced to an npmatch defect; four tiers published.**
 
-> **Where the work stands.** The build has not followed the phase order below.
-> Phase 0 is finished (see `PROCESS.md` §6). Rather than stop at a BMF-only
-> Phase 1, the first pass ingested every planned source, so the archive is
-> already Phase 4 in scope. The ingest functions are in `R/md-ingest-*.R`.
-> All five core tables are populated (`entity` 4.0M, `name` 9.7M, `address`
-> 18.5M, `orgtext` 15.1M rows), and `ein_relation` holds 2.15M edges with every
-> queued source loaded (`RELATION-BUILD-PLAN.md`). `PAIN-POINTS.md` treats this
-> as a deliberate dry run, to be rebuilt once the process is proven robust.
+> **Where the work stands.** Phase 0 is finished (see `PROCESS.md` §6). Every
+> planned source is ingested, so the archive is Phase 4 in scope: the BMF, NTEE,
+> 1023-EZ, e-file headers, Schedule I, Schedule R, group exemptions, the 527
+> filings, the 990-N e-Postcard (`postcard_only` layer), automatic revocations
+> (`revoked_only` layer, with dates in `entity_event`), websites, and Part VII
+> officer name keys (`person_key`; no titles or pay). A from-scratch build on
+> `matchdb@bb68531` takes 70 minutes (63 of them deriving columns), gives a
+> 10 GB database over 3.70M EINs, and passes `dev/check-build.R` 36 of 36.
 >
-> In `REDUCTION.md` §8's build order, step 1 (derived columns) is done and step 2
-> (compact form) has been drafted and tested (`COMPACTION.md`). Step 3 is partly
-> done: `cluster_id` is built as `group_id` (`md_build_groups()`, `REDUCTION.md`
-> §6a), and `n_eins_at_address` is not built yet. Steps 4–5 are not started:
-> `md_spec()`/`md_compile()` and the named tiers.
-> With no `md_compile()` yet, **neither the Phase 1 gate nor the Phase 2 gate has
-> been run**, and nothing has been published (Phase 3).
+> `REDUCTION.md` §8's build order is complete: derived columns (every
+> `np_normalize()` column stored), the compact tables, `ein_key` with sharing
+> counts, typed many-to-many clusters (`cluster`, `cluster_member`),
+> `md_spec()` / `md_compile()`, and the named tiers.
+>
+> **Phase 1** (`dev/verify/run-gate.R`, baseline re-frozen as
+> `dev/BASELINE-2026-10`): the BMF-only compile reproduces pfmatch's reference
+> row for row; `name_freq` and `token_idf` are identical; the 1k benchmark is
+> identical (0 of 4,715). Four cells differ, all `street_name` on EINs with no
+> street: npmatch writes the text `"NA"` for a missing street, matchdb leaves it
+> empty. That is an npmatch defect, so the gate is read as passed.
+>
+> **Phase 2** (`dev/verify/phase2-measure.R`): Schedule I aliases with two or
+> more corroborating filers add **+146 YES** on the 1k benchmark (295 gained,
+> 149 lost), the direction 0c measured. With one filer allowed they cost
+> **−527 YES**, so `min_corroborators = 2` stays the default.
+>
+> **Phase 3**: `md_publish()` writes parquet bundles stamped with the normalizer
+> signature and md5s; `md_reference()` refuses a stale or altered bundle;
+> `latest.json` is the rollback pointer. Published: `active-legal` (2.75M rows),
+> `active-observed` (2.89M), `unified-legal` (4.98M), `unified-observed`
+> (5.14M).
+>
+> **Matching one level up** (npmatch `np_cluster_rollup()`, `np_pair_links()`;
+> `dev/verify/eval-cluster-rollup.R`): on 1,984 Schedule I queries with a
+> reported EIN, matched against `active-legal`, 60 of 739 non-YES queries roll
+> up to a family, and the true EIN is in it 90% of the time. Brand-type
+> clusters were the weakest (1 of 5).
 
 This is the design document for `matchdb`, written before implementation so the
 boundaries can be argued about while they are still cheap to move. It was
