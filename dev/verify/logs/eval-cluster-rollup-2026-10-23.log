@@ -1,0 +1,72 @@
+Schedule I (name, own address, EIN) rows for active EINs: 1,556,030 
+reference active-legal 2402137493f88c8e: 2,749,145 rows, 2,511,343 cluster memberships 
+
+EIN level, 1984 in-scope queries 
+  YES    1245  right EIN  89.9% 
+  MAYBE   406  right EIN  60.1% 
+  NO      333  right EIN  25.2% 
+
+roll-up, all types: 60 of 739 non-YES queries placed in a family; truth in it 90.0% 
+               truth_in_family
+basis           FALSE TRUE
+  brand             0    9
+  same_member       5   37
+  small_cluster     1    8
+                 was
+type              YES MAYBE NO
+  co_tenant         0    40  0
+  group_exemption   0     7  0
+  related_system    0    12  0
+  shared_website    0     1  0
+
+roll-up, group_exemption: 12 of 739 non-YES queries placed in a family; truth in it 83.3% 
+             truth_in_family
+basis         FALSE TRUE
+  brand           0    8
+  same_member     2    2
+                 was
+type              YES MAYBE NO
+  group_exemption   0    12  0
+
+roll-up, related_system: 43 of 739 non-YES queries placed in a family; truth in it 88.4% 
+               truth_in_family
+basis           FALSE TRUE
+  brand             0    3
+  same_member       4   28
+  small_cluster     1    7
+                was
+type             YES MAYBE NO
+  related_system   0    43  0
+
+roll-up, brand: 5 of 739 non-YES queries placed in a family; truth in it 20.0% 
+             truth_in_family
+basis         FALSE TRUE
+  brand           0    1
+  same_member     4    0
+       was
+type    YES MAYBE NO
+  brand   0     5  0
+
+roll-up, co_tenant: 46 of 739 non-YES queries placed in a family; truth in it 87.0% 
+               truth_in_family
+basis           FALSE TRUE
+  same_member       6   32
+  small_cluster     0    8
+           was
+type        YES MAYBE NO
+  co_tenant   0    46  0
+  care_of_network  no roll-ups 
+
+roll-up, shared_website: 22 of 739 non-YES queries placed in a family; truth in it 86.4% 
+               truth_in_family
+basis           FALSE TRUE
+  same_member       2   13
+  small_cluster     1    6
+                was
+type             YES MAYBE NO
+  shared_website   0    22  0
+
+pair links over 1137 queries with two or more candidates 
+  top two are one family: 193 (17.0%) 
+  family contests (YES by < 0.05 over a linked sibling): 0 
+  YES queries: wrong EIN 48 of 430; of the wrong ones, runner-up linked 11, runner-up is the truth 10 

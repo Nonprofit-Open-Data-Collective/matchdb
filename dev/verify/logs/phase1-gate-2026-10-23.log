@@ -1,0 +1,52 @@
+============================================================================== 
+GATE: phase1 
+baseline: C:\Users\jlecy\AppData\Local\Temp\claude\C--Users-jlecy-Dropbox-00---URBAN-00-GITHUB-matchdb\e134bde0-6a3d-46eb-92b2-e5682780db20\scratchpad\wt-main\dev\BASELINE-2026-10 
+============================================================================== 
+pfmatch          pfmatch-0ad8f7a (git archive at C:/Users/jlecy/AppData/Local/Temp/claude/C--Users-jlecy-Dropbox-00---URBAN-00-GITHUB-matchdb/e134bde0-6a3d-46eb-92b2-e5682780db20/scratchpad/pfmatch-0ad8f7a)
+npmatch          0.1.0.9000
+normalizer sig   v1-b42811fe6601afe6
+R                R version 4.5.3 (2026-03-11 ucrt)
+ 
+normalizer signature matches: v1-b42811fe6601afe6 
+ 
+<md_spec active-legal> dc8419cede1cb540
+  layers:     bmf_active 
+  names:      dba, legal 
+  addresses:  mailing 
+  sources:    bmf 
+  dba_as:     column 
+spec dc8419cede1cb540: 1,974,830 rows over 1,974,830 EINs
+compiled 1,974,830 rows in 41 s 
+matchdb adds a county to 1,973,585 rows; blanked for this gate 
+--- reference frame vs pfmatch's, same BMF strings --- 
+<md_diff> **FAIL** 
+  rows only in baseline          0
+  rows only in candidate         0
+  cells differing                4   (over 1,974,830 compared rows)
+  by column:
+    street_name                     4
+  sample differing cells:
+                                                                                          key
+                                           EIN-25-0825089\rAMERICAN ART THERAPY\rNA\r37415\r1
+ EIN-33-0721056\rSOUTHERN CALIFORNIA REGION OF THE MODEL A FORD CLUB OF AMERICA\rNA\r90004\r1
+                                                    EIN-39-1688255\rWILLOW ACES\rNA\r53955\r1
+                                  EIN-99-2688773\rBRILLIANT AND KIND MONTESSORI\rNA\r30341\r1
+      column baseline candidate
+ street_name       NA      <NA>
+ street_name       NA      <NA>
+ street_name       NA      <NA>
+ street_name       NA      <NA>
+--- name_freq: identical (1563250 names) --- 
+--- token_idf: identical (268232 names) --- 
+--- 1k benchmark on the compiled reference vs baseline --- 
+<md_diff> PASS 
+  rows only in baseline          0
+  rows only in candidate         0
+  cells differing                0   (over 4,715 compared rows)
+--- not a gate: raw BMF strings vs processed (pfmatch today) --- 
+           YES MAYBE  NO
+processed 2817   989 910
+raw       2858   950 907
+  identities whose verdict or EIN differs: 160 of 4716 
+============================================================================== 
+GATE FAILED (1 check(s)) 
