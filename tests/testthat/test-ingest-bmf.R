@@ -70,8 +70,8 @@ test_that("the BMF ingest produces the three tables with the right shape", {
     expect_equal(unname(counts[["entity"]]), 3L)
     # legal x3 + dba x1 + in_care_of x1; blanks and NAs must not become rows
     expect_equal(unname(counts[["name"]]), 5L)
-    # the org with an empty street contributes no address
-    expect_equal(unname(counts[["address"]]), 2L)
+    # the org with an empty street still has a city, state and ZIP: a place
+    expect_equal(unname(counts[["address"]]), 3L)
 
     con <- md_db(read_only = TRUE); on.exit(md_db_close(con), add = TRUE)
     e <- DBI::dbGetQuery(con, "SELECT ein, layer, active FROM entity ORDER BY ein")
