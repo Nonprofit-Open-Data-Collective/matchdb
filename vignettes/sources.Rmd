@@ -1,0 +1,156 @@
+---
+title: "Sources: where every name and address comes from"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sources: where every name and address comes from}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = FALSE)
+```
+
+matchdb stores names and addresses long: one row per string observed for an
+EIN, each tagged with the `source` that reported it, the source version, and
+how often and when it was seen. Nothing is merged away at load time. The
+BMF's legal name, the spelling on the organization's own 990, and the
+spelling fifty grantmakers wrote on Schedule I are three rows, not one.
+
+This vignette lists the sources, what each one contributes, and how to choose
+among them.
+
+## The registry
+
+`md_sources()` lists every upstream input with its URL. Nothing is fetched
+that is not in the registry.
+
+```{r}
+library(matchdb)
+md_sources()[, c("source", "feeds", "url")]
+```
+
+| source | what it contributes |
+|---|---|
+| **BMF** (unified, geocoded) | every EIN the IRS has listed; legal name, DBA, in-care-of name, mailing address, ruling date, NTEE, subsection, group exemption |
+| **e-file 990 headers** | the filer's own legal name and DBA, former names, the mailing address on each return, websites |
+| **Schedule I** | names and addresses grantmakers wrote for the EINs they paid (`observed`) |
+| **Schedule R** | related organizations each filer disclosed, with names and addresses (`observed`, and relations) |
+| **Schedule R parts I, III, IV; Schedule C; affiliate listings; group-exemption metadata** | relations between EINs: disregarded entities, related partnerships and corporations, group members |
+| **Form 1023-EZ approvals** | legal name, address and NTEE at approval, 2014–2023 |
+| **990-N e-Postcard** | legal name, DBAs, mailing address and website of small organizations; the date the postcard filing stopped |
+| **automatic revocations** | names, the last address, and revocation, posting and reinstatement dates |
+| **Part VII officers** | name keys of officers, directors and key employees, used only to link EINs that share people. No titles, no compensation |
+| **mission and program text** | the 990 Part III text, for review and classification |
+| **NCCS address history, crosswalks and geocodes** | historical addresses, counties, CBSAs and census tracts |
+
+## How much each source contributes
+
+Rows in `name` by class and source, build of 2026-10-23:
+
+| class | source | rows |
+|---|---|---:|
+| legal | bmf | 3,698,197 |
+| legal | e_postcard | 1,534,620 |
+| legal | revocations | 1,188,534 |
+| legal | efile990 | 809,932 |
+| legal | f1023ez | 512,507 |
+| dba | bmf | 923,305 |
+| dba | revocations | 238,752 |
+| dba | e_postcard | 67,058 |
+| dba | efile990 | 59,992 |
+| former | efile990 | 207,795 |
+| in_care_of | bmf | 1,430,850 |
+| in_care_of | efile990 | 169,333 |
+| observed | schedi | 1,785,148 |
+| observed | schedr | 190,011 |
+| observed | efile990 | 10,311 |
+
+A name reported by several sources is several rows. When a reference is
+compiled, rows that normalize to the same `name_key` for the same EIN collapse
+into one row. That row takes its class from the strongest class among them
+(legal before dba before observed). Its spelling comes from the strongest
+class's own rows, most frequent first.
+
+## First-party and third-party sources
+
+The distinction that matters most is who wrote the string.
+
+- **First-party**: the IRS or the organization itself. That covers the BMF,
+  the organization's own 990 header, its 1023-EZ, its e-Postcard and the
+  revocation list. These give the classes `legal`, `dba`, `former` and
+  `in_care_of`.
+- **Third-party**: another organization writing about this one. That covers a
+  grantmaker on Schedule I and a related organization on Schedule R. These
+  give the class `observed`.
+
+Third-party names are what make matchdb more than the BMF. A grantmaker writes
+`AMERICAN RED CROSS`, not `AMERICAN NATIONAL RED CROSS`, and a matcher that
+has seen that spelling can match it directly. But a third party can be wrong:
+a typo, the wrong EIN, or a fiscal sponsor's EIN written for each of its
+projects. That is what corroboration measures and what the guards flag; see
+`vignette("corroborators")`.
+
+## Choosing sources
+
+`md_spec(sources = ...)` keeps only strings from the named sources:
+
+```{r}
+# exactly what the BMF says, nothing else; this is pfmatch's reference
+bmf_only <- md_spec(layers = "bmf_active", names = c("legal", "dba"),
+                    addresses = "mailing", sources = "bmf")
+
+# every source (the default)
+everything <- md_spec(layers = "bmf_active", names = c("legal", "dba", "observed"),
+                      addresses = c("mailing", "observed"), min_corroborators = 2)
+```
+
+Usually you choose by **class** (`names =`, `addresses =`) rather than by
+source, and leave `sources = NULL`. The classes already separate first-party
+names from third-party ones. A source filter is useful mainly for reproducing a
+single-source frame, as the Phase 1 gate does. It also has a cost: names are
+collapsed across sources, so a source filter cuts across the precomputed
+statistics, and those statistics are then computed directly from the selected
+rows. The report says so.
+
+The source codes `md_spec()` accepts:
+
+```{r}
+names(md_name_sources())
+#> "bmf" "efile990" "f1023ez" "schedi" "schedr" "e_postcard" "revocations"
+names(md_address_sources())
+#> "bmf" "efile990" "f1023ez" "schedi" "schedr" "meta_address" "e_postcard" "revocations"
+```
+
+## Provenance: every version is pinned
+
+Some upstream URLs are moving pointers: `latest/` changes without notice.
+Before any ingest reads a source, `md_source_pin()` downloads it and writes a
+`PIN.dcf` beside the copy with the URL, the upstream modification time, the
+size and the md5. The ingest reads the pinned copy, and the `source_vintage`
+table records which pinned version loaded each table. Two builds from the same
+pins are the same database.
+
+```{r}
+con <- md_db(read_only = TRUE)
+DBI::dbGetQuery(con, "SELECT source, version, table_name, local_md5, row_count
+                      FROM source_vintage ORDER BY source")
+md_db_close(con)
+```
+
+The published database on S3 ships a `MANIFEST.json` with every pin, so a
+downloaded copy states exactly what it was built from:
+
+```{r}
+md_fetch_db()                                   # about 10 GB
+jsonlite::read_json(md_path("db", "MANIFEST.json"))$sources
+```
+
+## Seeing the sources for one organization
+
+`md_lookup()` returns every name and address with its source:
+
+```{r}
+x <- md_lookup("53-0196605")
+table(x$names$variant_class, x$names$source)
+```

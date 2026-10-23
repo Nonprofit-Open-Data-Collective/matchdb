@@ -101,11 +101,23 @@ md_publish_pointer <- function(label, spec_hash, root = md_path("publish")) {
 #' @rdname md_publish
 #' @param build_index Also build npmatch's blocking index ([npmatch::np_ref_index()]),
 #'   so the result can go straight to the cascade.
+#' @param fetch Download the bundle first with [md_fetch_reference()]: `TRUE`
+#'   always (a bundle already here and intact is not downloaded again),
+#'   `"missing"` only when the label is not published locally.
 #' @return For `md_reference()`, a list: `reference` (an `np_reference`),
-#'   `name_freq`, `token_idf`, `ref_index` (when built) and `stamp`.
+#'   `name_freq`, `token_idf`, `clusters` (when published), `ref_index` (when
+#'   built) and `stamp`.
 #' @export
 md_reference <- function(label, root = md_path("publish"), spec_hash = NULL,
-                         build_index = TRUE) {
+                         build_index = TRUE, fetch = FALSE) {
+  local_has <- function() {
+    f <- file.path(root, "latest.json")
+    if (!is.null(spec_hash)) return(file.exists(file.path(root, label, spec_hash, "stamp.json")))
+    file.exists(f) && !is.null(jsonlite::read_json(f)[[label]])
+  }
+  if (isTRUE(fetch) || (identical(fetch, "missing") && !local_has())) {
+    md_fetch_reference(label, spec_hash = spec_hash, root = root)
+  }
   if (is.null(spec_hash)) {
     f <- file.path(root, "latest.json")
     if (!file.exists(f)) stop("no latest.json under ", root, call. = FALSE)
