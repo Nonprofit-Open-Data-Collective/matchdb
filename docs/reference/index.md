@@ -1,0 +1,232 @@
+# Package index
+
+## Get a reference and match
+
+Download a published reference, or the whole database, and read it in
+the form npmatch matches against.
+
+- [`md_publish()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
+  [`md_publish_pointer()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
+  [`md_reference()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
+  : Publish a compiled reference, and read one back
+- [`md_fetch_reference()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_fetch_reference.md)
+  [`md_fetch_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_fetch_reference.md)
+  [`md_remote()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_fetch_reference.md)
+  : Download published references, or the whole database
+
+## Look things up
+
+Everything the database knows about an EIN, and the families it belongs
+to.
+
+- [`md_lookup()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_lookup.md)
+  [`md_lookup_parts()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_lookup.md)
+  : Everything the database knows about an EIN
+- [`md_cluster()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_cluster.md)
+  : The families an EIN belongs to, and who else is in them
+- [`md_ein()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ein.md)
+  [`md_is_ein()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ein.md)
+  : The canonical EIN format
+
+## Compile and publish your own slice
+
+Describe a reference by layer, name and address class, source and
+corroboration; compile it; publish it as a stamped bundle.
+
+- [`md_spec()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_spec.md)
+  : Describe a reference: which EINs, which names, which addresses
+
+- [`md_compile()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compile.md)
+  : Compile a spec into the reference frame npmatch matches against
+
+- [`md_publish()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
+  [`md_publish_pointer()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
+  [`md_reference()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
+  : Publish a compiled reference, and read one back
+
+- [`md_relations()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  [`md_layers()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  [`md_name_classes()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  [`md_address_classes()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  : The frozen enumerations, as code
+
+- [`md_name_sources()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_name_sources.md)
+  [`md_address_sources()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_name_sources.md)
+  :
+
+  Source-bit registries for `source_mask`
+
+## The database
+
+- [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md)
+  [`md_db_close()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md)
+  : Open the matchdb database
+- [`md_data_root()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_data_root.md)
+  [`md_path()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_data_root.md)
+  [`md_data_init()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_data_root.md)
+  : Where matchdb keeps its data
+
+## Sources and provenance
+
+- [`md_sources()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_sources.md)
+  : The source registry
+- [`md_source_urls()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_source_urls.md)
+  : URLs for a year-partitioned source
+- [`md_source_head()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_source_head.md)
+  : Read upstream object metadata without downloading it
+- [`md_source_pin()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_source_pin.md)
+  [`md_source_read_pin()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_source_pin.md)
+  : Pin a source to a concrete, immutable version
+- [`md_source_moved()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_source_moved.md)
+  : Has an upstream pointer moved since we pinned it?
+- [`md_record_vintage()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_record_vintage.md)
+  : Record an ingest in the audit table
+- [`md_relations()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  [`md_layers()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  [`md_name_classes()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  [`md_address_classes()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
+  : The frozen enumerations, as code
+- [`md_f1023ez_urls`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_f1023ez_urls.md)
+  : The 1023-EZ approval URLs are not consistently named
+- [`md_meta_caveats`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_meta_caveats.md)
+  : Known hazards in the NCCS metadata name and address files
+
+## Building the database
+
+The ingests, in the order dev/build-matchdb.R runs them, then the
+derived tables. Most users never call these.
+
+- [`md_ingest_address_crosswalk()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_address_crosswalk.md)
+  : Ingest the resolved address crosswalk as historical spells
+
+- [`md_ingest_affiliate_listing()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_affiliate_listing.md)
+  : Add group-return rosters: the subordinate names the BMF throws away
+
+- [`md_ingest_bmf()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_bmf.md)
+  [`md_validate_bmf()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_bmf.md)
+  : Ingest the unified BMF into entity, name and address
+
+- [`md_ingest_efile_group()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_efile_group.md)
+  : Add group membership from what filers report on Form 990 line H
+
+- [`md_ingest_efile_header()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_efile_header.md)
+  : Ingest the 990 filing header as self-reported names and addresses
+
+- [`md_ingest_e_postcard()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_e_postcard.md)
+  : Ingest the Form 990-N e-Postcard
+
+- [`md_ingest_f1023ez()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_f1023ez.md)
+  : Ingest Form 1023-EZ approvals
+
+- [`md_ingest_geocode()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_geocode.md)
+  : Attach census geography to the addresses it actually describes
+
+- [`md_ingest_group_meta()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_group_meta.md)
+  : Add historical group membership from the NCCS group metadata
+
+- [`md_ingest_irs527_related()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_irs527_related.md)
+  : Add related entities disclosed on 527 Schedule R
+
+- [`md_ingest_ntee()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_ntee.md)
+  : Fill the resolved NTEE triple on entity
+
+- [`md_ingest_officers()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_officers.md)
+  : Ingest officer, director and key-employee name keys from Form 990
+  Part VII
+
+- [`md_ingest_orgtext()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_orgtext.md)
+  : Ingest mission and program text
+
+- [`md_ingest_relations()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_relations.md)
+  : Build ein_relation from Schedule R and the group exemption structure
+
+- [`md_ingest_revocations()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_revocations.md)
+  : Ingest the IRS automatic revocation list
+
+- [`md_ingest_schedi()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_schedi.md)
+  : Ingest Schedule I recipient aliases as observed names and addresses
+
+- [`md_ingest_schedr()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_schedr.md)
+  : Ingest Schedule R related organisations as observed names and
+  addresses
+
+- [`md_ingest_schedr_parts()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_schedr_parts.md)
+  : Add the other three identification parts of Schedule R
+
+- [`md_ingest_sched_c_affil()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_sched_c_affil.md)
+  : Add the Schedule C affiliated-group roster
+
+- [`md_ingest_websites()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_websites.md)
+  : Ingest organisation websites
+
+- [`md_build_derived()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_derived.md)
+  : Build the derived-column tables
+
+- [`md_check_derived_fresh()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_check_derived_fresh.md)
+  : Has a re-ingest invalidated the derived tables?
+
+- [`md_build_compact()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_compact.md)
+  : Build the compact identity tables
+
+- [`md_build_groups()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_groups.md)
+  :
+
+  Build `group_id`: the federated families in `ein_relation`
+
+- [`md_build_ein_key()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_ein_key.md)
+  :
+
+  Build `ein_key`: every identifier an EIN holds, with how specific it
+  is
+
+- [`md_build_clusters()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_clusters.md)
+  : Build the cluster layer: typed, many-to-many families of EINs
+
+- [`md_build_stats()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_stats.md)
+  : Build the per-cell corpus statistics
+
+- [`md_ntee_canonical`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ntee_canonical.md)
+  : The NTEE crosswalk is canonical, and its nteev2 columns are not
+
+- [`md_irs527_shape`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_irs527_shape.md)
+  : What the 527 files can and cannot support
+
+- [`md_schedb_excluded`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_schedb_excluded.md)
+  : Why 527 Schedule B is not a matchdb source
+
+## Checks and guards
+
+- [`md_validate()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_validate.md)
+  [`md_validate_report()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_validate.md)
+  : Intrinsic validation of a built table
+- [`md_ingest_bmf()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_bmf.md)
+  [`md_validate_bmf()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_bmf.md)
+  : Ingest the unified BMF into entity, name and address
+- [`md_ntee_crosscheck()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ntee_crosscheck.md)
+  : Compare the 1023-EZ NTEE against the resolved value
+- [`md_guard_observed()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_guard_observed.md)
+  : Guards on observed names: is the written name really this EIN's?
+- [`md_guard_key()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_guard_key.md)
+  : Name key used by the guards
+- [`md_placeholder_ein()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_placeholder_ein.md)
+  : Placeholder EINs
+- [`md_name_pair_hit()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_name_pair_hit.md)
+  : Do two name keys name the same organisation by an abbreviation rule?
+
+## Verification harness
+
+Comparing references and match results between builds (the phase gates).
+
+- [`md_normal_form()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_normal_form.md)
+  : Put a frame in comparison normal form
+- [`md_compare_frames()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compare_frames.md)
+  : Compare two frames against the gate criterion
+- [`md_compare_tiered()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compare_tiered.md)
+  : Compare two tiered benchmark outputs
+
+## Utilities
+
+- [`md_modal_sql()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_modal_sql.md)
+  : Deterministically pick a representative value
+- [`md_xlsx_to_csv()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_xlsx_to_csv.md)
+  : Extract named columns from a large .xlsx by streaming its XML

@@ -17,6 +17,8 @@ remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")
 
 ## Quick start: download a reference and match
 
+[Getting started](https://nonprofit-open-data-collective.github.io/matchdb/articles/matchdb.html) walks through a full example: matching four grant recipients, reading the results, and looking at the cases that are not clear-cut.
+
 Four references are published, built from the database. Downloading one needs
 no AWS account.
 
