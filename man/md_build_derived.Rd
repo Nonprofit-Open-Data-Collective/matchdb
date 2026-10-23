@@ -4,7 +4,12 @@
 \alias{md_build_derived}
 \title{Build the derived-column tables}
 \usage{
-md_build_derived(con = NULL, what = c("name", "address"), chunk = 1000000L)
+md_build_derived(
+  con = NULL,
+  what = c("name", "address"),
+  chunk = 1000000L,
+  incremental = FALSE
+)
 }
 \arguments{
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
@@ -12,6 +17,10 @@ md_build_derived(con = NULL, what = c("name", "address"), chunk = 1000000L)
 \item{what}{Which tables to build.}
 
 \item{chunk}{Rows per pass. Bounds peak memory, not correctness.}
+
+\item{incremental}{Derive only rows that have no derived row yet, and delete
+derived rows whose source row is gone. For adding a source to a built
+database; refused if the stored rows were built by another normalizer.}
 }
 \value{
 Row counts, invisibly.

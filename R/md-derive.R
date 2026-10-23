@@ -22,10 +22,13 @@
 #' @param con A connection from [md_db()].
 #' @param what Which tables to build.
 #' @param chunk Rows per pass. Bounds peak memory, not correctness.
+#' @param incremental Derive only rows that have no derived row yet, and delete
+#'   derived rows whose source row is gone. For adding a source to a built
+#'   database; refused if the stored rows were built by another normalizer.
 #' @return Row counts, invisibly.
 #' @export
 md_build_derived <- function(con = NULL, what = c("name", "address"),
-                             chunk = 1000000L) {
+                             chunk = 1000000L, incremental = FALSE) {
   if (!requireNamespace("npmatch", quietly = TRUE)) {
     stop("npmatch is required", call. = FALSE)
   }
@@ -42,7 +45,7 @@ md_build_derived <- function(con = NULL, what = c("name", "address"),
     keep <- .md_derived_name_cols
     out["name"] <- .md_derive_pass(
       con, src = "name", id = "name_id", dest = "name_derived", keep = keep,
-      chunk = chunk, sig = sig, msg = msg,
+      chunk = chunk, sig = sig, msg = msg, incremental = incremental,
       shape = function(d) data.frame(
         name = ifelse(is.na(d$name_raw), "", d$name_raw),
         dba = blank(nrow(d)), division = blank(nrow(d)), street = blank(nrow(d)),
@@ -55,7 +58,7 @@ md_build_derived <- function(con = NULL, what = c("name", "address"),
     keep <- .md_derived_address_cols
     out["address"] <- .md_derive_pass(
       con, src = "address", id = "address_id", dest = "address_derived",
-      keep = keep, chunk = chunk, sig = sig, msg = msg,
+      keep = keep, chunk = chunk, sig = sig, msg = msg, incremental = incremental,
       shape = function(d) data.frame(
         name = blank(nrow(d)), dba = blank(nrow(d)), division = blank(nrow(d)),
         street = ifelse(is.na(d$street_raw), "", d$street_raw),
@@ -111,13 +114,34 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
 }
 
 .md_derive_pass <- function(con, src, id, dest, keep, chunk, sig, msg,
-                            shape, select) {
-  n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s", src))$n
-  msg("%s: %s rows, %d chunks of %s", src, format(n, big.mark = ","),
-      ceiling(n / chunk), format(chunk, big.mark = ","))
-  DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s", dest))
+                            shape, select, incremental = FALSE) {
+  first <- TRUE
+  if (incremental && DBI::dbExistsTable(con, dest)) {
+    old <- DBI::dbGetQuery(con, sprintf("SELECT DISTINCT normalize_signature AS s FROM %s", dest))$s
+    if (length(old) && !all(old == sig)) {
+      stop(dest, " was built by normalizer ", paste(old, collapse = ", "), ", not ", sig,
+           ": an incremental build would mix two. Rebuild in full.", call. = FALSE)
+    }
+    gone <- DBI::dbExecute(con, sprintf(
+      "DELETE FROM %s WHERE %s NOT IN (SELECT %s FROM %s)", dest, id, id, src))
+    # The rows to do, fixed before the loop: paging over "not yet derived" while
+    # appending derived rows would shrink the set under the offset and skip rows.
+    DBI::dbExecute(con, sprintf("CREATE OR REPLACE TEMP TABLE drv_todo AS
+      SELECT %s FROM %s ANTI JOIN %s USING (%s)", id, src, dest, id))
+    select <- sprintf("%s WHERE %s IN (SELECT %s FROM drv_todo)", select, id, id)
+    n <- .md_n(con, "drv_todo")
+    msg("%s: %s rows to derive, %s stale derived rows removed (incremental)", src,
+        format(n, big.mark = ","), format(gone, big.mark = ","))
+    first <- FALSE
+    if (n == 0) return(0L)
+  } else {
+    n <- DBI::dbGetQuery(con, sprintf("SELECT count(*) AS n FROM %s", src))$n
+    msg("%s: %s rows, %d chunks of %s", src, format(n, big.mark = ","),
+        ceiling(n / chunk), format(chunk, big.mark = ","))
+    DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s", dest))
+  }
 
-  t0 <- Sys.time(); done <- 0L; first <- TRUE
+  t0 <- Sys.time(); done <- 0L
   for (off in seq(0, n - 1, by = chunk)) {
     d <- DBI::dbGetQuery(con, sprintf("%s ORDER BY %s LIMIT %d OFFSET %d",
                                       select, id, chunk, off))

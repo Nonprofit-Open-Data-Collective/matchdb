@@ -25,9 +25,10 @@ V <- list(
   address_geocoded  = "v2024-05",      # nccsdata meta/metadata-address-geocoded.csv
   meta_group_number = "v2023-09",      # nccsdata meta/metadata-group-number.csv
   irs527_related    = "v2024-11-15",   # nccsdata public/pacs/2024-11-POL-ORGS-SCHED-R.csv
-  e_postcard        = "v2026-07"       # nccsdata raw/e-postcard/2026-07-E-POSTCARD.csv
+  e_postcard        = "v2026-07",      # nccsdata raw/e-postcard/2026-07-E-POSTCARD.csv
+  revocations       = "v2026-07"       # nccsdata raw/revocations/2026-07-REVOCATIONS-ORGS.csv
 )
-EFILE_SOURCES <- c("efile_header", "schedi", "efile_related", "efile_disregarded",
+EFILE_SOURCES <- c("efile_header", "schedi", "efile_related", "efile_disregarded", "efile_officers",
                    "efile_related_ptr", "efile_related_corp", "efile_orgtext",
                    "efile_affiliate_listing", "efile_sched_c_affil")
 
@@ -71,6 +72,8 @@ step("pin sources", {
                 src_files("irs527_related", V$irs527_related, "[.]csv$"), V$irs527_related)
   md_source_pin("e_postcard",
                 src_files("e_postcard", V$e_postcard, "E-POSTCARD[.]csv$"), V$e_postcard)
+  md_source_pin("revocations",
+                src_files("revocations", V$revocations, "REVOCATIONS-ORGS[.]csv$"), V$revocations)
   for (s in EFILE_SOURCES) {
     md_source_pin(s, src_files(s, V$efile, "[0-9]{4}[.]CSV$"), V$efile)
   }
@@ -106,6 +109,11 @@ step("527 Schedule R", md_ingest_irs527_related(con = con, version = V$irs527_re
 step("Schedule R Parts I, III, IV", md_ingest_schedr_parts(con = con, version = V$efile))
 step("affiliate listing", md_ingest_affiliate_listing(con = con, version = V$efile))
 step("Schedule C affiliated groups", md_ingest_sched_c_affil(con = con, version = V$efile))
+# After every e-file entity source, so an EIN on a 990 is filer_only, not
+# postcard_only; revocations last, so revoked_only means on no other list.
+step("990-N e-Postcard", md_ingest_e_postcard(V$e_postcard, con = con))
+step("automatic revocations", md_ingest_revocations(V$revocations, con = con))
+step("Part VII officer keys", md_ingest_officers(V$efile, con = con))
 step("mission and program text", md_ingest_orgtext(V$efile, con = con))
 # Geography last among ingests, so it attaches to every address loaded above.
 step("census geography", md_ingest_geocode(con = con, version = V$address_geocoded))

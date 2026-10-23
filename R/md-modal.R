@@ -68,7 +68,12 @@ md_modal_sql <- function(table, by, value, where = NULL, alias = NULL) {
 #' @return A character vector of permitted values.
 #' @export
 md_layers <- function() {
-  c("bmf_active", "bmf_inactive", "filer_only", "approved_only", "irs527")
+  # Append-only (PLAN.md section 3a). postcard_only and revoked_only were added
+  # 2026-10-22 with the e-Postcard and revocation ingests: filer_only rows all
+  # came from 990 e-file filings and schedules, so 990-N-only EINs get their own
+  # value rather than widening an existing one.
+  c("bmf_active", "bmf_inactive", "filer_only", "approved_only", "irs527",
+    "postcard_only", "revoked_only")
 }
 
 #' @rdname md_layers

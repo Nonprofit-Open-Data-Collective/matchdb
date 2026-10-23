@@ -34,7 +34,10 @@ test_that("an empty string is a candidate like any other, not special-cased", {
   expect_equal(DBI::dbGetQuery(con, q)$v, "")
 })
 
-test_that("the frozen enumerations include the 1023-EZ layer", {
-  expect_true("approved_only" %in% md_layers())
-  expect_length(md_layers(), 5L)
+test_that("the layer vocabulary is append-only", {
+  # PLAN.md section 3a: values are appended, never renamed or removed, so the
+  # earlier values stay exactly where they were.
+  frozen <- c("bmf_active", "bmf_inactive", "filer_only", "approved_only", "irs527")
+  expect_identical(md_layers()[seq_along(frozen)], frozen)
+  expect_identical(md_layers()[-seq_along(frozen)], c("postcard_only", "revoked_only"))
 })

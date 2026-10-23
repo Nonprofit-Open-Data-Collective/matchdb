@@ -12,8 +12,10 @@
 #'   \item{`email_domain`}{`site_key` from `website`, `kind = 'email'`}
 #' }
 #'
-#' Officers and employees (990 Part VII) would be a fifth kind, `person`; they
-#' are not in the database yet.
+#' \describe{
+#'   \item{`person`}{an officer, director or key employee's name key from
+#'     `person_key` ([md_ingest_officers()]), when that table exists}
+#' }
 #'
 #' @section How specific a key is:
 #' `n_eins_sharing` counts the EINs holding the key, across the whole database.
@@ -44,8 +46,13 @@ md_build_ein_key <- function(con = NULL) {
     }
   }
 
+  # person keys only for EINs in entity, like every other kind
+  person <- if (DBI::dbExistsTable(con, "person_key"))
+    "UNION ALL
+      SELECT p.ein, 'person', p.person_key, 1, p.first_year, p.last_year
+      FROM person_key p JOIN entity e USING (ein)" else ""
   DBI::dbExecute(con, "DROP TABLE IF EXISTS ein_key")
-  DBI::dbExecute(con, "
+  DBI::dbExecute(con, sprintf("
     CREATE TABLE ein_key AS
     WITH k AS (
       SELECT ein, 'name' AS kind, name_key AS key,
@@ -60,6 +67,7 @@ md_build_ein_key <- function(con = NULL) {
       SELECT ein, CASE WHEN kind = 'email' THEN 'email_domain' ELSE 'website' END,
              site_key, count(DISTINCT source), min(first_year), max(last_year)
       FROM website GROUP BY ein, kind, site_key
+      %s
     ), one AS (
       SELECT ein, kind, key, max(n_sources) AS n_sources,
              min(first_year) AS first_year, max(last_year) AS last_year
@@ -69,7 +77,7 @@ md_build_ein_key <- function(con = NULL) {
     )
     SELECT one.*, s.n_eins_sharing
     FROM one JOIN sharing s USING (kind, key)
-    ORDER BY kind, key, ein")
+    ORDER BY kind, key, ein", person))
 
   DBI::dbExecute(con, "DROP TABLE IF EXISTS ein_key_layer")
   DBI::dbExecute(con, "

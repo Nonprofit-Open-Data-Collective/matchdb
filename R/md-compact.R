@@ -8,14 +8,15 @@
 #' @return A named integer vector, source name to bit value.
 #' @export
 md_name_sources <- function() {
-  c(bmf = 1L, efile990 = 2L, f1023ez = 4L, schedi = 8L, schedr = 16L)
+  c(bmf = 1L, efile990 = 2L, f1023ez = 4L, schedi = 8L, schedr = 16L,
+    e_postcard = 32L, revocations = 64L)
 }
 
 #' @rdname md_name_sources
 #' @export
 md_address_sources <- function() {
   c(bmf = 1L, efile990 = 2L, f1023ez = 4L, schedi = 8L, schedr = 16L,
-    meta_address = 32L)
+    meta_address = 32L, e_postcard = 64L, revocations = 128L)
 }
 
 # A SQL CASE expression mapping `source` to its registry bit, so the mapping
