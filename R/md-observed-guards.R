@@ -314,6 +314,15 @@ md_guard_key <- function(x) {
                        t -> CASE t %s ELSE t END),
         t -> NOT list_contains(%s, t)),
       ' '), '')", abbr_sql, stop_sql))
+  .md_placeholder_macro(con)
+  invisible(TRUE)
+}
+
+# md_placeholder_ein(e) in SQL, the rule md_placeholder_ein() applies in R. The
+# builders of derived tables (groups, keys, clusters) leave these EINs out: a
+# written 0 or 123456789 is not an organisation, and joining on it links every
+# filer that wrote it.
+.md_placeholder_macro <- function(con) {
   ph_ein <- paste(sprintf("'%s'", .MD_PLACEHOLDER_EINS), collapse = ", ")
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_placeholder_ein(e) AS

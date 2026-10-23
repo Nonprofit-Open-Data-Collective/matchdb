@@ -25,7 +25,7 @@ lookup_db <- function() {
 
 test_that("md_lookup gathers every part for an EIN, in any EIN form", {
   con <- lookup_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
-  x <- md_lookup("00-0000001", con = con)
+  x <- md_lookup("10-0000001", con = con)
   expect_s3_class(x, "md_lookup")
   expect_setequal(names(x), c("entity", "names", "addresses", "events", "relations",
                               "clusters", "keys"))
@@ -38,7 +38,7 @@ test_that("md_lookup gathers every part for an EIN, in any EIN form", {
   expect_equal(x$relations$direction, "discloses")
   expect_setequal(x$clusters$cluster_id, c("GRP-1", "CTN-1"))
   expect_equal(nrow(x$events), 0)
-  expect_output(print(x), "EIN-00-0000001  ACME FOUNDATION INC")
+  expect_output(print(x), "EIN-10-0000001  ACME FOUNDATION INC")
 })
 
 test_that("relations are found from either side; events are dated", {

@@ -1,7 +1,7 @@
 # ein_key and the cluster layer, on a small synthetic database. Each case is a
 # rule that, broken, would either invent a family or hide a real one.
 
-e <- function(n) sprintf("EIN-00-%07d", n)
+e <- function(n) sprintf("EIN-10-%07d", n)
 
 layer_db <- function() {
   con <- DBI::dbConnect(duckdb::duckdb())
@@ -38,8 +38,8 @@ layer_db <- function() {
   # groups: one star; relations: two Schedule R stars that share a member
   x("CREATE TABLE entity_group (ein VARCHAR, group_id VARCHAR, role VARCHAR,
        group_central_ein VARCHAR)")
-  x(sprintf("INSERT INTO entity_group VALUES ('%s','GRP-00-0000001','parent','%s'),
-             ('%s','GRP-00-0000001','member','%s'), ('%s','GRP-00-0000001','member','%s')",
+  x(sprintf("INSERT INTO entity_group VALUES ('%s','GRP-10-0000001','parent','%s'),
+             ('%s','GRP-10-0000001','member','%s'), ('%s','GRP-10-0000001','member','%s')",
             e(1), e(1), e(2), e(1), e(3), e(1)))
   x("CREATE TABLE ein_relation (ein_a VARCHAR, ein_b VARCHAR, relation VARCHAR, evidence VARCHAR)")
   x(sprintf("INSERT INTO ein_relation VALUES
@@ -107,9 +107,9 @@ test_that("Schedule R gives one star per discloser, never a chained component", 
   con <- layer_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   r <- build_all(con, types = "related_system")
   # 36 -> 37 and 38 -> 37, 38 -> 39: two stars that share 37, not one cluster
-  expect_setequal(r$c$cluster_id, c("SYS-00-0000036", "SYS-00-0000038"))
-  expect_setequal(r$m$ein[r$m$cluster_id == "SYS-00-0000038"], e(c(37, 38, 39)))
-  expect_equal(r$m$role[r$m$cluster_id == "SYS-00-0000036" & r$m$ein == e(36)], "central")
+  expect_setequal(r$c$cluster_id, c("SYS-10-0000036", "SYS-10-0000038"))
+  expect_setequal(r$m$ein[r$m$cluster_id == "SYS-10-0000038"], e(c(37, 38, 39)))
+  expect_equal(r$m$role[r$m$cluster_id == "SYS-10-0000036" & r$m$ein == e(36)], "central")
   # 40 lists only a NULL counterparty and an EIN outside entity: no cluster
   expect_false(any(grepl("0000040", r$c$cluster_id)))
 })
@@ -119,7 +119,7 @@ test_that("in-care-of keeps organisations in the same state, not people, roles o
   con <- layer_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   r <- build_all(con, types = "care_of_network")
   # only 32 -> LEHIGH CEMENT (31, both DE) survives
-  expect_equal(r$c$cluster_id, "ICO-00-0000031")
+  expect_equal(r$c$cluster_id, "ICO-10-0000031")
   expect_setequal(r$m$ein, e(c(31, 32)))
 })
 
@@ -149,8 +149,8 @@ test_that("one EIN sits in several clusters, and footprints sum by layer", {
   con <- layer_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   r <- build_all(con, types = c("group_exemption", "shared_website", "brand"))
   expect_setequal(r$m$cluster_id[r$m$ein == e(1)],
-                  c("GRP-00-0000001", "WEB-toastmasters.org", "BRD-TOASTMASTERS"))
-  expect_equal(r$m$role[r$m$ein == e(1) & r$m$cluster_id == "GRP-00-0000001"], "central")
+                  c("GRP-10-0000001", "WEB-toastmasters.org", "BRD-TOASTMASTERS"))
+  expect_equal(r$m$role[r$m$ein == e(1) & r$m$cluster_id == "GRP-10-0000001"], "central")
   f <- DBI::dbGetQuery(con, "SELECT cluster_id, sum(n_eins) AS n FROM cluster_footprint GROUP BY 1")
   sz <- r$c[match(f$cluster_id, r$c$cluster_id), "size"]
   expect_equal(f$n, sz)
@@ -175,4 +175,41 @@ test_that("an anchor with other uses needs a second brand word, trailing S ignor
   expect_true(e(51) %in% m)            # CLUB matches CLUBS
   expect_false(any(e(52:54) %in% m))   # LIONS alone is not enough
   expect_setequal(m, e(41:51))
+})
+
+test_that("a placeholder EIN is in no group, key or cluster", {
+  skip_if_not_installed("duckdb")
+  con <- layer_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  x <- function(sql) DBI::dbExecute(con, sql)
+  ph <- c("EIN-00-0000000", "EIN-12-3456789")
+  # placeholders as entities, as the ingests create them from written EINs
+  x(sprintf("INSERT INTO entity VALUES ('%s', 'filer_only'), ('%s', 'filer_only')", ph[1], ph[2]))
+  # three disclosers write 0 or 123456789 on Schedule R; one discloser also has
+  # a real related entity, so its own star survives
+  x(sprintf("INSERT INTO ein_relation VALUES
+             ('%s','%s','related_entity','schedule_r_part_ii'),
+             ('%s','%s','related_entity','schedule_r_part_ii'),
+             ('%s','%s','related_entity','schedule_r_part_ii')",
+            e(2), ph[1], e(4), ph[1], e(36), ph[2]))
+  # a placeholder that shares a place and a site with a real EIN
+  x(sprintf("INSERT INTO address_compact VALUES ('%s', '1 SCHOOL ST', '11111', 'ME', 1, 1, 2015, 2020)", ph[1]))
+  x(sprintf("INSERT INTO website VALUES ('%s', 'solo.org', 'url', 'efile990', 2020, 2020)", ph[2]))
+  # a group edge to a placeholder subordinate
+  x(sprintf("INSERT INTO ein_relation VALUES ('%s','%s','group_member','bmf_group_exemption')",
+            e(1), ph[1]))
+  suppressMessages(md_build_groups(con))
+  r <- build_all(con)
+  k <- DBI::dbGetQuery(con, "SELECT * FROM ein_key")
+  g <- DBI::dbGetQuery(con, "SELECT * FROM entity_group")
+  expect_false(any(ph %in% r$m$ein))
+  expect_false(any(ph %in% k$ein))
+  expect_false(any(ph %in% g$ein))
+  # stars made only of a placeholder are gone; a real star is untouched
+  expect_false(any(c("SYS-10-0000002", "SYS-10-0000004") %in% r$c$cluster_id))
+  expect_true("SYS-10-0000036" %in% r$c$cluster_id)
+  # the placeholder does not count toward a real place's sharing
+  expect_equal(k$n_eins_sharing[k$kind == "place" & k$ein == e(29)], 2)
+  # the raw rows stay, as provenance
+  expect_equal(DBI::dbGetQuery(con, sprintf(
+    "SELECT count(*) AS n FROM ein_relation WHERE ein_b = '%s'", ph[1]))$n, 3)
 })

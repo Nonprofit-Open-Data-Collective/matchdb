@@ -52,6 +52,6 @@ test_that("the bundle carries the clusters touching its EINs", {
   root <- tempfile("pub")
   suppressMessages(md_publish(md_spec(label = "thin"), root, con))   # active only
   cl <- md_reference("thin", root, build_index = FALSE)$clusters
-  expect_equal(cl$ein, "EIN-00-0000001")       # e3, inactive, is outside the bundle
+  expect_equal(cl$ein, "EIN-10-0000001")       # e3, inactive, is outside the bundle
   expect_equal(cl$cluster_id, "GRP-1")
 })

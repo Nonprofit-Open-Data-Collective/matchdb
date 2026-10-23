@@ -105,6 +105,7 @@ md_build_groups <- function(con = NULL, max_iter = 100L) {
                   .md_group_evidence_rank), collapse = " "),
     " ELSE ", if ("evidence" %in% flds) length(.md_group_evidence_rank) + 1L else 1L,
     " END")
+  .md_placeholder_macro(con)
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE grp_edge_all AS
     SELECT ein_a, ein_b, %s AS rk,
@@ -112,7 +113,8 @@ md_build_groups <- function(con = NULL, max_iter = 100L) {
     FROM ein_relation
     WHERE relation = 'group_member'
       AND ein_a IS NOT NULL AND ein_b IS NOT NULL
-      AND ein_a <> ein_b",
+      AND ein_a <> ein_b
+      AND NOT md_placeholder_ein(ein_a) AND NOT md_placeholder_ein(ein_b)",
     rank_case, col("n_obs", "NULL"), col("last_year", "NULL")))
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE grp_edge AS
