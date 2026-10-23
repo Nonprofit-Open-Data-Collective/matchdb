@@ -7,3 +7,5 @@
 ^\.Rproj\.user$
 ^\.gitignore$
 ^LICENSE\.md$
+^_pkgdown\.yml$
+^pkgdown$

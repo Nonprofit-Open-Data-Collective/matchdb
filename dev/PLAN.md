@@ -10,7 +10,7 @@ gate passes but for 4 cells traced to an npmatch defect; four tiers published.**
 > (`revoked_only` layer, with dates in `entity_event`), websites, and Part VII
 > officer name keys (`person_key`; no titles or pay). A from-scratch build on
 > `matchdb@bb68531` takes 70 minutes (63 of them deriving columns), gives a
-> 10 GB database over 3.70M EINs, and passes `dev/check-build.R` 36 of 36.
+> 10 GB database over 4.24M EINs (3.70M of them from the BMF), and passes `dev/check-build.R` 36 of 36.
 >
 > `REDUCTION.md` §8's build order is complete: derived columns (every
 > `np_normalize()` column stored), the compact tables, `ein_key` with sharing

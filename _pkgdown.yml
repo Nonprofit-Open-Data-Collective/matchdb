@@ -1,0 +1,107 @@
+url: https://nonprofit-open-data-collective.github.io/matchdb/
+
+template:
+  bootstrap: 5
+  bslib:
+    primary: "#1F5F8B"
+
+navbar:
+  structure:
+    left:  [reference, articles]
+    right: [search, github]
+
+articles:
+- title: Choosing a reference
+  navbar: ~
+  contents:
+  - layers
+  - sources
+  - corroborators
+
+reference:
+- title: Get a reference and match
+  desc: >
+    Download a published reference, or the whole database, and read it in the
+    form npmatch matches against.
+  contents:
+  - md_reference
+  - md_fetch_reference
+  - md_fetch_db
+  - md_remote
+- title: Look things up
+  desc: Everything the database knows about an EIN, and the families it belongs to.
+  contents:
+  - md_lookup
+  - md_lookup_parts
+  - md_cluster
+  - md_ein
+  - md_is_ein
+- title: Compile and publish your own slice
+  desc: >
+    Describe a reference by layer, name and address class, source and
+    corroboration; compile it; publish it as a stamped bundle.
+  contents:
+  - md_spec
+  - md_compile
+  - md_publish
+  - md_publish_pointer
+  - md_layers
+  - md_name_classes
+  - md_address_classes
+  - md_name_sources
+  - md_address_sources
+- title: The database
+  contents:
+  - md_db
+  - md_db_close
+  - md_data_root
+  - md_path
+  - md_data_init
+- title: Sources and provenance
+  contents:
+  - md_sources
+  - md_source_urls
+  - md_source_head
+  - md_source_pin
+  - md_source_read_pin
+  - md_source_moved
+  - md_record_vintage
+  - md_relations
+  - md_f1023ez_urls
+  - md_meta_caveats
+- title: Building the database
+  desc: >
+    The ingests, in the order dev/build-matchdb.R runs them, then the derived
+    tables. Most users never call these.
+  contents:
+  - starts_with("md_ingest_")
+  - md_build_derived
+  - md_check_derived_fresh
+  - md_build_compact
+  - md_build_groups
+  - md_build_ein_key
+  - md_build_clusters
+  - md_build_stats
+  - md_ntee_canonical
+  - md_irs527_shape
+  - md_schedb_excluded
+- title: Checks and guards
+  contents:
+  - md_validate
+  - md_validate_report
+  - md_validate_bmf
+  - md_ntee_crosscheck
+  - md_guard_observed
+  - md_guard_key
+  - md_placeholder_ein
+  - md_name_pair_hit
+- title: Verification harness
+  desc: Comparing references and match results between builds (the phase gates).
+  contents:
+  - md_normal_form
+  - md_compare_frames
+  - md_compare_tiered
+- title: Utilities
+  contents:
+  - md_modal_sql
+  - md_xlsx_to_csv

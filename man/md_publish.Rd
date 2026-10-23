@@ -14,7 +14,8 @@ md_reference(
   label,
   root = md_path("publish"),
   spec_hash = NULL,
-  build_index = TRUE
+  build_index = TRUE,
+  fetch = FALSE
 )
 }
 \arguments{
@@ -32,12 +33,17 @@ md_reference(
 
 \item{build_index}{Also build npmatch's blocking index (\code{\link[npmatch:np_ref_index]{npmatch::np_ref_index()}}),
 so the result can go straight to the cascade.}
+
+\item{fetch}{Download the bundle first with \code{\link[=md_fetch_reference]{md_fetch_reference()}}: \code{TRUE}
+always (a bundle already here and intact is not downloaded again),
+\code{"missing"} only when the label is not published locally.}
 }
 \value{
 The bundle directory, invisibly.
 
 For \code{md_reference()}, a list: \code{reference} (an \code{np_reference}),
-\code{name_freq}, \code{token_idf}, \code{ref_index} (when built) and \code{stamp}.
+\code{name_freq}, \code{token_idf}, \code{clusters} (when published), \code{ref_index} (when
+built) and \code{stamp}.
 }
 \description{
 \code{md_publish()} compiles a spec and writes it as a bundle; \code{md_reference()}
