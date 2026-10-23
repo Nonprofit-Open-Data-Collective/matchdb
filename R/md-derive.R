@@ -39,8 +39,7 @@ md_build_derived <- function(con = NULL, what = c("name", "address"),
   out <- integer(0)
 
   if ("name" %in% what) {
-    keep <- c("name_key", "name_full", "name_form", "name_gen", "name_gen_rank",
-              "name_nums", "name_ord", "name_dir")
+    keep <- .md_derived_name_cols
     out["name"] <- .md_derive_pass(
       con, src = "name", id = "name_id", dest = "name_derived", keep = keep,
       chunk = chunk, sig = sig, msg = msg,
@@ -53,8 +52,7 @@ md_build_derived <- function(con = NULL, what = c("name", "address"),
   }
 
   if ("address" %in% what) {
-    keep <- c("street_key", "street_num", "street_name", "street_type",
-              "street_unit", "is_po_box", "zip3", "zip9", "state_abb")
+    keep <- .md_derived_address_cols
     out["address"] <- .md_derive_pass(
       con, src = "address", id = "address_id", dest = "address_derived",
       keep = keep, chunk = chunk, sig = sig, msg = msg,
@@ -125,7 +123,8 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
                                       select, id, chunk, off))
     if (!nrow(d)) break
     o <- npmatch::np_normalize(shape(d))
-    res <- cbind(stats::setNames(d["id"], id), o[, keep, drop = FALSE])
+    # ids as integers, so joins to name and address compare like types
+    res <- cbind(stats::setNames(data.frame(as.integer(d$id)), id), o[, keep, drop = FALSE])
     res$normalize_signature <- sig
     if (first) { DBI::dbWriteTable(con, dest, res); first <- FALSE
     } else      { DBI::dbAppendTable(con, dest, res) }
@@ -139,3 +138,15 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
       as.numeric(difftime(Sys.time(), t0, units = "mins")))
   done
 }
+
+# Every column np_normalize() adds or rewrites, by the one input field it is a
+# function of. md_build_derived() stores these, and md_compile() attaches them
+# instead of normalizing. dba_key and division_key are the same transformation
+# as name_key applied to the dba and division strings, so they come from the
+# name_key of a stored row holding that string. A test fails if np_normalize()
+# gains a column these lists do not cover.
+.md_derived_name_cols <- c("name_gen", "name_gen_rank", "name_nums", "name_ord",
+  "name_dir", "name_form", "name_full", "name_key", "name_core", "name_placeholder")
+.md_derived_address_cols <- c("street_unit", "street_key", "is_po_box", "street_num",
+  "street_name", "street_type", "zip5", "zip3", "zip9", "state_abb")
+.md_derived_alt_cols <- c("dba_key", "division_key")
