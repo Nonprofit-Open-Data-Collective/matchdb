@@ -25,7 +25,7 @@ check <- function(label, ok, detail = "") {
 tabs <- c("entity", "name", "address", "orgtext", "ein_relation", "source_vintage",
           "name_derived", "address_derived", "name_compact", "address_compact",
           "entity_group", "website", "ein_key", "ein_key_layer", "cluster",
-          "cluster_member", "cluster_footprint")
+          "cluster_member", "cluster_footprint", "entity_event")
 for (t in tabs) {
   n <- if (DBI::dbExistsTable(con, t)) .md_n(con, t) else NA
   check(sprintf("%s is non-empty", t), !is.na(n) && n > 0,
@@ -67,7 +67,7 @@ need <- c("bmf_unified", "f1023ez", "efile_header", "schedi", "efile_related",
           "efile_disregarded", "efile_related_ptr", "efile_related_corp",
           "efile_orgtext", "efile_affiliate_listing", "efile_sched_c_affil",
           "address_crosswalk", "address_geocoded", "meta_group_number",
-          "irs527_related", "e_postcard")
+          "irs527_related", "e_postcard", "revocations")
 have <- q("SELECT DISTINCT source FROM source_vintage")$source
 check("every source is in source_vintage", all(need %in% have),
       paste(setdiff(need, have), collapse = ", "))

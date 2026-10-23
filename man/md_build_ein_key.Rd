@@ -26,8 +26,10 @@ former names, without in-care-of names or guarded observed rows}
 \item{\code{email_domain}}{\code{site_key} from \code{website}, \code{kind = 'email'}}
 }
 
-Officers and employees (990 Part VII) would be a fifth kind, \code{person}; they
-are not in the database yet.
+\describe{
+\item{\code{person}}{an officer, director or key employee's name key from
+\code{person_key} (\code{\link[=md_ingest_officers]{md_ingest_officers()}}), when that table exists}
+}
 }
 \section{How specific a key is}{
 
