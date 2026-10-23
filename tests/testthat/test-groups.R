@@ -3,7 +3,7 @@
 # families, a member under two parents, chains longer than one hop, and ids
 # that move when unrelated groups are added.
 
-e <- function(n) sprintf("EIN-00-%07d", n)
+e <- function(n) sprintf("EIN-10-%07d", n)
 
 rel_db <- function(rows) {
   con <- DBI::dbConnect(duckdb::duckdb())
@@ -29,7 +29,7 @@ test_that("a star is one group, named after its smallest EIN", {
   g <- groups(con)
 
   expect_equal(g$ein, e(c(3, 5, 7, 9)))
-  expect_equal(unique(g$group_id), "GRP-00-0000003")
+  expect_equal(unique(g$group_id), "GRP-10-0000003")
   expect_equal(unique(g$group_size), 4)
   expect_equal(g$role[g$ein == e(5)], "parent")
   expect_true(all(g$role[g$ein != e(5)] == "member"))
@@ -45,8 +45,8 @@ test_that("separate stars stay separate", {
   g <- groups(con)
 
   expect_equal(out$groups, 2)
-  expect_equal(g$group_id[g$ein == e(3)], "GRP-00-0000001")
-  expect_equal(g$group_id[g$ein == e(12)], "GRP-00-0000010")
+  expect_equal(g$group_id[g$ein == e(3)], "GRP-10-0000001")
+  expect_equal(g$group_id[g$ein == e(12)], "GRP-10-0000010")
 })
 
 test_that("related_entity and disregarded_entity edges never join groups", {
@@ -110,7 +110,7 @@ test_that("a long chain converges to one group, and max_iter is enforced", {
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   out <- suppressMessages(md_build_groups(con))
   expect_equal(out$groups, 1)
-  expect_equal(unique(groups(con)$group_id), "GRP-00-0000001")
+  expect_equal(unique(groups(con)$group_id), "GRP-10-0000001")
   expect_gt(out$passes, 10)
 
   expect_error(suppressMessages(md_build_groups(con, max_iter = 3)),
@@ -180,7 +180,7 @@ test_that("a member's own H(c) report does not override its BMF parent", {
   out <- suppressMessages(md_build_groups(con))
   g <- groups(con)
   expect_equal(out$groups, 2)
-  expect_equal(g$group_id[g$ein == e(3)], "GRP-00-0000001")
+  expect_equal(g$group_id[g$ein == e(3)], "GRP-10-0000001")
   expect_equal(g$n_parents[g$ein == e(3)], 1)
 })
 

@@ -217,17 +217,17 @@ md_cluster <- function(ein = NULL, cluster_id = NULL, types = NULL, max_members 
   tabs <- DBI::dbListTables(con)
   # the name to show: the BMF legal name, else another legal, a dba, an alias
   nm <- if ("name" %in% tabs) "
-    LEFT JOIN (SELECT n.ein, arg_min(n.name_raw, CASE
+    LEFT JOIN (SELECT n.ein, arg_min(n.name_raw, {a: CASE
                  WHEN n.variant_class = 'legal' AND n.source = 'bmf' THEN 0
                  WHEN n.variant_class = 'legal' THEN 1 WHEN n.variant_class = 'dba' THEN 2
-                 ELSE 3 END) AS name
+                 ELSE 3 END, b: n.name_raw}) AS name
                FROM name n
                WHERE n.variant_class <> 'in_care_of' AND n.ein IN
                  (SELECT ein FROM cluster_member JOIN lk_cl USING (cluster_id))
                GROUP BY n.ein) n ON n.ein = m.ein" else ""
   st <- if ("address" %in% tabs) "
-    LEFT JOIN (SELECT ein, arg_min(state, CASE variant_class WHEN 'mailing' THEN 1
-                 WHEN 'principal' THEN 2 ELSE 3 END) AS state FROM address
+    LEFT JOIN (SELECT ein, arg_min(state, {a: CASE variant_class WHEN 'mailing' THEN 1
+                 WHEN 'principal' THEN 2 ELSE 3 END, b: state}) AS state FROM address
                WHERE coalesce(state, '') <> '' GROUP BY ein) s ON s.ein = m.ein" else ""
   ly <- if ("entity" %in% tabs) "LEFT JOIN entity e ON e.ein = m.ein" else ""
   sel <- c("m.cluster_id", "c.cluster_type", "m.ein",

@@ -2,7 +2,7 @@
 # compiled reference must keep: the pairing rule, per-class caps, sources,
 # statistics that sum exactly, the row budget and the absence report.
 
-e <- function(n) sprintf("EIN-00-%07d", n)
+e <- function(n) sprintf("EIN-10-%07d", n)
 
 compile_db <- function() {
   skip_if_not_installed("duckdb")

@@ -79,6 +79,7 @@ md_build_clusters <- function(con = NULL,
   msg <- function(...) message(sprintf(...))
   digits <- function(col) sprintf("substr(%s, 5)", col)   # EIN-12-3456789 -> 12-3456789
 
+  .md_placeholder_macro(con)
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE cl_mem (
     cluster_id VARCHAR, cluster_type VARCHAR, ein VARCHAR, role VARCHAR,
     evidence VARCHAR, central_ein VARCHAR, label VARCHAR)")
@@ -100,6 +101,7 @@ md_build_clusters <- function(con = NULL,
       WHERE r.relation IN ('related_entity', 'disregarded_entity')
         AND r.ein_b IS NOT NULL AND r.ein_a <> r.ein_b
         AND r.ein_b IN (SELECT ein FROM entity) AND r.ein_a IN (SELECT ein FROM entity)
+        AND NOT md_placeholder_ein(r.ein_a) AND NOT md_placeholder_ein(r.ein_b)
       GROUP BY 1, 2")
     add(sprintf("SELECT DISTINCT 'SYS-' || %s, 'related_system', ein_a, 'central',
                 'schedule_r_discloser', ein_a, NULL FROM cl_sys", digits("ein_a")))
@@ -151,7 +153,9 @@ md_build_clusters <- function(con = NULL,
            string_agg(DISTINCT evidence, ';' ORDER BY evidence) AS evidence
     -- members must be known entities: group edges can name a subordinate
     -- that is not in entity (the affiliate listing has 9)
-    FROM cl_mem WHERE ein IN (SELECT ein FROM entity)
+    -- and real: a placeholder EIN (0, 123456789) written by many filers is not
+    -- an organisation, and every cluster that holds it would be a false family
+    FROM cl_mem WHERE ein IN (SELECT ein FROM entity) AND NOT md_placeholder_ein(ein)
     GROUP BY cluster_id, ein
     ORDER BY cluster_id, ein")
 
@@ -195,7 +199,7 @@ md_build_clusters <- function(con = NULL,
     WHERE c.cluster_id = b.cluster_id")
 
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE cl_state AS
-    SELECT ein, arg_max(state, n) AS state FROM (
+    SELECT ein, arg_min(state, {a: -n, b: state}) AS state FROM (
       SELECT ein, state, sum(n_obs) AS n FROM address_compact
       WHERE coalesce(state, '') <> '' GROUP BY 1, 2) GROUP BY 1")
   DBI::dbExecute(con, "DROP TABLE IF EXISTS cluster_footprint")
@@ -266,7 +270,7 @@ md_build_clusters <- function(con = NULL,
       FROM name n JOIN name_derived d USING (name_id)
       WHERE n.variant_class IN ('legal', 'dba') GROUP BY 1
     ), st AS (
-      SELECT ein, arg_max(state, n) AS state FROM (
+      SELECT ein, arg_min(state, {a: -n, b: state}) AS state FROM (
         SELECT ein, state, count(*) AS n FROM address
         WHERE coalesce(state, '') <> '' GROUP BY 1, 2) GROUP BY 1
     )
@@ -318,7 +322,7 @@ md_build_clusters <- function(con = NULL,
       FROM cl_tok t JOIN cl_keys k USING (ein)
       WHERE (' ' || k.name_key || ' ') LIKE ('%% ' || t.word || ' %%')
       GROUP BY 1, 2
-    ), top AS (SELECT word, arg_max(name_key, n) AS top_key, max(n) AS top_n FROM keyed GROUP BY 1),
+    ), top AS (SELECT word, arg_min(name_key, {a: -n, b: name_key}) AS top_key, max(n) AS top_n FROM keyed GROUP BY 1),
     cand AS (
       SELECT top.word, top.top_key, top.top_n, df.df, top.top_n / df.df AS top_share
       FROM top JOIN df USING (word)

@@ -51,6 +51,7 @@ md_build_ein_key <- function(con = NULL) {
     "UNION ALL
       SELECT p.ein, 'person', p.person_key, 1, p.first_year, p.last_year
       FROM person_key p JOIN entity e USING (ein)" else ""
+  .md_placeholder_macro(con)
   DBI::dbExecute(con, "DROP TABLE IF EXISTS ein_key")
   DBI::dbExecute(con, sprintf("
     CREATE TABLE ein_key AS
@@ -71,7 +72,7 @@ md_build_ein_key <- function(con = NULL) {
     ), one AS (
       SELECT ein, kind, key, max(n_sources) AS n_sources,
              min(first_year) AS first_year, max(last_year) AS last_year
-      FROM k GROUP BY ein, kind, key
+      FROM k WHERE NOT md_placeholder_ein(ein) GROUP BY ein, kind, key
     ), sharing AS (
       SELECT kind, key, count(*) AS n_eins_sharing FROM one GROUP BY kind, key
     )
