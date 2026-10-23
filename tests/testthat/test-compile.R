@@ -32,13 +32,6 @@ compile_db <- function() {
     last_year  = c(NA, 2022, NA, 2023, 2019, NA, NA, 2022, NA, 2020),
     stringsAsFactors = FALSE)
   DBI::dbWriteTable(con, "name", nm)
-  blank <- function(n) rep("", n)
-  norm <- npmatch::np_normalize(data.frame(name = nm$name_raw, dba = blank(10),
-                                           division = blank(10), street = blank(10),
-                                           zip5 = blank(10), zip_plus4 = blank(10), state = blank(10),
-                                           stringsAsFactors = FALSE))
-  DBI::dbWriteTable(con, "name_derived", data.frame(name_id = nm$name_id,
-    name_key = norm$name_key, normalize_signature = sig, stringsAsFactors = FALSE))
   # addresses: e1 bmf mailing + efile mailing (same place, other spelling) +
   # a historical; the observed alias ACME FDN has its own address; e2 one mailing
   ad <- data.frame(
@@ -56,11 +49,8 @@ compile_db <- function() {
     n_obs = 1L, last_vintage = c(NA, "2022", "2010", "2023", NA, NA, "2022"),
     stringsAsFactors = FALSE)
   DBI::dbWriteTable(con, "address", ad)
-  an <- npmatch::np_normalize(data.frame(name = blank(7), dba = blank(7), division = blank(7),
-    street = ad$street_raw, zip5 = ad$zip5, zip_plus4 = blank(7), state = ad$state,
-    stringsAsFactors = FALSE))
-  DBI::dbWriteTable(con, "address_derived", data.frame(address_id = ad$address_id,
-    street_key = an$street_key, stringsAsFactors = FALSE))
+  # the derived tables, by the real code: every column np_normalize() adds
+  suppressMessages(md_build_derived(con, chunk = 4L))
   x("CREATE TABLE source_vintage (vintage_id VARCHAR, local_md5 VARCHAR, row_count INTEGER)")
   x("INSERT INTO source_vintage VALUES ('bmf_unified-t:entity', 'abc', 4)")
   # the derived and statistics tables, built by the real code
@@ -142,8 +132,9 @@ test_that("cell sums equal statistics computed directly from the same names", {
 test_that("npmatch's own statistics are returned over the emitted frame", {
   con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   r <- ref_of(con, names = c("legal", "observed"), addresses = c("mailing", "historical"))
-  expect_equal(r$name_freq, npmatch::np_name_freq(r$reference$name_key))
-  expect_equal(r$token_idf, npmatch::np_token_idf(r$reference$name_key))
+  same <- function(a, b) identical(a[order(names(a))], b[order(names(b))])
+  expect_true(same(r$name_freq, npmatch::np_name_freq(r$reference$name_key)))
+  expect_true(same(r$token_idf, npmatch::np_token_idf(r$reference$name_key)))
   # legal ACME is one name but two frame rows (two first-party places)
   k <- unique(r$reference$name_key[r$reference$name == "ACME FOUNDATION INC"])
   expect_equal(unname(r$name_freq[toupper(k)]), 2L)
@@ -183,4 +174,36 @@ test_that("a DBA sharing the legal name's key still fills the dba field", {
   r <- ref_of(con, sources = "bmf", dba_as = "row")$reference
   expect_equal(nrow(r[r$.ein == e(1), ]), 1)
   expect_equal(r$dba[r$.ein == e(1)], "")
+})
+
+test_that("the stored lists cover every column np_normalize() adds or rewrites", {
+  blank <- .md_blank_frame()
+  inputs <- .md_frame_inputs
+  added <- c(setdiff(names(blank), inputs), "zip5")     # zip5 is rewritten
+  expect_setequal(added, c(.md_derived_name_cols, .md_derived_address_cols,
+                           .md_derived_alt_cols))
+})
+
+test_that("a frame from stored columns is identical to np_normalize()'s", {
+  con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  for (args in list(list(sources = "bmf"),
+                    list(names = c("legal", "dba", "observed"),
+                         addresses = c("mailing", "observed", "historical")),
+                    list(layers = md_layers(), names = c("legal", "observed"),
+                         addresses = "observed"),          # rows with no address
+                    list(dba_as = "row", names = c("legal", "dba")))) {
+    sp <- do.call(md_spec, args)
+    st <- suppressMessages(md_compile(sp, con, derive = "stored"))$reference
+    nz <- suppressMessages(md_compile(sp, con, derive = "normalize"))$reference
+    expect_identical(names(st), names(nz))
+    rownames(nz) <- NULL
+    expect_identical(st, nz)
+  }
+})
+
+test_that("a stored value that disagrees with the normalizer is caught", {
+  con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  DBI::dbExecute(con, "UPDATE name_derived SET name_full = 'TAMPERED'")
+  expect_error(suppressMessages(md_compile(md_spec(), con)), "disagree with np_normalize")
+  expect_no_error(suppressMessages(md_compile(md_spec(), con, check_rows = 0)))
 })

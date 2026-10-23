@@ -4,18 +4,29 @@
 \alias{md_compile}
 \title{Compile a spec into the reference frame npmatch matches against}
 \usage{
-md_compile(spec, con = NULL, derive = c("normalize", "none"), max_rows = 2e+07)
+md_compile(
+  spec,
+  con = NULL,
+  derive = c("stored", "normalize", "none"),
+  max_rows = 2e+07,
+  check_rows = 2000L
+)
 }
 \arguments{
 \item{spec}{An \code{\link[=md_spec]{md_spec()}}.}
 
 \item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
 
-\item{derive}{\code{"normalize"} (the npmatch frame) or \code{"none"} (raw fields only).}
+\item{derive}{\code{"stored"} (the npmatch frame from stored columns),
+\code{"normalize"} (the same frame, by running \code{np_normalize()}) or \code{"none"}
+(raw fields only).}
 
 \item{max_rows}{Row budget. Emission is counted before anything is
 materialised, and a spec over budget is an error naming the classes
 responsible, rather than a reference that costs far more than planned.}
+
+\item{check_rows}{For \code{derive = "stored"}, how many rows to re-normalize and
+compare. 0 skips the check.}
 }
 \value{
 An object of class \code{md_reference}: \code{reference} (the frame),
@@ -51,11 +62,17 @@ per name, with the address fields empty.
 
 \section{Derived columns}{
 
-\code{derive = "normalize"} runs \code{\link[npmatch:np_normalize]{npmatch::np_normalize()}} on the compiled frame,
-so the frame is exactly what npmatch would build from the same strings. The
-stored \code{name_derived} columns are a subset of \code{np_normalize()}'s output, so
-they cannot yet stand in for it. The installed normalizer must match the one
-that built \code{name_derived}, because \code{name_compact}'s keys came from it.
+Every column \code{\link[npmatch:np_normalize]{npmatch::np_normalize()}} adds is a function of one input field,
+and \code{\link[=md_build_derived]{md_build_derived()}} stores all of them. \code{derive = "stored"} (the
+default) gives each row the stored columns of a row holding exactly its
+strings - the name row with its spelling, the address row with its street,
+zip and state, the DBA row with its DBA - so the frame is what
+\code{np_normalize()} would build, without running it. A sample of \code{check_rows}
+rows is then re-normalized and compared, and any difference is an error.
+\code{derive = "normalize"} runs \code{np_normalize()} on the whole frame instead.
+
+Either way the installed normalizer must be the one that built
+\code{name_derived}, because \code{name_compact}'s keys came from it.
 }
 
 \section{Statistics}{

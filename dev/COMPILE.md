@@ -25,11 +25,23 @@ Tests: `tests/testthat/test-compile.R`. This is `REDUCTION.md` section 8, step 4
 
 ## Measured
 
-| spec | rows | EINs | SQL | with `np_normalize()` |
+| spec | rows | EINs | first version | stored columns |
 |---|---:|---:|---:|---:|
-| `active-legal`, `sources = "bmf"` | 1,974,830 | 1,974,830 | 17 s | — |
-| `active-legal`, all sources | 2,456,647 | 1,974,830 | — | — |
-| `active-observed` (observed ≥ 2 filers, observed addresses) | 2,602,912 | 1,974,830 | 15 s | 371 s |
+| `active-legal`, `sources = "bmf"` | 1,974,830 | 1,974,830 | — | 36 s |
+| `active-observed` (observed ≥ 2 filers, observed addresses) | 2,602,912 | 1,974,830 | 371 s | **34 s** |
+| `unified-observed` (adds the inactive layer) | 4,470,900 | 3,698,197 | — | 68 s |
+
+`active-legal` with all sources emits 2,456,647 rows.
+
+A full compile includes the frame, both kinds of statistics and the report.
+Where the 371 s went, and how each part was removed:
+
+| part | before | after | how |
+|---|---:|---:|---|
+| `np_normalize()` | 356 s | 0 s | every column it adds is stored (`md_build_derived()`) and attached by id; a 2,000-row sample is re-normalized and compared on each compile |
+| `np_name_freq()` and `np_token_idf()` on the frame | 90 s | 8 s | counted in DuckDB from the pairing table, with npmatch's exact definitions; verified equal to npmatch's own output on the 1.97M-row frame |
+| sorting those vectors' names in locale order | 41 s | 0 s | sorted in C order instead; npmatch looks them up by name, so the order carries nothing |
+| moving the frame from DuckDB into R | 27 s | 27 s | what remains |
 
 `active-observed` by name class × address class:
 
@@ -84,11 +96,10 @@ auto-accepts against whichever member it holds.
 
 ## Not done
 
-* **`np_normalize()` is most of the cost:** 356 of 371 s for 2.6M rows. The
-  stored `name_derived` and `address_derived` columns are a subset of its output
-  (no `name_acro`, `name_pre`, `name_core`, `dba_key`, ...). Storing the full set
-  in `md_build_derived()` would make a compile about 15 s, which is section 6c's
-  target.
+* **The frame transfer is now the cost:** 27 of 34 s, moving 2.6M rows × 38
+  columns from DuckDB into an R data frame. Writing the frame to parquet, or
+  handing npmatch an Arrow table, would avoid it. That belongs with publishing
+  (section 7b).
 * **The Phase 1 gate cannot pass against this database.**
   * The frozen `REF-active.rds` was built from the 2026-01 active BMF, 1,924,822
     rows.
