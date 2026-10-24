@@ -1,7 +1,7 @@
 # matchdb — development plan
 
 **Status: proposal, 2026-08-21. Updated 2026-10-23: Phases 0–3 run; the Phase 1
-gate passes but for 4 cells traced to an npmatch defect; four tiers published.**
+gate passes with three zeros; four tiers published.**
 
 > **Where the work stands.** Phase 0 is finished (see `PROCESS.md` §6). Every
 > planned source is ingested, so the archive is Phase 4 in scope: the BMF, NTEE,
@@ -20,9 +20,11 @@ gate passes but for 4 cells traced to an npmatch defect; four tiers published.**
 > **Phase 1** (`dev/verify/run-gate.R`, baseline re-frozen as
 > `dev/BASELINE-2026-10`): the BMF-only compile reproduces pfmatch's reference
 > row for row; `name_freq` and `token_idf` are identical; the 1k benchmark is
-> identical (0 of 4,715). Four cells differ, all `street_name` on EINs with no
-> street: npmatch writes the text `"NA"` for a missing street, matchdb leaves it
-> empty. That is an npmatch defect, so the gate is read as passed.
+> identical (0 of 4,715): **three zeros**. The first run left 4 cells, all
+> `street_name` on EINs with no street, where npmatch wrote the text `"NA"`.
+> That was an npmatch defect, fixed in `npmatch@ddfd967` (PR #17, signature
+> `v1-6dcb298522cc5118`); on a rebuild with it and a re-frozen baseline the
+> gate is exact.
 >
 > **Phase 2** (`dev/verify/phase2-measure.R`): Schedule I aliases with two or
 > more corroborating filers add **+146 YES** on the 1k benchmark (295 gained,
