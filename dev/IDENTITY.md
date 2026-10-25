@@ -1,7 +1,8 @@
 # Stable IDs, change detection and folding in new vintages
 
 **Status: in progress, 2026-10-24, reconciled with `main` at `d75d73c` (Phases
-0–3 complete, four tiers published). Steps 0–2 are done. Steps 3–7 are not
+0–3 complete, four tiers published). Steps 0–2 are done. Step 3 is built and
+tested; its measurement on a full database is pending. Steps 4–7 are not
 started.**
 
 This plan takes on three problems that remain after Phases 0–3:
@@ -485,8 +486,20 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    runs again on each full file at ingest, since a sample can disprove
    uniqueness but cannot prove it.
 3. **`release`, `name_text`, `address_text`, the text-keyed derived tables.**
-   *Check:* dictionary size and normalization time measured; every text id has a
-   current-signature row.
+   **Built 2026-10-24** (`R/md-text.R`): `md_text_schema()` creates the tables
+   with real primary keys, `(text_id, normalize_signature)` for the derived
+   ones. `md_add_text()` adds new strings from any relation, and repeating it
+   adds nothing. `md_build_text_derived()` normalizes only strings with no row
+   for the current signature. `md_check_text_derived()` is the coverage check.
+   Until step 4 exists, `md_build_text()` fills the dictionaries from today's
+   `name` and `address` tables, and `md_text_stats()` reports rows against
+   distinct strings. *Tested* (`test-text.R`): the text-keyed columns equal
+   what `md_build_derived()` stores per row; a re-ingest that renumbers every
+   row normalizes nothing and orphans nothing; an older signature's rows
+   survive a rebuild under the new one. *Check, pending:* run `md_build_text()`,
+   `md_build_text_derived()` and `md_text_stats()` on a full database to
+   measure dictionary size against the 9.7M name and 18.5M address rows, and
+   normalization time against the 63 minutes `md_build_derived()` takes.
 4. **`obs` and `md_apply_release()`** with the update procedures. Port one source
    of each kind first: `efile_header` (series), Schedule I (mentions),
    `bmf_active` (snapshot), `address_crosswalk` (cache). *Check:* idempotent and
