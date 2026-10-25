@@ -17,12 +17,13 @@ md_validate_bmf(con)
 \item{validate}{Run \code{\link[=md_validate]{md_validate()}} on each table and stop on failure.}
 }
 \value{
-A named list of row counts, invisibly.
+A named vector of the BMF's own row counts, invisibly.
 }
 \description{
-Reads the pinned BMF parquet and writes the three core tables. Idempotent:
-a full load keyed on \code{source_vintage}, per §10, so re-running replaces rather
-than accumulating.
+Reads the pinned BMF parquet and writes its rows into the three core tables.
+Idempotent: re-running replaces the BMF's own rows rather than accumulating,
+and leaves every other source's rows alone, so a newer BMF can be loaded into
+a database that already holds Schedule I, the return headers and the rest.
 }
 \section{What this does and does not populate}{
 
@@ -42,5 +43,33 @@ recomputation has its input, but the BMF's \code{nteev2} rendering is deliberate
 file is \code{last_vintage_ym} equal to the newest vintage present. Everything else
 is \code{bmf_inactive}. \code{status_code} is carried separately rather than conflated
 with layer, because status is mutable and layer is provenance (§4).
+}
+
+\section{Loading into a database that already has other sources}{
+
+This used to \verb{CREATE OR REPLACE} all three tables, which deleted every other
+source's rows and made the BMF loadable only as the first step of a fresh
+build. It now deletes and re-inserts only its own rows, in one transaction:
+
+\itemize{
+\item \code{name} and \code{address}: rows with \code{source = 'bmf'}.
+\item \code{entity}: rows from any earlier BMF load, plus any row an earlier
+ingest wrote for an EIN this file contains. The BMF is the identity spine,
+so its row replaces a \code{filer_only}, \code{approved_only} or other placeholder
+for the same EIN.
+\item An EIN that an earlier BMF load had but this file does not, and that
+another source's \code{name}, \code{address} or \code{entity_event} row still refers to,
+is put back with the layer a fresh build would give it: that of the
+earliest-built source still naming it (\code{approved_only} for 1023-EZ,
+\code{filer_only} for the 990 filings and schedules, \code{postcard_only},
+\code{revoked_only}). No row is left pointing at a missing entity.
+}
+
+Replaced rows lose whatever later steps wrote onto them, and the new BMF rows
+get new \code{name_id}/\code{address_id} values. After a re-ingest, re-run the steps
+that follow the ingests in \code{dev/build-matchdb.R} (NTEE, geocode, guards,
+derived columns with \code{incremental = TRUE}, compaction, groups, keys,
+clusters, statistics). The ingest prints this reminder when it replaced
+anything.
 }
 
