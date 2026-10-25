@@ -38,6 +38,8 @@ Suggests:
     openxlsx,
     peopleparser,
     arrow,
+    digest,
+    stringi,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr

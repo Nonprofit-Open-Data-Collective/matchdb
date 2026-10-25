@@ -3,11 +3,14 @@
 \name{md_source_pin}
 \alias{md_source_pin}
 \alias{md_source_read_pin}
+\alias{md_source_read_files}
 \title{Pin a source to a concrete, immutable version}
 \usage{
 md_source_pin(source, file, version = NULL)
 
 md_source_read_pin(source, version)
+
+md_source_read_files(source, version)
 }
 \arguments{
 \item{source}{A \code{source} value from \code{\link[=md_sources]{md_sources()}}.}
@@ -29,4 +32,11 @@ Records what was fetched, from where, and when, into
 \details{
 The point is not ceremony. \verb{md_ingest_*()} refuses to read a source directory
 with no pin, so no row can enter the database whose origin cannot be named.
+
+Every pin also writes \code{FILES.csv} beside \code{PIN.dcf}: one row per
+file with its name, size and md5. A set pin's own \code{local_md5} is a digest
+of these, so it says \emph{that} a year changed; \code{FILES.csv} says \emph{which}, which
+is what lets a re-release skip the year files that did not change
+(\code{dev/IDENTITY.md} section 5). \code{md_source_read_files()} returns it, or
+\code{NULL} for a pin written before \code{FILES.csv} existed.
 }

@@ -1,7 +1,8 @@
 # Stable IDs, change detection and folding in new vintages
 
-**Status: proposal, 2026-10-24, reconciled with `main` at `d75d73c` (Phases 0–3
-complete, four tiers published). Step 0 is done; the rest is not started.**
+**Status: in progress, 2026-10-24, reconciled with `main` at `d75d73c` (Phases
+0–3 complete, four tiers published). Steps 0–2 are done. Steps 3–7 are not
+started.**
 
 This plan takes on three problems that remain after Phases 0–3:
 
@@ -109,13 +110,13 @@ measured the same thing, which is what `n_obs` does today.
 |---|---|
 | snapshot | `bmf_active` (monthly), `e_postcard` (one row per EIN: its latest postcard). Future: Pub 78 |
 | snapshot seed (§2a) | `bmf_unified` |
-| series | `efile_header`, `efile_orgtext`, `efile_officers`, `f1023ez` (one partition per approval year), `irs527` (Form 8871: one partition, re-dumped whole on each pull, so a new pull is a re-released partition) |
+| series | `efile_header`, `efile_orgtext`, `efile_officers`, `f1023ez` (one partition per approval year), `irs527` (Form 8871: one partition, re-dumped whole on each pull, so a new pull is a re-released partition), `revocations` (a cumulative list re-pulled whole, one row per revocation; §9) |
 | mentions | `schedi`, `efile_related`, `efile_disregarded`, `efile_related_ptr`, `efile_related_corp`, `efile_affiliate_listing` and `efile_sched_c_affil` (both published by year from e-file v2_3), `irs527_related` (one pooled file) |
 | cache | `meta_names`, `meta_addresses`, `meta_group_aff`, `meta_group_number`, `meta_group_return`, `ntee_crosswalk`, `address_crosswalk`, `address_geocoded` |
-| to decide (§9) | `revocations` |
 
-The kind becomes a column in `md_sources()`. An ingest function does not choose
-its own update rule.
+The kind is the `kind` column of `md_sources()` (step 2, done), with the
+vocabulary in `md_source_kinds()`. `bmf_unified` is kind `seed`. An ingest
+function does not choose its own update rule.
 
 ### 2a. `bmf_unified` is a snapshot that has already been folded
 
@@ -190,7 +191,7 @@ not need separate hashes: the string has one id, and its role (`legal`, `dba`,
 
 | kind | recipe | why |
 |---|---|---|
-| series | `md5('obs.v1' ␟ source ␟ record_key ␟ role)` | `record_key` is the filing id. One filing states each field once |
+| series | `md5('obs.v1' ␟ source ␟ record_key ␟ role)` | `record_key` is the filing id. One filing states each field once. A series with many rows per filing (`efile_officers`: one row per person) uses the mentions recipe |
 | mentions | `md5('obs.v1' ␟ source ␟ record_key ␟ role ␟ occurrence)` | `record_key` is the filing id plus a hash of the row's fields, or for a pooled file with no filing id, the row hash alone. `occurrence` numbers identical rows 1, 2, 3, ... **Identical rows are real here**: two grants from one funder to one grantee in one year are two mentions, and the counter keeps them apart. Nothing depends on row order, so the ids survive re-release |
 | snapshot | `md5('obs.v1' ␟ source ␟ ein ␟ role ␟ value_id ␟ first_seen)` | one id per spell. `first_seen` keeps a value that comes back (A → B → A) from colliding with its earlier spell |
 | cache | `md5('obs.v1' ␟ source ␟ release_id ␟ row_hash ␟ occurrence)` | the file is the unit. A corrected re-release gets a new `release_id` and is diffed as a whole |
@@ -198,10 +199,33 @@ not need separate hashes: the string has one id, and its role (`legal`, `dba`,
 `value_id` is the `name_text_id` or `address_text_id`, or both for a record that
 states both.
 
-**The e-file filing id needs confirming.** NCCS e-file tables are expected to
-carry `OBJECT_ID` and/or `URL` per return, but no ingest here reads either yet.
-Step 2 (§8) confirms the natural key for every source before anything is built on
-it.
+### The natural keys, confirmed
+
+Step 2 sampled the first 2 MB of each 2022 e-file table (`efile_v3_1`), of the
+2026-07 e-Postcard and revocation files, and of the other remote CSVs. The
+result is the `md_record_keys()` registry, and `md_check_record_key()` reruns the
+test on a whole file:
+
+| sources | key | what the sample showed |
+|---|---|---|
+| 990 header, mission | `OBJECTID` | unique: one row per return. 1.5% of header EIN-years have two returns, so the amended-return rule has work to do |
+| Schedule I, Schedule R Parts I–IV, officers, affiliate listing, Schedule C | `OBJECTID` + row content + occurrence | `OBJECTID` + `TABLE_ID` is unique in all seven. Rows identical in every column but `TABLE_ID` occur: 11 of 4,646 in Schedule I, up to 5 elsewhere |
+| e-Postcard, monthly BMF, `bmf_unified`, NCCS metadata files | the EIN | unique |
+| revocations | `ein` + `revocation_date` | unique over 11,138 rows, 247 of them reinstated |
+| Form 8871 | `FORM_ID_NUMBER` | unique; EINs repeat (amendments) |
+| 527 Schedule R | `ENTITY_ID` | unique |
+
+Every e-file table carries `RETURN_AMENDED_X` and `RETURN_TIME_STAMP`, so "count
+only the latest return per filer and tax year" (§9) is `max(RETURN_TIME_STAMP)`
+per `(EIN2, TAX_YEAR)`.
+
+`TABLE_ID` (`TID-000-000-NNN`) is the row's position in the return. It is kept
+on each observation for tracing by hand but is **not** hashed into the id: a
+parser change could renumber positions, while a row's content cannot change.
+
+Not sampled: `f1023ez` (an xlsx cannot be range-read) and the three local files.
+Their keys in the registry are marked as assumptions until checked on a full
+file.
 
 ---
 
@@ -441,12 +465,25 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    byte-identical, ids included, after a BMF re-ingest and after loading a newer
    BMF (both tests fail against the old code), and the restored layer is right
    for each source.
-1. **`canon()` and the id recipes**, in R and SQL. *Check:* R and SQL agree on
-   the test strings; ids are identical across two machines.
+1. **`canon()` and the id recipes**, in R and SQL. **Done 2026-10-24**
+   (`R/md-identity.R`): `md_canon()`, `md_hash_id()`, `md_name_text_id()`,
+   `md_address_text_id()`, `md_release_id()`, the `md_id_recipes()` registry,
+   and `md_identity_macros()`, which installs the same functions as DuckDB
+   macros. *Check* (`test-identity.R`): R and SQL give identical output on
+   hard cases (control characters, NFC, CJK, emoji, `NULL`s) and on 3,000
+   random strings, and five ids match values computed by a third md5
+   implementation (`openssl`). Because the expected values are fixed constants,
+   a second machine is checked just by running the tests on it.
 2. **Confirm each source's natural key** and write `record_key` for each. Record
-   per-file md5s in set pins. Add `kind` to `md_sources()`. *Check:*
-   `record_key` is unique within every partition, or its occurrence counter is
-   documented.
+   per-file md5s in set pins. Add `kind` to `md_sources()`. **Kinds and per-file
+   md5s done 2026-10-24:** every pin writes `FILES.csv` (file, size, md5) beside
+   `PIN.dcf`, read by `md_source_read_files()`. Existing pins predate it; re-pin
+   once to get one. **Natural keys done 2026-10-24** (`R/md-record-keys.R`,
+   §3 "The natural keys, confirmed"). *Check:* `md_check_record_key()` passes on
+   all 20 sampled sources. Every record-grain key is unique, and row-grain
+   repeats (identical rows in one return) are counted: 0–11 per sample. It
+   runs again on each full file at ingest, since a sample can disprove
+   uniqueness but cannot prove it.
 3. **`release`, `name_text`, `address_text`, the text-keyed derived tables.**
    *Check:* dictionary size and normalization time measured; every text id has a
    current-signature row.
@@ -481,14 +518,16 @@ compile reads.
    same grants would double them. The earlier return's rows stay in the ledger;
    they just aren't counted. This needs the filing id from step 2 to tell an
    amendment apart from a second, separate grant.
-2. **Which kind is `revocations`?** It was described as one row per EIN keeping
-   only the latest record, which would make it a snapshot. But
-   `md_ingest_revocations()` measured 18,909 EINs appearing twice and 176 three
-   times in the 2026-07 file, and each row carries its own revocation and
-   reinstatement dates. That looks like a cumulative event list, which is a
-   single partition diffed on each pull. The test: does a reinstated organisation
-   stay on the list with a reinstatement date, or drop off? If it stays, it is a
-   cumulative list; if it drops off, it is a snapshot.
+2. **`revocations` is a cumulative list, classified as `series`. Settled
+   2026-10-24 by the file, open to correction.** It was described as one row
+   per EIN keeping only the latest record, which would make it a snapshot. The
+   file says otherwise: `md_ingest_revocations()` measured 18,909 EINs appearing
+   twice and 176 three times in the 2026-07 file, each row carries its own
+   revocation date, and the file has an `exemption_reinstatement_date` column
+   that the ingest reads into `reinstated` events. A reinstated organisation
+   stays on the list with its reinstatement date, which is the test this
+   decision set; the step 2 sample has 247 such rows in 11,138. If a later pull
+   shows rows disappearing, it becomes a snapshot.
 3. **Case in the text id.** Keeping case (recommended) preserves exactly what the
    source wrote, at the cost of "United Way" and "UNITED WAY" being two
    dictionary entries that normalize to the same key. Folding case removes that

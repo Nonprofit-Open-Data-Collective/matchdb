@@ -65,10 +65,21 @@ reference:
   - md_source_pin
   - md_source_read_pin
   - md_source_moved
+  - md_source_kinds
   - md_record_vintage
   - md_relations
   - md_f1023ez_urls
   - md_meta_caveats
+- title: Stable ids
+  desc: >
+    Content-hash ids for names, addresses, observations and releases, the same
+    in R and in SQL (dev/IDENTITY.md).
+  contents:
+  - md_identity
+  - md_id_recipes
+  - md_identity_macros
+  - md_record_keys
+  - md_check_record_key
 - title: Building the database
   desc: >
     The ingests, in the order dev/build-matchdb.R runs them, then the derived
