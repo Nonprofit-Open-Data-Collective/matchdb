@@ -95,32 +95,30 @@ md_release_id <- function(source, version, partition = NA) {
 #' superseded by a new tag, because an edit would silently change what every
 #' stored id of that tag refers to.
 #'
-#' The `obs.v1` recipes depend on the kind of source (`dev/IDENTITY.md` §3) and
-#' get their natural keys in Phase 5 step 2; they are listed so the vocabulary is
-#' complete, and the hashing is the same [md_hash_id()].
+#' Observation ids come in two shapes ([md_ledger]): a spell id for snapshot
+#' sources, and a row id for every other kind. The row id hashes the row's
+#' content, so a corrected value in a re-released filing is a new observation
+#' rather than an update a diff cannot see.
 #'
 #' @return A data frame with `tag`, `identifies`, `fields`.
 #' @export
 md_id_recipes <- function() {
   data.frame(
-    tag = c("name.v1", "addr.v1", "rel.v1",
-            "obs.v1/series", "obs.v1/mentions", "obs.v1/snapshot", "obs.v1/cache"),
+    tag = c("name.v1", "addr.v1", "rel.v1", "row.v1", "obs.v1/row", "obs.v1/spell"),
     identifies = c(
       "a distinct name string, whatever EIN or source wrote it",
       "a distinct address as written",
       "one pinned file or partition actually read",
-      "one field of one filing (first-party, once per period)",
-      "one occurrence of a row written by a third party",
-      "one spell: an unbroken run of releases with the same value",
-      "one row of a cache file"),
+      "the content of one observation, within its record",
+      "one occurrence of a row (series, mentions, cache, seed)",
+      "one spell of a snapshot value: an unbroken run of releases with the same value"),
     fields = c(
       "name_raw",
       "street, unit, city, state, zip5, zip4",
       "source, version, partition",
-      "source, record_key, role",
-      "source, record_key, role, occurrence",
-      "source, ein, role, value_id, first_seen",
-      "source, release_id, row_hash, occurrence"),
+      "ein, role, name_text_id, address_text_id, asserted_by, period",
+      "source, record_key, row_hash, occurrence",
+      "source, ein, role, name_text_id, address_text_id, first_seen"),
     stringsAsFactors = FALSE)
 }
 

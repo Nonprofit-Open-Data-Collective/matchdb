@@ -16,7 +16,8 @@ superseded by a new tag, because an edit would silently change what every
 stored id of that tag refers to.
 }
 \details{
-The \code{obs.v1} recipes depend on the kind of source (\code{dev/IDENTITY.md} §3) and
-get their natural keys in Phase 5 step 2; they are listed so the vocabulary is
-complete, and the hashing is the same \code{\link[=md_hash_id]{md_hash_id()}}.
+Observation ids come in two shapes (\link{md_ledger}): a spell id for snapshot
+sources, and a row id for every other kind. The row id hashes the row's
+content, so a corrected value in a re-released filing is a new observation
+rather than an update a diff cannot see.
 }

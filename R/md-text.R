@@ -39,11 +39,13 @@ NULL
 #' @return `md_text_schema()`: `con`, invisibly.
 #' @export
 md_text_schema <- function(con) {
+  # seq orders a source's releases as they were applied; a snapshot's previous
+  # release is the one with the greatest seq (md_apply_release()).
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS release (
       release_id VARCHAR PRIMARY KEY, source VARCHAR NOT NULL, kind VARCHAR,
-      version VARCHAR NOT NULL, part VARCHAR, file_md5 VARCHAR,
-      content_vintage VARCHAR, ingested_at TIMESTAMP)")
+      version VARCHAR NOT NULL, part VARCHAR, vintage VARCHAR, file_md5 VARCHAR,
+      seq INTEGER, n_rows BIGINT, ingested_at TIMESTAMP)")
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS name_text (
       name_text_id VARCHAR PRIMARY KEY, name_raw VARCHAR NOT NULL)")

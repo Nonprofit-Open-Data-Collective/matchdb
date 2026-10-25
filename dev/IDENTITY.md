@@ -1,9 +1,8 @@
 # Stable IDs, change detection and folding in new vintages
 
 **Status: in progress, 2026-10-24, reconciled with `main` at `d75d73c` (Phases
-0–3 complete, four tiers published). Steps 0–2 are done. Step 3 is built and
-tested; its measurement on a full database is pending. Steps 4–7 are not
-started.**
+0–3 complete, four tiers published). Steps 0–4 are done, except step 3's
+measurement on a full database, which is pending. Steps 5–7 are not started.**
 
 This plan takes on three problems that remain after Phases 0–3:
 
@@ -188,17 +187,25 @@ legal name is the same text with a different observation. Main and DBA names do
 not need separate hashes: the string has one id, and its role (`legal`, `dba`,
 ...) lives on the observation.
 
-### `obs_id` by kind
+### `obs_id`: two shapes
 
-| kind | recipe | why |
+Built in step 4 (`R/md-ledger.R`). An earlier draft had a separate recipe per
+kind. Building it reduced them to two:
+
+| used for | recipe | why |
 |---|---|---|
-| series | `md5('obs.v1' ␟ source ␟ record_key ␟ role)` | `record_key` is the filing id. One filing states each field once. A series with many rows per filing (`efile_officers`: one row per person) uses the mentions recipe |
-| mentions | `md5('obs.v1' ␟ source ␟ record_key ␟ role ␟ occurrence)` | `record_key` is the filing id plus a hash of the row's fields, or for a pooled file with no filing id, the row hash alone. `occurrence` numbers identical rows 1, 2, 3, ... **Identical rows are real here**: two grants from one funder to one grantee in one year are two mentions, and the counter keeps them apart. Nothing depends on row order, so the ids survive re-release |
-| snapshot | `md5('obs.v1' ␟ source ␟ ein ␟ role ␟ value_id ␟ first_seen)` | one id per spell. `first_seen` keeps a value that comes back (A → B → A) from colliding with its earlier spell |
-| cache | `md5('obs.v1' ␟ source ␟ release_id ␟ row_hash ␟ occurrence)` | the file is the unit. A corrected re-release gets a new `release_id` and is diffed as a whole |
+| snapshot | `md5('obs.v1' ␟ source ␟ ein ␟ role ␟ name_text_id ␟ address_text_id ␟ first_seen)` | one id per spell. `first_seen` keeps a value that comes back (A → B → A) from colliding with its earlier spell |
+| every other kind | `md5('obs.v1' ␟ source ␟ record_key ␟ row_hash ␟ occurrence)`, where `row_hash = md5('row.v1' ␟ ein ␟ role ␟ name_text_id ␟ address_text_id ␟ asserted_by ␟ period)` | `record_key` is the natural key (§3 below): the filing id, or empty for a pooled file. `occurrence` numbers rows identical in all of those 1, 2, 3, ... **Identical rows are real**: two grants from one funder to one grantee in one year are two mentions, and the counter keeps them apart. Nothing depends on row order, so the ids survive re-release |
 
-`value_id` is the `name_text_id` or `address_text_id`, or both for a record that
-states both.
+Why the per-kind series recipe (`source, record_key, role`) was dropped: it
+leaves the value out of the id. A re-released filing whose name was corrected
+would keep the same id, so the diff would see the row as unchanged and keep the
+old spelling. Hashing the content makes the correction a new row, and the old
+one is retracted. The cache recipe that included `release_id` was dropped for
+the opposite reason: every re-release would have looked entirely new, so there
+would have been nothing to diff.
+
+`md_id_recipes()` lists both, with `row.v1`.
 
 ### The natural keys, confirmed
 
@@ -237,11 +244,11 @@ file.
 ```
 release            one row per file or partition read
   release_id       PK
-  source, kind, version, partition      partition = tax year for series and mentions
-  file_md5         per file. A set pin keeps only one combined digest today;
-                   this needs per-file digests so unchanged years can be skipped
-  content_vintage  as in source_vintage
-  ingested_at
+  source, kind, version, part           part = tax year for series and mentions
+  vintage          what the release describes ("2026-07"); orders snapshot releases
+  file_md5         the file read; a release already applied from the same file is skipped
+  seq              order of application; a snapshot's previous release is its greatest seq
+  n_rows, ingested_at
 
 name_text          string dictionary, insert-only
   name_text_id     PK
@@ -254,17 +261,22 @@ address_text       insert-only
 obs                the ledger; rows are never deleted
   obs_id           PK
   source, kind
+  part             the partition the row came from; the diff is scoped to it
   ein              EIN2
   role             legal | dba | division | in_care_of | observed | mailing | ...
                    the class as asserted by the source
   name_text_id     NULL for address-only records (crosswalk spells)
   address_text_id  NULL for name-only records
   asserted_by      the filer EIN for a mention; NULL for first-party sources
-  record_key       the source's natural key, as text, for tracing by hand
+  record_key       the source's natural key, as text
+  trace_key        a publisher's row id (e-file TABLE_ID, crosswalk spell_rank),
+                   for tracing by hand; never hashed
   period           tax year for a series or a mention; NULL for a pooled file whose
                    rows carry no year, and for snapshots and caches
-  first_seen, last_seen        vintages; for a snapshot these bound the spell
-  bounds_kind      spell | envelope | period
+  filed_at         the return's timestamp, for the latest-return rule (§9)
+  first_seen, last_seen        release vintages; for a snapshot these bound the
+                   spell; for a cache or seed that states a range, that range
+  bounds_kind      spell | period | stated (a cache's own range) | envelope (the seed)
   first_release, last_release  release_ids
   retracted_in     release_id that dropped this row, else NULL
 ```
@@ -506,7 +518,20 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    replay-equal on all four, plus two synthetic runs. A snapshot run of A, A, B,
    A, then gone must give three spells with the right bounds. A pooled mentions
    file that writes a pair 3 times, then 5, then 2 must give `n_mentions` of 3,
-   5 and 2.
+   5 and 2. **Done 2026-10-24** (`R/md-ledger.R`, `R/md-parse.R`):
+   `md_ledger_schema()`, `md_apply_release()`, and `md_parse_efile_header()`,
+   `md_parse_schedi()`, `md_parse_bmf_active()`, `md_parse_address_crosswalk()`.
+   The parsers run beside today's ingests, which are unchanged. *Check*
+   (`test-ledger.R`): both synthetic runs pass, with the right spell bounds and
+   3, 5, 2 live mentions. Re-applying a release changes nothing, and a ledger
+   built with repeats is identical to a clean replay. The tests also cover a
+   corrected value becoming a new row with the old one retracted, a retracted
+   row coming back with its old id, partitions diffed independently, and a
+   snapshot release out of order being refused. The crosswalk parser has only
+   been run on fixtures (the file is local). The other three were run on the
+   real 2022 / 2026-01 samples: 3,586 header, 4,512 Schedule I and 7,020 BMF
+   observations, and a second application changed nothing. Speed at full
+   scale is unmeasured.
 5. **Port the remaining ingests to parsers.** Each one shrinks: its `DELETE`,
    id assignment and aggregation move into the engine.
 6. **Rollups off the ledger**, then compile's tiebreak onto `n_support`, then

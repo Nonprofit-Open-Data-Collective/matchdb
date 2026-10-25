@@ -81,6 +81,9 @@ reference:
   - md_record_keys
   - md_check_record_key
   - md_text
+  - md_ledger
+  - md_apply_release
+  - md_parse
 - title: Building the database
   desc: >
     The ingests, in the order dev/build-matchdb.R runs them, then the derived
