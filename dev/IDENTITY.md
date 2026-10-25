@@ -1,8 +1,8 @@
 # Stable IDs, change detection and folding in new vintages
 
-**Status: in progress, 2026-10-24, reconciled with `main` at `d75d73c` (Phases
-0–3 complete, four tiers published). Steps 0–4 are done, except step 3's
-measurement on a full database, which is pending. Steps 5–7 are not started.**
+**Status: in progress, 2026-10-25, reconciled with `main` at `d75d73c` (Phases
+0–3 complete, four tiers published). Steps 0–5 are done, except step 3's
+measurement on a full database, which is pending. Steps 6–7 are not started.**
 
 This plan takes on three problems that remain after Phases 0–3:
 
@@ -533,7 +533,27 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    observations, and a second application changed nothing. Speed at full
    scale is unmeasured.
 5. **Port the remaining ingests to parsers.** Each one shrinks: its `DELETE`,
-   id assignment and aggregation move into the engine.
+   id assignment and aggregation move into the engine. **Done 2026-10-25** for
+   every source that writes names or addresses today: `md_parse_bmf_unified()`
+   (seed, envelope bounds), `md_parse_f1023ez()`, `md_parse_efile_related()`,
+   `md_parse_affiliate_listing()` (now with the subordinate's address, which
+   e-file v3_1 publishes and today's ingest ignores), `md_parse_e_postcard()`
+   (snapshot) and `md_parse_revocations()`. With step 4's four, that is all ten.
+   The parsers run beside today's ingests; nothing is replaced until step 6.
+   *Check* (`test-parse-step5.R`): a fixture per parser, in the publisher's own
+   column names. Seven parsers were run on the real samples: 990 header,
+   Schedule I, monthly BMF, Schedule R Part II, affiliate listing, e-Postcard
+   and revocations. All seven load, and a second application changes nothing;
+   every revocation date parsed. Not run on real data: `bmf_unified` (a
+   parquet file cannot be range-sampled), `f1023ez` (xlsx) and
+   `address_crosswalk` (local).
+   **Left out, as planned:** sources that write no name or address rows today.
+   These are the relation tables (Schedule R Parts I, III, IV, Schedule C, 527
+   Schedule R, group metadata), the enrichments (NTEE, geocodes, mission text,
+   officer keys), and the three registered sources the build does not ingest
+   (`irs527`, `meta_names`, `meta_addresses`). Schedule R Part I carries a
+   counterparty name with its EIN and could become an observed name; that is a
+   decision for later, not a port.
 6. **Rollups off the ledger**, then compile's tiebreak onto `n_support`, then
    address compaction onto normalized keys. Groups, keys, clusters and
    statistics rebuild unchanged on top. *Check:* the three regression checks

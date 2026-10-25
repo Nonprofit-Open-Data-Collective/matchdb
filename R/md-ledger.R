@@ -301,6 +301,9 @@ md_apply_release <- function(con, frame, source, version, part = NA,
     CASE WHEN length(md_digits(x)) BETWEEN 1 AND 9 THEN
       'EIN-' || substr(lpad(md_digits(x), 9, '0'), 1, 2) || '-' ||
                 substr(lpad(md_digits(x), 9, '0'), 3, 7) END")
+  # whatever type a column arrived as, is there any text in it?
+  DBI::dbExecute(con, "CREATE OR REPLACE TEMP MACRO md_nonblank(x) AS
+    coalesce(trim(CAST(x AS VARCHAR)), '') <> ''")
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP MACRO md_zip5(x) AS
     nullif(substr(md_digits(x), 1, 5), '')")
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP MACRO md_zip4(x) AS

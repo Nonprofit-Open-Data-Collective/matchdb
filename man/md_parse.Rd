@@ -6,6 +6,12 @@
 \alias{md_parse_schedi}
 \alias{md_parse_bmf_active}
 \alias{md_parse_address_crosswalk}
+\alias{md_parse_bmf_unified}
+\alias{md_parse_f1023ez}
+\alias{md_parse_efile_related}
+\alias{md_parse_affiliate_listing}
+\alias{md_parse_e_postcard}
+\alias{md_parse_revocations}
 \title{Parse a raw source file into a ledger frame}
 \usage{
 md_parse_efile_header(con, relation, view = "frame_efile_header")
@@ -15,6 +21,18 @@ md_parse_schedi(con, relation, view = "frame_schedi")
 md_parse_bmf_active(con, relation, view = "frame_bmf_active")
 
 md_parse_address_crosswalk(con, relation, view = "frame_address_crosswalk")
+
+md_parse_bmf_unified(con, relation, view = "frame_bmf_unified")
+
+md_parse_f1023ez(con, relation, year, view = "frame_f1023ez")
+
+md_parse_efile_related(con, relation, view = "frame_efile_related")
+
+md_parse_affiliate_listing(con, relation, view = "frame_affiliate_listing")
+
+md_parse_e_postcard(con, relation, view = "frame_e_postcard")
+
+md_parse_revocations(con, relation, view = "frame_revocations")
 }
 \arguments{
 \item{con}{A DuckDB connection.}
@@ -22,6 +40,8 @@ md_parse_address_crosswalk(con, relation, view = "frame_address_crosswalk")
 \item{relation}{The raw file as a table, view or \code{read_csv(...)} expression.}
 
 \item{view}{Name for the temporary view returned.}
+
+\item{year}{For \code{md_parse_f1023ez()}: the approval year of the file.}
 }
 \value{
 The view's name.
@@ -53,5 +73,27 @@ rows, so a renamed organisation that did not move keeps its address
 spell, and the other way round.}
 \item{\code{md_parse_address_crosswalk()}}{cache. One row per address spell,
 with the range the crosswalk states as \code{first_seen}/\code{last_seen}.}
+}
+
+Step 5 ports the remaining sources that write names or addresses:
+\describe{
+\item{\code{md_parse_bmf_unified()}}{seed. Like the monthly BMF, names and the
+address are separate rows; each carries the EIN's first and last vintage,
+stored as an envelope ("the EIN existed over this range and ended with
+this value"), not as a spell.}
+\item{\code{md_parse_f1023ez()}}{series, one partition per approval year. The
+legal name with the address, keyed on the EIN.}
+\item{\code{md_parse_efile_related()}}{mentions. Schedule R Part II: each
+related organisation's name and address as the filer wrote them.}
+\item{\code{md_parse_affiliate_listing()}}{mentions. A group return's roster:
+each subordinate's own name, and from e-file v3_1 its address. A row
+needs a full nine-digit member EIN, and a parent listing itself is
+dropped, as in \code{\link[=md_ingest_affiliate_listing]{md_ingest_affiliate_listing()}}.}
+\item{\code{md_parse_e_postcard()}}{snapshot. The legal name and up to three
+DBAs, and the address, as separate rows. The postcard's tax year is not
+kept: a spell runs across monthly releases, not across postcards.}
+\item{\code{md_parse_revocations()}}{series, one cumulative partition. The
+legal name and DBA, each with the address as of revocation, keyed on the
+EIN and revocation date; the year revoked is the period.}
 }
 }
