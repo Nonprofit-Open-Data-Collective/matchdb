@@ -62,6 +62,7 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
   msg <- function(...) message(sprintf(...))
   msg("schedule R: %d year files", length(files))
 
+  .md_light_key_macro(con)
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE sr_clean AS
     SELECT
@@ -70,8 +71,7 @@ md_ingest_schedr <- function(version = "v2_2", con = NULL, min_corroborators = 1
       'EIN-' || substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),1,2) || '-' ||
                 substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),3,9) AS filer_ein,
       tax_year, name_raw, street_raw, city_raw, state, zip5,
-      trim(regexp_replace(regexp_replace(upper(name_raw),'[^A-Z0-9 ]','','g'),
-                          ' +',' ','g')) AS name_key
+      md_light_key(name_raw) AS name_key
     FROM (
       SELECT
         EIN2 AS filer_ein,

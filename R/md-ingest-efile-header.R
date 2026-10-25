@@ -81,10 +81,10 @@ md_ingest_efile_header <- function(version = "v2_2", con = NULL) {
     SELECT ein, tax_year, 'dba',        name_dba FROM hdr WHERE name_dba <> ''
     UNION ALL
     SELECT ein, tax_year, 'in_care_of', name_ico FROM hdr WHERE name_ico <> ''")
+  .md_light_key_macro(con)
   DBI::dbExecute(con, "
     CREATE OR REPLACE TEMP TABLE hdr_key AS
-    SELECT *, trim(regexp_replace(regexp_replace(upper(name_raw),'[^A-Z0-9 ]','','g'),
-                                  ' +',' ','g')) AS name_key
+    SELECT *, md_light_key(name_raw) AS name_key
     FROM hdr_long")
 
   DBI::dbExecute(con, sprintf("

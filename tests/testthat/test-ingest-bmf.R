@@ -270,3 +270,32 @@ test_that("an EIN leaving the BMF gets back the layer a fresh build would give i
                           "bmf_active"))    # already present: untouched
   expect_equal(e$source_vintage[1], "schedi-1")
 })
+
+test_that("Schedule I groups accent and ampersand variants as one name", {
+  skip_if_no_duckdb()
+  skip_if_not_installed("stringi")
+  with_fake_root({
+    stage_bmf("v2026-08-11")
+    dir <- md_path("sources", "schedi", "v2_2")
+    dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+    rows <- data.frame(
+      EIN2 = c("EIN-11-1111111", "EIN-22-2222222", "EIN-33-3333333", "EIN-11-1111111", "EIN-22-2222222"),
+      TAX_YEAR = "2020", SI_02_GRANT_US_ORG_EIN = "133039601",
+      SI_02_GRANT_US_ORG_NAME_L1 = c("Café Alpha & Sons", "Cafe Alpha and Sons", "CAFE ALPHA AND SONS",
+                                     "Øresund Trust", "Oresund Trust"),
+      SI_02_GRANT_US_ORG_NAME_L2 = "", SI_02_GRANT_US_ORG_ADDR_L1 = "1 MAIN ST",
+      SI_02_GRANT_US_ORG_ADDR_L2 = "", SI_02_GRANT_US_ORG_ADDR_CITY = "CHICAGO",
+      SI_02_GRANT_US_ORG_ADDR_STATE = "IL", SI_02_GRANT_US_ORG_ADDR_ZIP = "60601",
+      stringsAsFactors = FALSE)
+    utils::write.csv(rows, file.path(dir, "SI-P02-T01-GRANTS-US-ORGS-GOVTS-2020.CSV"),
+                     row.names = FALSE, fileEncoding = "UTF-8")
+    pin_fake("schedi", "v2_2", "SI-P02-T01-GRANTS-US-ORGS-GOVTS-2020.CSV")
+    md_ingest_bmf("v2026-08-11", validate = FALSE)
+    md_ingest_schedi(guard = FALSE)
+    con <- md_db(read_only = TRUE); on.exit(md_db_close(con), add = TRUE)
+    n <- DBI::dbGetQuery(con, "
+      SELECT n_corroborators FROM name WHERE source = 'schedi' ORDER BY n_corroborators DESC")
+    # three filers wrote one name three ways, two wrote another two ways
+    expect_equal(n$n_corroborators, c(3, 2))
+  })
+})

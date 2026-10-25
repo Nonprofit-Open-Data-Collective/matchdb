@@ -210,9 +210,9 @@ md_ingest_revocations <- function(version, con = NULL) {
 # (ein, class, spelling key), the most common spelling, the years it spans - the
 # shape every first-party source writes.
 .md_insert_named_rows <- function(con, tbl, source, vintage) {
+  .md_light_key_macro(con)
   DBI::dbExecute(con, sprintf("CREATE OR REPLACE TEMP TABLE ins_k AS
-    SELECT *, trim(regexp_replace(regexp_replace(upper(name_raw), '[^A-Z0-9 ]', '', 'g'),
-                                  ' +', ' ', 'g')) AS k FROM %s", tbl))
+    SELECT *, md_light_key(name_raw) AS k FROM %s", tbl))
   base <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id), 0) AS m FROM name")$m
   n <- DBI::dbExecute(con, sprintf("
     INSERT INTO name (name_id, ein, name_raw, variant_class, source, source_vintage,

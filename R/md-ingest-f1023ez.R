@@ -137,10 +137,10 @@ md_ingest_f1023ez <- function(version = "v2014-2023", con = NULL,
   ## ---- names ----------------------------------------------------------------
   # mode(name_raw) was used here previously and is exactly the non-deterministic
   # tiebreak md_modal_sql() exists to replace (?md_modal_sql; PAIN-POINTS.md #1).
+  .md_light_key_macro(con)
   DBI::dbExecute(con, "
     CREATE OR REPLACE TEMP TABLE ez_name_key AS
-    SELECT *, trim(regexp_replace(regexp_replace(upper(name_raw),'[^A-Z0-9 ]','','g'),
-                                  ' +',' ','g')) AS name_key
+    SELECT *, md_light_key(name_raw) AS name_key
     FROM ez WHERE trim(name_raw) <> ''")
   base_name <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id),0) AS m FROM name")$m
   n_name <- DBI::dbExecute(con, sprintf("

@@ -119,4 +119,5 @@ reference:
 - title: Utilities
   contents:
   - md_modal_sql
+  - md_light_key
   - md_xlsx_to_csv
