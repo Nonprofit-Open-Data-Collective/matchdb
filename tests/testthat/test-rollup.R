@@ -116,6 +116,23 @@ test_that("installing the rollups links derived columns and keeps the old tables
   expect_equal(ac$n_contributing_rows, 2)
 })
 
+test_that("installing keeps the BMF's own geography for the same address", {
+  skip_if_no_rollup_deps()
+  con <- rollup_con("EIN-00-0000001"); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  put(con, hdr_row("o1", "ALPHA TRUST", 2021, "1 MAIN ST"), "efile_header", "v3_1", part = 2021)
+  suppressMessages(md_build_rollups(con))
+  r <- DBI::dbGetQuery(con, "SELECT ein, source, street_raw, city_raw, state, zip5 FROM rollup_address")
+  # a live row for the same spelling with geography, and one for another street
+  # (the live row spaced differently, as ingests left it)
+  live <- rbind(cbind(transform(r, street_raw = "1  MAIN ST "), county = "Cook County", lat = 41.88),
+                cbind(transform(r, street_raw = "9 ELSEWHERE"), county = "Lake County", lat = 42.0))
+  DBI::dbWriteTable(con, "address", cbind(address_id = 1:2, live))
+  .md_carry_address_attrs(con)
+  got <- DBI::dbGetQuery(con, "SELECT county, lat FROM rollup_address")
+  expect_equal(got$county, "Cook County")
+  expect_equal(got$lat, 41.88)
+})
+
 test_that("an observed address is one row per name and place, whatever the street spelling", {
   skip_if_no_rollup_deps()
   con <- rollup_con("EIN-00-0000001"); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))

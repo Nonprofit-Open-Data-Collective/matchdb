@@ -51,8 +51,11 @@
 #' addresses, not the BMF's other attributes.
 #'
 #' @section Not carried:
-#' The BMF's own `lat`, `lon`, `county` and `cbsa` are not in the ledger; run
-#' `md_ingest_geocode()` after installing, as the build already does.
+#' The BMF's own `lat`, `lon`, `county`, `cbsa`, `is_po_box` and `n_vintages`
+#' are not in the ledger. [md_install_rollups()] copies them from the live
+#' `address` row with the same EIN, source and spelling; run
+#' `md_ingest_geocode()` after installing, as the build already does, for the
+#' census geography.
 #'
 #' @param con A DuckDB connection.
 #' @name md_rollup
@@ -300,6 +303,7 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
   # leave compile reading tables with no derived columns.
   .md_check_rollup_derived(con)
   DBI::dbWithTransaction(con, {
+    .md_carry_address_attrs(con)
     for (t in c("name", "address")) {
       DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s_legacy", t))
       if (DBI::dbExistsTable(con, t)) {
@@ -311,6 +315,33 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
   })
   md_link_derived(con)
   invisible(con)
+}
+
+# Attributes the ledger does not hold - the BMF's own geography, its PO-box
+# flag and vintage count - copied from the live address table onto the rollup
+# row with the same EIN, source and spelling. Only blanks are filled, and each
+# rollup row takes one live row's values.
+.md_carry_address_attrs <- function(con) {
+  if (!DBI::dbExistsTable(con, "address")) return(invisible(0))
+  live <- DBI::dbListFields(con, "address")
+  cols <- intersect(c("lat", "lon", "county", "cbsa", "is_po_box", "n_vintages"), live)
+  keys <- c("ein", "source", "street_raw", "city_raw", "state", "zip5")
+  if (!length(cols) || !all(keys %in% live)) return(invisible(0))
+  # the ledger writes blanks where ingests wrote NULLs, and collapses runs of
+  # spaces (md_canon), so keys are compared that way
+  k <- function(p, col) sprintf("trim(regexp_replace(coalesce(%s%s, ''), '\\s+', ' ', 'g'))", p, col)
+  n <- DBI::dbExecute(con, sprintf("
+    UPDATE rollup_address r SET %s
+    FROM (SELECT %s, %s FROM address
+          WHERE %s
+          GROUP BY ALL) o
+    WHERE %s",
+    paste(sprintf("%s = coalesce(r.%s, o.%s)", cols, cols, cols), collapse = ", "),
+    paste(sprintf("%s AS k_%s", k("", keys), keys), collapse = ", "),
+    paste(sprintf("any_value(%s) AS %s", cols, cols), collapse = ", "),
+    paste(sprintf("%s IS NOT NULL", cols), collapse = " OR "),
+    paste(sprintf("%s = o.k_%s", k("r.", keys), keys), collapse = " AND ")))
+  invisible(n)
 }
 
 # Every spelling the rollups show has derived columns under the signature.
