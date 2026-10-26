@@ -98,6 +98,9 @@ reference:
   - md_check_derived_fresh
   - md_build_compact
   - md_build_groups
+  - md_build_places
+  - md_place_key
+  - md_addr_freq
   - md_build_ein_key
   - md_build_clusters
   - md_build_stats

@@ -42,8 +42,10 @@ always (a bundle already here and intact is not downloaded again),
 The bundle directory, invisibly.
 
 For \code{md_reference()}, a list: \code{reference} (an \code{np_reference}),
-\code{name_freq}, \code{token_idf}, \code{clusters} (when published), \code{ref_index} (when
-built) and \code{stamp}.
+\code{name_freq}, \code{token_idf}, \code{addr_freq} (an \code{np_addr_freq}, when published),
+\code{places} (a list of the \code{place}, \code{place_layer} and \code{place_unit} rows for
+the bundle's places, when published), \code{clusters} (when published),
+\code{ref_index} (when built) and \code{stamp}.
 }
 \description{
 \code{md_publish()} compiles a spec and writes it as a bundle; \code{md_reference()}
@@ -58,6 +60,12 @@ reference, not the database.
 \item{\code{reference.parquet}}{the frame \code{\link[=md_compile]{md_compile()}} returns}
 \item{\code{name_freq.parquet}, \code{token_idf.parquet}}{npmatch's corpus
 statistics for exactly that frame}
+\item{\code{addr_freq.parquet}}{address sharing over exactly that frame
+(\code{\link[=md_addr_freq]{md_addr_freq()}}): records per address and suite, suite coverage, name
+concentration and npmatch's place class}
+\item{\code{place.parquet}, \code{place_layer.parquet}, \code{place_unit.parquet}}{when
+\code{\link[=md_build_places]{md_build_places()}} has run: the evidence and flags for the places the
+frame touches, counted over the whole database}
 \item{\code{report.json}}{the compile report: shape and absence}
 \item{\code{stamp.json}}{the spec, the spec hash, the database fingerprint, the
 normalizer signature, the npmatch and matchdb versions, and the md5 of

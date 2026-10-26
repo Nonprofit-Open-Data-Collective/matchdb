@@ -57,6 +57,7 @@ if (install) {
                                       e_postcard_version = V$e_postcard))
   step("compact tables", md_build_compact(con = con))
   step("groups", md_build_groups(con = con))
+  step("places", md_build_places(con))
   step("identifier keys", md_build_ein_key(con = con))
   step("clusters", md_build_clusters(con = con))
   step("statistics cells", md_build_stats(con = con))

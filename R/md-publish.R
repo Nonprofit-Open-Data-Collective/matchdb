@@ -11,6 +11,12 @@
 #'   \item{`reference.parquet`}{the frame [md_compile()] returns}
 #'   \item{`name_freq.parquet`, `token_idf.parquet`}{npmatch's corpus
 #'     statistics for exactly that frame}
+#'   \item{`addr_freq.parquet`}{address sharing over exactly that frame
+#'     ([md_addr_freq()]): records per address and suite, suite coverage, name
+#'     concentration and npmatch's place class}
+#'   \item{`place.parquet`, `place_layer.parquet`, `place_unit.parquet`}{when
+#'     [md_build_places()] has run: the evidence and flags for the places the
+#'     frame touches, counted over the whole database}
 #'   \item{`report.json`}{the compile report: shape and absence}
 #'   \item{`stamp.json`}{the spec, the spec hash, the database fingerprint, the
 #'     normalizer signature, the npmatch and matchdb versions, and the md5 of
@@ -52,6 +58,25 @@ md_publish <- function(spec, root = md_path("publish"), con = NULL, set_latest =
                                stringsAsFactors = FALSE), file.path(dir, files[["token_idf"]]))
   jsonlite::write_json(r$report, file.path(dir, files[["report"]]), auto_unbox = TRUE,
                        pretty = TRUE, digits = NA, na = "null")
+  # Address sharing over exactly this frame's rows (dev/PLACES.md section 6), so a
+  # run against a slice of the tier still reads the whole tier's counts.
+  af <- md_addr_freq(as.data.frame(r$reference))
+  files[["addr_freq"]] <- "addr_freq.parquet"
+  .md_write_parquet(.md_addr_freq_table(af), file.path(dir, files[["addr_freq"]]))
+  # The place evidence and flags (md_build_places()) for the places this frame
+  # touches: what the tier's own counts cannot see - group rulings, mailbox
+  # stores, care-of agents, churn, buildings.
+  if (all(c("place", "place_layer", "place_unit") %in% DBI::dbListTables(con))) {
+    keys <- unique(md_place_key(r$reference$street_key, r$reference$zip5))
+    duckdb::duckdb_register(con, "pub_places", data.frame(place_key = keys[nzchar(keys)]))
+    for (t in c("place", "place_layer", "place_unit")) {
+      files[[t]] <- paste0(t, ".parquet")
+      .md_write_parquet(DBI::dbGetQuery(con, sprintf(
+        "SELECT t.* FROM %s t JOIN pub_places USING (place_key) ORDER BY ALL", t)),
+        file.path(dir, files[[t]]))
+    }
+    duckdb::duckdb_unregister(con, "pub_places")
+  }
   # The clusters holding the bundle's EINs, members limited to those EINs: what
   # npmatch's np_cluster_rollup() and np_pair_links() read.
   if (all(c("cluster", "cluster_member") %in% DBI::dbListTables(con))) {
@@ -72,6 +97,7 @@ md_publish <- function(spec, root = md_path("publish"), con = NULL, set_latest =
   stamp <- c(r$stamp, list(
     label = spec$label,
     spec = unclass(spec[setdiff(names(spec), c("label", "spec_hash"))]),
+    addr_freq = list(share_min = af$share_min, unit_coverage_min = af$unit_coverage_min),
     rows = nrow(r$reference),
     files = as.list(stats::setNames(unname(tools::md5sum(file.path(dir, files))), files))))
   jsonlite::write_json(stamp, file.path(dir, "stamp.json"), auto_unbox = TRUE, pretty = TRUE,
@@ -105,8 +131,10 @@ md_publish_pointer <- function(label, spec_hash, root = md_path("publish")) {
 #'   always (a bundle already here and intact is not downloaded again),
 #'   `"missing"` only when the label is not published locally.
 #' @return For `md_reference()`, a list: `reference` (an `np_reference`),
-#'   `name_freq`, `token_idf`, `clusters` (when published), `ref_index` (when
-#'   built) and `stamp`.
+#'   `name_freq`, `token_idf`, `addr_freq` (an `np_addr_freq`, when published),
+#'   `places` (a list of the `place`, `place_layer` and `place_unit` rows for
+#'   the bundle's places, when published), `clusters` (when published),
+#'   `ref_index` (when built) and `stamp`.
 #' @export
 md_reference <- function(label, root = md_path("publish"), spec_hash = NULL,
                          build_index = TRUE, fetch = FALSE) {
@@ -149,6 +177,17 @@ md_reference <- function(label, root = md_path("publish"), spec_hash = NULL,
               stamp = stamp)
   if (file.exists(file.path(dir, "clusters.parquet"))) {
     out$clusters <- .md_read_parquet(file.path(dir, "clusters.parquet"))
+  }
+  # the np_addr_freq object np_compare(addr_freq = ) takes; absent in bundles
+  # published before dev/PLACES.md
+  if (file.exists(file.path(dir, "addr_freq.parquet"))) {
+    p <- stamp$addr_freq
+    out$addr_freq <- .md_addr_freq_from_table(.md_read_parquet(file.path(dir, "addr_freq.parquet")),
+                                              p$share_min %||% 10L, p$unit_coverage_min %||% 0.5)
+  }
+  if (file.exists(file.path(dir, "place.parquet"))) {
+    out$places <- lapply(c(place = "place", layer = "place_layer", unit = "place_unit"),
+                         function(t) .md_read_parquet(file.path(dir, paste0(t, ".parquet"))))
   }
   if (build_index) out$ref_index <- npmatch::np_ref_index(ref)
   out

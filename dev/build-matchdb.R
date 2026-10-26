@@ -113,6 +113,9 @@ step("websites", md_ingest_websites(con = con, efile_version = V$efile,
 step("derived columns", md_build_derived(con = con))
 step("compact tables", md_build_compact(con = con))
 step("groups", md_build_groups(con = con))
+# After groups (group rulings) and the derived columns; before keys and
+# clusters, since co-tenancy reads the place class (dev/PLACES.md).
+step("places", md_build_places(con))
 # After compaction and websites, which they read.
 step("identifier keys", md_build_ein_key(con = con))
 step("clusters", md_build_clusters(con = con))

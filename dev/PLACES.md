@@ -1,6 +1,8 @@
 # Places: what matchdb should compute about shared addresses
 
-**Status: proposal, 2026-10-26. Nothing here is built.**
+**Status: built, 2026-10-26, and tested on fixtures. The full-database checks
+in §7 are pending, and so are the parity tests that wait for npmatch's
+`fix/address-class` to be merged and installed (§8).**
 
 This note answers npmatch's `dev/MATCHDB-ADDRESS-UNIQUENESS.md` (branch
 `fix/address-class`, commits `4bc7fa7`, `9337d75`, `f8229b6`). It covers what
@@ -217,24 +219,77 @@ Each step ends with a check.
    *Check:* the Schedule I sample's line-2 rows (suites in `street_unit_id`,
    PO boxes and building names kept out of `street_key`); the step 6 rollup
    parity test still holds where line 2 is empty.
+   **Built.**
+   * Schedule I, Schedule R Part II, the affiliate listing and the e-Postcard
+     write line 2 to `unit_raw`.
+   * Both derive paths pass it to `np_normalize()` as `unit`. The installed
+     npmatch (`ddfd967`) ignores the column; `fix/address-class` reads it.
+   * The stored address columns follow npmatch's output (`.md_address_cols()`),
+     so `street_unit_id` is stored as soon as npmatch produces it. A derived
+     table built earlier gains the column instead of failing.
+   *Tested:* "93 COTTAGE STREET" + "SUITE 1" and "103 MAINE AVENUE" + "PO BOX
+   1358" stay as separate street and unit; the rollup parity test still holds.
+   *Pending:* suites landing in `street_unit_id` needs the new npmatch.
 2. **Place key and parity.** `place_key` and `unit_key` from npmatch's
    function. *Check:* a parity test against `np_addr_key()`; PO boxes excluded.
+   **Built** (`md_place_key()`, `md_unit_id()`, and their SQL macros). Each
+   calls npmatch's own function when installed and a port otherwise.
+   *Checked:* the R port and the SQL macros are identical to the branch's
+   `.np_addr_key()` and `.np_unit_id()`, loaded straight from
+   `origin/fix/address-class`, on 4,000 random rows with every PO-box
+   spelling. A package test repeats the comparison automatically once that
+   npmatch is installed.
 3. **`place`, `place_layer`, `place_unit`** with the count, name and suite
    columns, and `place_class` by npmatch's rule. *Check:* on a full database,
    reproduce npmatch's BMF figures over the BMF-only population: 138,629
    shared addresses, 1,188 federated / 1,319 shared / 1,910 building.
+   **Built** (`md_build_places()`), with npmatch's thresholds as arguments.
+   *Tested* on a fixture with one place of each kind; each gets its class, and
+   a crowded address whose suites are barely recorded is `shared`, not
+   `building`. *Pending:* npmatch's BMF figures on the full database. They
+   will differ by design, since matchdb counts EINs over every layer's own
+   current addresses, not BMF rows; `place_layer` can select the BMF layers to
+   compare.
 4. **Group, care-of and PMB evidence**, and the flags. *Check:* the five
    most-occupied addresses (§1) get the labels a reader would give them, and
    `group_confirmed` agrees with `federated` on most federated places;
    disagreements are listed for review.
+   **Built**: `flag_cmra`, `flag_care_of`, `flag_bank_trust`,
+   `flag_group_confirmed`, `flag_military_or_gd`, and `place_flags`. Care-of
+   agents reuse `care_of_network`'s word list. *Tested on fixtures. Pending:*
+   the five addresses on real data, and the agreement between
+   `group_confirmed` and `federated`.
 5. **Occupancy history and churn** from the ledger. *Check:* known agents (501
    SILVERSIDE RD) churn; known national offices (1 WATERFOWL WAY) do not.
+   **Built**, from every own address in `address`, current and historical:
+   `n_eins_ever`, `first_year`, `last_year`, `churn`, and `flag_agent_churn`.
+   After the rollups are installed, that history is the ledger's. *Tested on
+   fixtures. Pending:* the two real addresses.
 6. **Building ids** from rooftop geocodes. *Check:* the radius is chosen from
    the distance distribution between geocodes of one `place_key`, not guessed.
+   **Built** as a grid: `PointAddress` coordinates rounded to
+   `building_digits` (default 4, about 11 m), each place taking its commonest
+   cell. *Tested:* two spellings of 127 Filmore Lane share a building.
+   *Pending:* measure the radius, and replace the grid with distance
+   clustering if cell edges split buildings measurably.
 7. **Publish** `addr_freq.parquet` per bundle and the place sidecar; restrict
    `co_tenant` by class. *Check:* `np_addr_freq()` over a bundle's reference
    equals the shipped `addr_freq` exactly; the Phase 1 gate stays at three
    zeros.
+   **Built.**
+   * Every bundle ships `addr_freq.parquet` over its own rows. It is computed
+     by `npmatch::np_addr_freq()` when installed, or by a port identical to the
+     branch's function (checked as in step 2).
+   * Bundles also ship `place`, `place_layer` and `place_unit` for the places
+     they touch.
+   * `md_reference()` returns them as `addr_freq` (an `np_addr_freq`) and
+     `places`.
+   * Co-tenant clusters form only at a plain `cluster` place without the
+     care-of, mailbox-store, bank-trust or churn flags.
+   *Tested:* the shipped `addr_freq` round-trips identically.
+   *Pending:* the Phase 1 gate on a full database.
+   `dev/build-matchdb.R` and `dev/build-ledger.R --install` run
+   `md_build_places()` after groups and before keys and clusters.
 
 ---
 
