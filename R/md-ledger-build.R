@@ -54,6 +54,8 @@ md_build_ledger <- function(con, versions, sources = NULL) {
       address_crosswalk = "[.]csv$",
       sprintf("^%s-[0-9]{4}[.]CSV$", ef[[s]]))
     files <- sort(list.files(dir, pattern = pat, full.names = TRUE))
+    # the pin's own checksum list sits beside the data and matches "[.]csv$"
+    files <- files[basename(files) != "FILES.csv"]
     if (!length(files)) {
       msg("%s: no files matching %s in %s, skipped%s", s, pat, dir,
           if (s == "f1023ez") " (md_ingest_f1023ez() converts the workbooks)" else "")

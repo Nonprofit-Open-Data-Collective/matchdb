@@ -213,25 +213,28 @@ md_parse_efile_related <- function(con, relation, view = "frame_efile_related") 
 md_parse_affiliate_listing <- function(con, relation, view = "frame_affiliate_listing") {
   .md_ledger_macros(con)
   cols <- names(DBI::dbGetQuery(con, sprintf("SELECT * FROM %s LIMIT 0", relation)))
-  # the published tables (e-file v3_1) carry the subordinate's address; the
-  # older local extract does not
-  addr <- if ("F9_00_AFFIL_ADDR_L1" %in% cols) {
-    "F9_00_AFFIL_ADDR_L1, F9_00_AFFIL_ADDR_L2, F9_00_AFFIL_ADDR_CITY, F9_00_AFFIL_ADDR_STATE,
-     md_zip5(F9_00_AFFIL_ADDR_ZIP), md_zip4(F9_00_AFFIL_ADDR_ZIP)"
-  } else "NULL, NULL, NULL, NULL, NULL, NULL"
+  # Each column checked on its own: the published tables (e-file v3_1) carry
+  # the subordinate's address, the older local extract does not, and the 2009
+  # table has an address with no second line.
+  col <- function(x) if (x %in% cols) x else "NULL"
+  addr <- sprintf("%s, %s, %s, %s, md_zip5(%s), md_zip4(%s)",
+                  col("F9_00_AFFIL_ADDR_L1"), col("F9_00_AFFIL_ADDR_L2"),
+                  col("F9_00_AFFIL_ADDR_CITY"), col("F9_00_AFFIL_ADDR_STATE"),
+                  col("F9_00_AFFIL_ADDR_ZIP"), col("F9_00_AFFIL_ADDR_ZIP"))
+  name2 <- col("F9_00_AFFIL_NAME_L2")
   filer <- if ("ORG_EIN" %in% cols) "coalesce(ORG_EIN, EIN2)" else "EIN2"
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP VIEW %s AS
     SELECT * FROM (
       SELECT md_ein2(F9_00_AFFIL_EIN), 'observed',
-             trim(coalesce(F9_00_AFFIL_NAME_L1, '') || ' ' || coalesce(F9_00_AFFIL_NAME_L2, '')),
+             trim(coalesce(F9_00_AFFIL_NAME_L1, '') || ' ' || coalesce(CAST(%s AS VARCHAR), '')),
              %s,
              md_ein2(%s), OBJECTID, TABLE_ID, TAX_YEAR, RETURN_TIME_STAMP
       FROM %s
       WHERE length(md_digits(F9_00_AFFIL_EIN)) = 9 AND length(md_digits(%s)) = 9
     ) AS f (ein, role, name_raw, street_raw, unit_raw, city_raw, state, zip5, zip_plus4,
             asserted_by, record_key, trace_key, period, filed_at)
-    WHERE ein <> asserted_by AND name_raw <> ''", view, addr, filer, relation, filer))
+    WHERE ein <> asserted_by AND name_raw <> ''", view, name2, addr, filer, relation, filer))
   view
 }
 

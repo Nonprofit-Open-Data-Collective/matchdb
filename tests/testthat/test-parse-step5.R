@@ -176,3 +176,18 @@ test_that("the second address line is kept as the unit, not joined to the street
   expect_equal(d$street_key, c("103 MAINE AVE", "93 COTTAGE ST"))
   expect_equal(d$street_unit_id, c(NA, "1"))
 })
+
+test_that("an affiliate listing year without a second address line still parses", {
+  skip_if_no_parse_deps()
+  con <- parse_con(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  # the published 2009 table has four address columns: no F9_00_AFFIL_ADDR_L2
+  raw <- data.frame(
+    EIN2 = "EIN-22-2222222", ORG_EIN = "222222222", OBJECTID = "801", TABLE_ID = "TID-0",
+    TAX_YEAR = "2009", RETURN_TIME_STAMP = "2010-05-01", F9_00_AFFIL_EIN = "133039601",
+    F9_00_AFFIL_NAME_L1 = "ALPHA LODGE 12", F9_00_AFFIL_ADDR_L1 = "1 MAIN ST",
+    F9_00_AFFIL_ADDR_CITY = "CHICAGO", F9_00_AFFIL_ADDR_STATE = "IL", F9_00_AFFIL_ADDR_ZIP = "60601",
+    stringsAsFactors = FALSE)
+  r <- apply_raw(con, raw, md_parse_affiliate_listing, "efile_affiliate_listing", "v3_1", part = 2009)
+  expect_equal(r$n_new, 1)
+  expect_equal(DBI::dbGetQuery(con, "SELECT street_raw FROM address_text")$street_raw, "1 MAIN ST")
+})

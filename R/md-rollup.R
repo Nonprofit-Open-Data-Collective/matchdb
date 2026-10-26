@@ -184,7 +184,14 @@ md_build_rollups <- function(con) {
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TABLE rollup_address AS
     WITH src AS (
-      SELECT *, coalesce(addr_class, 'recency') AS cls,
+      -- An observed address is one row per (name written, city, state, ZIP),
+      -- keeping the commonest street, as md_ingest_schedi() and
+      -- md_ingest_schedr() group it. Grouping on the street as well split one
+      -- grantee's place into a row per spelling: +42%% Schedule I rows on the
+      -- full database, each one more compiled reference row.
+      SELECT * REPLACE (CASE WHEN coalesce(addr_class, '') = 'observed' THEN ''
+                             ELSE street_lk END AS street_lk),
+             coalesce(addr_class, 'recency') AS cls,
              -- an observed address belongs to the name it was written with
              CASE WHEN coalesce(addr_class, '') = 'observed' THEN coalesce(name_lk, '') ELSE '' END AS link_lk
       FROM ru_obs WHERE address_text_id IS NOT NULL

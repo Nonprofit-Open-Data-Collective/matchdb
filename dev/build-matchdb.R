@@ -30,6 +30,9 @@ step <- function(label, expr) {
 }
 src_files <- function(source, version, pattern) {
   f <- list.files(md_path("sources", source, version), pattern = pattern, full.names = TRUE)
+  # a pin writes FILES.csv beside the data; it is not a source file, and a
+  # second build would otherwise pin it into the set
+  f <- f[basename(f) != "FILES.csv"]
   if (!length(f)) stop("no ", pattern, " files for ", source, "/", version, call. = FALSE)
   sort(f)
 }

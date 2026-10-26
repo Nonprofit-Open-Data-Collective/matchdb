@@ -46,3 +46,29 @@ test_that("the ledger driver applies one release per file and skips them on a re
                                  sources = c("revocations", "schedi")),
                  "no files matching")
 })
+
+test_that("the ledger driver never reads a pin's FILES.csv as data", {
+  skip_if_not_installed("duckdb")
+  skip_if_not_installed("digest")
+  skip_if_not_installed("stringi")
+  root <- tempfile("mdroot"); dir.create(root)
+  old <- Sys.getenv("MATCHDB_DATA", unset = NA)
+  Sys.setenv(MATCHDB_DATA = root)
+  on.exit({
+    if (is.na(old)) Sys.unsetenv("MATCHDB_DATA") else Sys.setenv(MATCHDB_DATA = old)
+    unlink(root, recursive = TRUE)
+  })
+  dir <- md_path("sources", "address_crosswalk", "v2026-07", create = TRUE)
+  f <- file.path(dir, "address_resolved_crosswalk.csv")
+  utils::write.csv(data.frame(EIN2 = "EIN-13-3039601", spell_rank = "0", street = "1 MAIN ST",
+                              city = "CHICAGO", state = "IL", zip5 = "60601",
+                              first_vintage = "2019-01", last_vintage = "2026-07"), f, row.names = FALSE)
+  # a pin writes FILES.csv beside the data, matching the crosswalk's "[.]csv$"
+  md_source_pin("address_crosswalk", f, version = "v2026-07")
+  expect_true(file.exists(file.path(dir, "FILES.csv")))
+  con <- DBI::dbConnect(duckdb::duckdb()); on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  r <- suppressMessages(md_build_ledger(con, list(address_crosswalk = "v2026-07"),
+                                        sources = "address_crosswalk"))
+  expect_equal(nrow(r), 1)
+  expect_equal(r$status, "applied")
+})
