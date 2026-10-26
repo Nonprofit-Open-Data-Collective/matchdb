@@ -171,16 +171,21 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
   # Plain equality joins only, ids cast to one type: a filter inside a LEFT
   # JOIN's ON clause, or a DOUBLE-to-BIGINT comparison, turns DuckDB's hash
   # join into a pairwise one - measured at 1,261 s for this statement.
+  # the second address line, where the address table keeps it: the stored
+  # derived columns were computed with it, so the frame must carry it too
+  unit_sql <- if ("unit_raw" %in% DBI::dbListFields(con, "address"))
+    "coalesce(a.unit_raw, '')" else "''"
   x(sprintf("CREATE OR REPLACE TEMP TABLE cp_addr_sel AS
     SELECT a.address_id, a.ein, a.name_id, coalesce(a.zip5, '') AS zip5,
            a.variant_class = 'observed' AS observed,
            CASE a.variant_class WHEN 'mailing' THEN 1 WHEN 'principal' THEN 2
                 WHEN 'historical' THEN 3 ELSE 4 END AS class_rank,
-           a.variant_class, a.street_raw, a.city_raw, a.state, a.zip_plus4, a.county,
-           try_cast(substr(a.last_vintage, 1, 4) AS INT) AS ly, coalesce(a.n_obs, 1) AS n_obs
+           a.variant_class, a.street_raw, %s AS unit_raw, a.city_raw, a.state, a.zip_plus4,
+           a.county, try_cast(substr(a.last_vintage, 1, 4) AS INT) AS ly,
+           coalesce(a.n_obs, 1) AS n_obs
     FROM address a JOIN cp_ein e USING (ein)
     WHERE a.variant_class IN (%s) AND %s AND %s",
-    lit(spec$addresses), addr_year, src_ok("a.source")))
+    unit_sql, lit(spec$addresses), addr_year, src_ok("a.source")))
   x("CREATE OR REPLACE TEMP TABLE cp_addr_link AS
      SELECT s.address_id, nd.name_key AS link_key
      FROM cp_addr_sel s JOIN name_derived nd ON CAST(nd.name_id AS BIGINT) = s.name_id
@@ -197,13 +202,14 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
   x("CREATE OR REPLACE TEMP TABLE cp_addr AS
     WITH sp AS (
       SELECT ein, street_key, zip5, observed, coalesce(link_key, '') AS link_key,
-             street_raw, city_raw, state, zip_plus4, county, count(*) AS n,
+             street_raw, unit_raw, city_raw, state, zip_plus4, county, count(*) AS n,
              min(address_id) AS address_id  -- a stored row with exactly this spelling
       FROM cp_addr_raw GROUP BY ALL
     ), best AS (
       SELECT * FROM (SELECT *, row_number() OVER (
                PARTITION BY ein, street_key, zip5, observed, link_key
-               ORDER BY n DESC, street_raw, city_raw, state, zip_plus4, county) AS rk FROM sp)
+               ORDER BY n DESC, street_raw, unit_raw, city_raw, state, zip_plus4, county) AS rk
+             FROM sp)
       WHERE rk = 1
     ), agg AS (
       SELECT ein, street_key, zip5, observed, coalesce(link_key, '') AS link_key,
@@ -211,7 +217,8 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
              arg_min(variant_class, class_rank) AS address_class
       FROM cp_addr_raw GROUP BY 1, 2, 3, 4, 5
     )
-    SELECT a.*, b.street_raw, b.city_raw, b.state, b.zip_plus4, b.county, b.address_id,
+    SELECT a.*, b.street_raw, b.unit_raw, b.city_raw, b.state, b.zip_plus4, b.county,
+           b.address_id,
            row_number() OVER (PARTITION BY a.ein, a.observed
              ORDER BY a.class_rank, a.ly DESC NULLS LAST, a.n_obs DESC,
                       a.street_key, a.zip5, a.link_key) AS addr_rank
@@ -273,7 +280,7 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
     SELECT p.ein AS \".ein\", n.name_raw AS name,
            CASE WHEN p.variant_class = 'legal' THEN coalesce(d.dba, '') ELSE '' END AS dba,
            '' AS division,
-           coalesce(a.street_raw, '') AS street, '' AS unit,
+           coalesce(a.street_raw, '') AS street, coalesce(a.unit_raw, '') AS unit,
            coalesce(a.city_raw, '') AS city, coalesce(a.county, '') AS county,
            coalesce(a.state, '') AS state, coalesce(p.zip5, '') AS zip5,
            coalesce(a.zip_plus4, '') AS zip_plus4, e.active,

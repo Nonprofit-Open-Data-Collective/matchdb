@@ -136,6 +136,19 @@ test_that("a frame from stored columns is identical to np_normalize()'s", {
   }
 })
 
+test_that("the second address line reaches the frame, and stored still equals normalize", {
+  con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  DBI::dbExecute(con, "ALTER TABLE address ADD COLUMN unit_raw VARCHAR")
+  DBI::dbExecute(con, "UPDATE address SET unit_raw = 'STE 1102' WHERE address_id = 1")
+  suppressMessages(md_build_derived(con, chunk = 4L))
+  sp <- md_spec(sources = "bmf")
+  st <- suppressMessages(md_compile(sp, con, derive = "stored"))$reference
+  nz <- suppressMessages(md_compile(sp, con, derive = "normalize"))$reference
+  rownames(nz) <- NULL
+  expect_identical(st, nz)
+  expect_true("STE 1102" %in% st$unit)
+})
+
 test_that("a stored value that disagrees with the normalizer is caught", {
   con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   DBI::dbExecute(con, "UPDATE name_derived SET name_full = 'TAMPERED'")

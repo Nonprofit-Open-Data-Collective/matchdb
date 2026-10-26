@@ -85,7 +85,10 @@ addresses, not the BMF's other attributes.
 
 \section{Not carried}{
 
-The BMF's own \code{lat}, \code{lon}, \code{county} and \code{cbsa} are not in the ledger; run
-\code{md_ingest_geocode()} after installing, as the build already does.
+The BMF's own \code{lat}, \code{lon}, \code{county}, \code{cbsa}, \code{is_po_box} and \code{n_vintages}
+are not in the ledger. \code{\link[=md_install_rollups]{md_install_rollups()}} copies them from the live
+\code{address} row with the same EIN, source and spelling; run
+\code{md_ingest_geocode()} after installing, as the build already does, for the
+census geography.
 }
 

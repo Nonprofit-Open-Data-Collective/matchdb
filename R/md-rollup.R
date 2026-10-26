@@ -51,8 +51,11 @@
 #' addresses, not the BMF's other attributes.
 #'
 #' @section Not carried:
-#' The BMF's own `lat`, `lon`, `county` and `cbsa` are not in the ledger; run
-#' `md_ingest_geocode()` after installing, as the build already does.
+#' The BMF's own `lat`, `lon`, `county`, `cbsa`, `is_po_box` and `n_vintages`
+#' are not in the ledger. [md_install_rollups()] copies them from the live
+#' `address` row with the same EIN, source and spelling; run
+#' `md_ingest_geocode()` after installing, as the build already does, for the
+#' census geography.
 #'
 #' @param con A DuckDB connection.
 #' @name md_rollup
@@ -184,7 +187,14 @@ md_build_rollups <- function(con) {
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TABLE rollup_address AS
     WITH src AS (
-      SELECT *, coalesce(addr_class, 'recency') AS cls,
+      -- An observed address is one row per (name written, city, state, ZIP),
+      -- keeping the commonest street, as md_ingest_schedi() and
+      -- md_ingest_schedr() group it. Grouping on the street as well split one
+      -- grantee's place into a row per spelling: +42%% Schedule I rows on the
+      -- full database, each one more compiled reference row.
+      SELECT * REPLACE (CASE WHEN coalesce(addr_class, '') = 'observed' THEN ''
+                             ELSE street_lk END AS street_lk),
+             coalesce(addr_class, 'recency') AS cls,
              -- an observed address belongs to the name it was written with
              CASE WHEN coalesce(addr_class, '') = 'observed' THEN coalesce(name_lk, '') ELSE '' END AS link_lk
       FROM ru_obs WHERE address_text_id IS NOT NULL
@@ -293,6 +303,7 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
   # leave compile reading tables with no derived columns.
   .md_check_rollup_derived(con)
   DBI::dbWithTransaction(con, {
+    .md_carry_address_attrs(con)
     for (t in c("name", "address")) {
       DBI::dbExecute(con, sprintf("DROP TABLE IF EXISTS %s_legacy", t))
       if (DBI::dbExistsTable(con, t)) {
@@ -304,6 +315,37 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
   })
   md_link_derived(con)
   invisible(con)
+}
+
+# Attributes the ledger does not hold - the BMF's own geography, its PO-box
+# flag and vintage count - copied from the live address table onto the rollup
+# row with the same EIN, source and spelling. Only blanks are filled, and each
+# rollup row takes one live row's values.
+.md_carry_address_attrs <- function(con) {
+  if (!DBI::dbExistsTable(con, "address")) return(invisible(0))
+  live <- DBI::dbListFields(con, "address")
+  cols <- intersect(c("lat", "lon", "county", "cbsa", "is_po_box", "n_vintages"), live)
+  keys <- c("ein", "source", "street_raw", "city_raw", "state", "zip5")
+  if (!length(cols) || !all(keys %in% live)) return(invisible(0))
+  # the ledger writes blanks where ingests wrote NULLs, and collapses runs of
+  # spaces (md_canon), so keys are compared that way
+  k <- function(p, col) sprintf("trim(regexp_replace(coalesce(%s%s, ''), '\\s+', ' ', 'g'))", p, col)
+  # each value in the rollup's type: today's BMF ingest stores is_po_box as text
+  ty <- DBI::dbGetQuery(con, "SELECT column_name, data_type FROM duckdb_columns()
+                              WHERE table_name = 'rollup_address' AND NOT internal")
+  ty <- stats::setNames(ty$data_type, ty$column_name)[cols]
+  n <- DBI::dbExecute(con, sprintf("
+    UPDATE rollup_address r SET %s
+    FROM (SELECT %s, %s FROM address
+          WHERE %s
+          GROUP BY ALL) o
+    WHERE %s",
+    paste(sprintf("%s = coalesce(r.%s, TRY_CAST(o.%s AS %s))", cols, cols, cols, ty), collapse = ", "),
+    paste(sprintf("%s AS k_%s", k("", keys), keys), collapse = ", "),
+    paste(sprintf("any_value(%s) AS %s", cols, cols), collapse = ", "),
+    paste(sprintf("%s IS NOT NULL", cols), collapse = " OR "),
+    paste(sprintf("%s = o.k_%s", k("r.", keys), keys), collapse = " AND ")))
+  invisible(n)
 }
 
 # Every spelling the rollups show has derived columns under the signature.

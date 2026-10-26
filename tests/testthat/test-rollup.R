@@ -115,3 +115,40 @@ test_that("installing the rollups links derived columns and keeps the old tables
   expect_equal(ac$street_key, "123 MAIN ST")
   expect_equal(ac$n_contributing_rows, 2)
 })
+
+test_that("installing keeps the BMF's own geography for the same address", {
+  skip_if_no_rollup_deps()
+  con <- rollup_con("EIN-00-0000001"); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  put(con, hdr_row("o1", "ALPHA TRUST", 2021, "1 MAIN ST"), "efile_header", "v3_1", part = 2021)
+  suppressMessages(md_build_rollups(con))
+  r <- DBI::dbGetQuery(con, "SELECT ein, source, street_raw, city_raw, state, zip5 FROM rollup_address")
+  # a live row for the same spelling with geography, and one for another street
+  # (the live row spaced differently, as ingests left it)
+  # is_po_box as text, as today's BMF ingest stores it
+  live <- rbind(cbind(transform(r, street_raw = "1  MAIN ST "), county = "Cook County", lat = 41.88,
+                      is_po_box = "FALSE"),
+                cbind(transform(r, street_raw = "9 ELSEWHERE"), county = "Lake County", lat = 42.0,
+                      is_po_box = "TRUE"))
+  DBI::dbWriteTable(con, "address", cbind(address_id = 1:2, live))
+  .md_carry_address_attrs(con)
+  got <- DBI::dbGetQuery(con, "SELECT county, lat, is_po_box FROM rollup_address")
+  expect_equal(got$county, "Cook County")
+  expect_equal(got$lat, 41.88)
+  expect_identical(got$is_po_box, FALSE)
+})
+
+test_that("an observed address is one row per name and place, whatever the street spelling", {
+  skip_if_no_rollup_deps()
+  con <- rollup_con("EIN-00-0000001"); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  g <- function(street, filer) data.frame(
+    ein = "EIN-00-0000001", role = "observed", name_raw = "Alpha Trust Fdn", street_raw = street,
+    city_raw = "CHICAGO", state = "IL", zip5 = "60601", asserted_by = filer,
+    record_key = paste0("o-", filer), period = 2022, stringsAsFactors = FALSE)
+  put(con, rbind(g("1 MAIN ST", "EIN-11-1111111"), g("1 MAIN STREET", "EIN-22-2222222"),
+                 g("1 MAIN ST", "EIN-33-3333333")), "schedi", "v3_1", part = 2022)
+  suppressMessages(md_build_rollups(con))
+  a <- DBI::dbGetQuery(con, "SELECT street_raw, n_obs FROM rollup_address")
+  expect_equal(nrow(a), 1)                  # as md_ingest_schedi() groups it
+  expect_equal(a$street_raw, "1 MAIN ST")   # the commonest spelling
+  expect_equal(a$n_obs, 3)
+})
