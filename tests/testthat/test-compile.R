@@ -115,7 +115,7 @@ test_that("the stored lists cover every column np_normalize() adds or rewrites",
   blank <- .md_blank_frame()
   inputs <- .md_frame_inputs
   added <- c(setdiff(names(blank), inputs), "zip5")     # zip5 is rewritten
-  expect_setequal(added, c(.md_derived_name_cols, .md_derived_address_cols,
+  expect_setequal(added, c(.md_derived_name_cols, .md_address_cols(),
                            .md_derived_alt_cols))
 })
 

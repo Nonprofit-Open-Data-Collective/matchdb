@@ -55,18 +55,23 @@ md_build_derived <- function(con = NULL, what = c("name", "address"),
   }
 
   if ("address" %in% what) {
-    keep <- .md_derived_address_cols
+    keep <- .md_address_cols()
+    # the second address line, where a table keeps one: npmatch reads the suite
+    # from it when the street line names none (dev/PLACES.md section 3)
+    unit <- if ("unit_raw" %in% DBI::dbListFields(con, "address")) "unit_raw" else "NULL AS unit_raw"
     out["address"] <- .md_derive_pass(
       con, src = "address", id = "address_id", dest = "address_derived",
       keep = keep, chunk = chunk, sig = sig, msg = msg, incremental = incremental,
       shape = function(d) data.frame(
         name = blank(nrow(d)), dba = blank(nrow(d)), division = blank(nrow(d)),
         street = ifelse(is.na(d$street_raw), "", d$street_raw),
+        unit = ifelse(is.na(d$unit_raw), "", as.character(d$unit_raw)),
         zip5 = ifelse(is.na(d$zip5), "", d$zip5),
         zip_plus4 = ifelse(is.na(d$zip_plus4), "", d$zip_plus4),
         state = ifelse(is.na(d$state), "", d$state),
         stringsAsFactors = FALSE),
-      select = "SELECT address_id AS id, street_raw, zip5, zip_plus4, state FROM address")
+      select = sprintf("SELECT address_id AS id, street_raw, %s, zip5, zip_plus4, state FROM address",
+                       unit))
   }
   invisible(out)
 }
@@ -171,6 +176,16 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
 # gains a column these lists do not cover.
 .md_derived_name_cols <- c("name_gen", "name_gen_rank", "name_nums", "name_ord",
   "name_dir", "name_form", "name_full", "name_key", "name_core", "name_placeholder")
-.md_derived_address_cols <- c("street_unit", "street_key", "is_po_box", "street_num",
+.md_derived_address_base <- c("street_unit", "street_key", "is_po_box", "street_num",
   "street_name", "street_type", "zip5", "zip3", "zip9", "state_abb")
+# The address columns stored: the base list, plus street_unit_id (the suite
+# identifier with separators dropped, "STE D-2" -> "D2") when the installed
+# npmatch produces it - which it does from its fix/address-class onward. Read
+# off npmatch rather than listed here, so a newer npmatch needs no change in
+# matchdb (dev/PLACES.md section 3).
+.md_address_cols <- function() {
+  if ("street_unit_id" %in% names(.md_blank_frame())) {
+    c(.md_derived_address_base, "street_unit_id")
+  } else .md_derived_address_base
+}
 .md_derived_alt_cols <- c("dba_key", "division_key")

@@ -213,3 +213,18 @@ test_that("a placeholder EIN is in no group, key or cluster", {
   expect_equal(DBI::dbGetQuery(con, sprintf(
     "SELECT count(*) AS n FROM ein_relation WHERE ein_b = '%s'", ph[1]))$n, 3)
 })
+
+test_that("co-tenancy skips places md_build_places() labels as not a family", {
+  skip_if_not_installed("duckdb")
+  con <- layer_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  # the school's address turns out to be an accountant's c/o address
+  DBI::dbExecute(con, "CREATE TABLE place AS SELECT '1 SCHOOL ST 11111' AS place_key,
+    'cluster' AS place_class, TRUE AS flag_care_of, FALSE AS flag_cmra,
+    FALSE AS flag_bank_trust, FALSE AS flag_agent_churn")
+  r <- build_all(con, types = "co_tenant")
+  expect_false("CTN-1 SCHOOL ST|11111" %in% r$c$cluster_id)
+  # a plain cluster place still forms one
+  DBI::dbExecute(con, "UPDATE place SET flag_care_of = FALSE")
+  r <- build_all(con, types = "co_tenant")
+  expect_true("CTN-1 SCHOOL ST|11111" %in% r$c$cluster_id)
+})

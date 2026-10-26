@@ -25,8 +25,9 @@
 #'
 #' @section Grouping on a key, storing the raw string:
 #' Deduplication needs some normalisation or trivial punctuation differences
-#' become separate variants. Rows are grouped on a light key - uppercased,
-#' non-alphanumerics stripped, whitespace collapsed - but the stored `name_raw`
+#' become separate variants. Rows are grouped on the light key
+#' ([md_light_key()]: accents and `&` spelled out, uppercased, punctuation
+#' dropped, whitespace collapsed) - but the stored `name_raw`
 #' is the **most frequently written raw form** within the group, so the database
 #' still holds a string a filer actually typed rather than a normalised
 #' reconstruction. `np_normalize()` derived columns are built from that raw
@@ -88,6 +89,7 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
 
   # Recipient EIN to EIN2. Anything that is not nine digits is dropped rather
   # than coerced: a mangled identifier attaches one charity's rows to another.
+  .md_light_key_macro(con)
   DBI::dbExecute(con, "
     CREATE OR REPLACE TEMP TABLE si_clean AS
     SELECT
@@ -96,8 +98,7 @@ md_ingest_schedi <- function(version = "v2_2", years = NULL, con = NULL,
       'EIN-' || substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),1,2) || '-' ||
                 substr(lpad(regexp_replace(coalesce(filer_ein,''),'[^0-9]','','g'),9,'0'),3,9) AS filer_ein,
       tax_year, name_raw, street_raw, city_raw, state, zip5,
-      trim(regexp_replace(regexp_replace(upper(name_raw), '[^A-Z0-9 ]', '', 'g'),
-                          ' +', ' ', 'g'))                    AS name_key
+      md_light_key(name_raw)                                  AS name_key
     FROM (
       SELECT *, lpad(regexp_replace(coalesce(recipient_ein_raw,''),'[^0-9]','','g'), 9, '0') AS d
       FROM si_raw

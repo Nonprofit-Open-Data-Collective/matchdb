@@ -55,3 +55,27 @@ test_that("the bundle carries the clusters touching its EINs", {
   expect_equal(cl$ein, "EIN-10-0000001")       # e3, inactive, is outside the bundle
   expect_equal(cl$cluster_id, "GRP-1")
 })
+
+test_that("a bundle carries address sharing over exactly its own rows", {
+  con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  root <- tempfile("pub"); sp <- md_spec(label = "t-addr")
+  suppressMessages(md_publish(sp, root, con))
+  got <- md_reference("t-addr", root, build_index = FALSE)
+  expect_s3_class(got$addr_freq, "np_addr_freq")
+  expect_identical(unclass(got$addr_freq), unclass(md_addr_freq(as.data.frame(got$reference))))
+  expect_true("addr_freq.parquet" %in% names(got$stamp$files))
+  expect_equal(got$stamp$addr_freq$share_min, 10)
+})
+
+test_that("a bundle carries the place evidence for its own places", {
+  con <- compile_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  suppressMessages(md_build_places(con))
+  root <- tempfile("pub"); sp <- md_spec(label = "t-place")
+  suppressMessages(md_publish(sp, root, con))
+  got <- md_reference("t-place", root, build_index = FALSE)
+  expect_named(got$places, c("place", "layer", "unit"))
+  keys <- unique(md_place_key(got$reference$street_key, got$reference$zip5))
+  expect_true(all(got$places$place$place_key %in% keys))
+  expect_true(all(c("place.parquet", "place_layer.parquet", "place_unit.parquet") %in%
+                  names(got$stamp$files)))
+})

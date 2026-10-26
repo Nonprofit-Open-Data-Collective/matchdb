@@ -42,6 +42,14 @@ gate passes with three zeros; four tiers published.**
 > reported EIN, matched against `active-legal`, 60 of 739 non-YES queries roll
 > up to a family, and the true EIN is in it 90% of the time. Brand-type
 > clusters were the weakest (1 of 5).
+>
+> **Next: stable identity and incremental updates** (`dev/IDENTITY.md`,
+> proposed 2026-10-24, Phase 5 below). Row ids are still a running counter, and
+> every ingest still replaces its source wholesale, so a newer BMF or e-Postcard
+> overwrites the only history those sources have. The plan gives every name,
+> address and observation a content hash and keeps one append-only observation
+> ledger, with an update rule for each kind of source. Its step 0 is done: the BMF
+> ingest no longer deletes every other source when re-run.
 
 This is the design document for `matchdb`, written before implementation so the
 boundaries can be argued about while they are still cheap to move. It was
@@ -1212,6 +1220,13 @@ and a full rebuild in DuckDB is minutes. Build `md_ingest_*()` as **idempotent
 full loads keyed on `source_vintage`**. Combined with §7d's derived primacy, this
 removes a whole class of drift bug at negligible cost.
 
+> **Revisited 2026-10-24** (`dev/IDENTITY.md`, "Why this reverses §10"). The
+> diff proposed there compares exact bytes only, so it never has to decide
+> whether two addresses are the same place: that stays in the compact tables, as
+> now. A full build now takes 70 minutes, not minutes. And a full reload cannot
+> recover history that a snapshot source (the monthly BMF, the e-Postcard) has
+> already overwritten.
+
 **Affiliates are not DBAs.** Group-exemption subordinates and affiliate chapters
 are *distinct EINs with near-identical names* — precisely the condition that
 produces false matches. Registering "BOYS AND GIRLS CLUB OF SPRINGFIELD" as an
@@ -1366,6 +1381,14 @@ from `dev/GROUP-STRUCTURE-FINDINGS.md`: derive `group_id` from `ein_relation`
 (§4), and ingest e-file `AffiliateListing` names as `observed` variants (§10) —
 the latter is a `name` ingest with no schema change and can move ahead of the
 rest of the phase.
+
+**Phase 5 — stable identity and incremental updates.** Content-hash ids for
+names, addresses and observations; an append-only observation ledger; one update
+rule per kind of source (cache, snapshot, series, mentions); derived columns keyed
+on the string and the normalizer signature. The full plan and its build order are
+in `dev/IDENTITY.md`. **Success criterion:** the Phase 1 gate stays at three
+zeros, the Phase 2 measurement reproduces, and applying releases one at a time
+gives the same database as rebuilding from the pinned files.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.

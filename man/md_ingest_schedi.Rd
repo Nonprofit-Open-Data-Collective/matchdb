@@ -62,8 +62,9 @@ Losing the link is what turns a useful source into a row explosion.
 \section{Grouping on a key, storing the raw string}{
 
 Deduplication needs some normalisation or trivial punctuation differences
-become separate variants. Rows are grouped on a light key - uppercased,
-non-alphanumerics stripped, whitespace collapsed - but the stored \code{name_raw}
+become separate variants. Rows are grouped on the light key
+(\code{\link[=md_light_key]{md_light_key()}}: accents and \code{&} spelled out, uppercased, punctuation
+dropped, whitespace collapsed) - but the stored \code{name_raw}
 is the \strong{most frequently written raw form} within the group, so the database
 still holds a string a filer actually typed rather than a normalised
 reconstruction. \code{np_normalize()} derived columns are built from that raw

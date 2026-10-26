@@ -1,8 +1,9 @@
 #' Ingest the unified BMF into entity, name and address
 #'
-#' Reads the pinned BMF parquet and writes the three core tables. Idempotent:
-#' a full load keyed on `source_vintage`, per §10, so re-running replaces rather
-#' than accumulating.
+#' Reads the pinned BMF parquet and writes its rows into the three core tables.
+#' Idempotent: re-running replaces the BMF's own rows rather than accumulating,
+#' and leaves every other source's rows alone, so a newer BMF can be loaded into
+#' a database that already holds Schedule I, the return headers and the rest.
 #'
 #' @section What this does and does not populate:
 #' The BMF is a snapshot, not a panel (§4), so this fills the identity spine and
@@ -20,10 +21,36 @@
 #' is `bmf_inactive`. `status_code` is carried separately rather than conflated
 #' with layer, because status is mutable and layer is provenance (§4).
 #'
+#' @section Loading into a database that already has other sources:
+#' This used to `CREATE OR REPLACE` all three tables, which deleted every other
+#' source's rows and made the BMF loadable only as the first step of a fresh
+#' build. It now deletes and re-inserts only its own rows, in one transaction:
+#'
+#' \itemize{
+#'   \item `name` and `address`: rows with `source = 'bmf'`.
+#'   \item `entity`: rows from any earlier BMF load, plus any row an earlier
+#'     ingest wrote for an EIN this file contains. The BMF is the identity spine,
+#'     so its row replaces a `filer_only`, `approved_only` or other placeholder
+#'     for the same EIN.
+#'   \item An EIN that an earlier BMF load had but this file does not, and that
+#'     another source's `name`, `address` or `entity_event` row still refers to,
+#'     is put back with the layer a fresh build would give it: that of the
+#'     earliest-built source still naming it (`approved_only` for 1023-EZ,
+#'     `filer_only` for the 990 filings and schedules, `postcard_only`,
+#'     `revoked_only`). No row is left pointing at a missing entity.
+#' }
+#'
+#' Replaced rows lose whatever later steps wrote onto them, and the new BMF rows
+#' get new `name_id`/`address_id` values. After a re-ingest, re-run the steps
+#' that follow the ingests in `dev/build-matchdb.R` (NTEE, geocode, guards,
+#' derived columns with `incremental = TRUE`, compaction, groups, keys,
+#' clusters, statistics). The ingest prints this reminder when it replaced
+#' anything.
+#'
 #' @param version The pinned `bmf_unified` version, e.g. `"v2026-08-11"`.
 #' @param con A connection from [md_db()]. Opened and closed here if `NULL`.
 #' @param validate Run [md_validate()] on each table and stop on failure.
-#' @return A named list of row counts, invisibly.
+#' @return A named vector of the BMF's own row counts, invisibly.
 #' @export
 md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
   pin <- md_source_read_pin("bmf_unified", version)
@@ -38,18 +65,18 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
 
   vintage <- paste0("bmf_unified-", version)
-  P <- function(sql) DBI::dbExecute(con, sprintf(sql, src, vintage))
   msg <- function(...) message(sprintf(...))
 
   DBI::dbExecute(con, sprintf(
-    "CREATE OR REPLACE VIEW bmf_src AS SELECT * FROM read_parquet('%s')", src))
+    "CREATE OR REPLACE TEMP VIEW bmf_src AS SELECT * FROM read_parquet('%s')",
+    gsub("\\\\", "/", src)))
+  on.exit(DBI::dbExecute(con, "DROP VIEW IF EXISTS bmf_src"), add = TRUE, after = FALSE)
   newest <- DBI::dbGetQuery(con, "SELECT max(last_vintage_ym) AS v FROM bmf_src")$v
 
   msg("bmf_unified %s - newest vintage in file: %s", version, newest)
 
-  ## ---- entity ---------------------------------------------------------------
-  DBI::dbExecute(con, sprintf("
-    CREATE OR REPLACE TABLE entity AS
+  ## ---- the three SELECTs ------------------------------------------------------
+  entity_sql <- sprintf("
     SELECT
       EIN2                                   AS ein,
       CASE WHEN last_vintage_ym = '%s' THEN 'bmf_active' ELSE 'bmf_inactive' END AS layer,
@@ -76,16 +103,15 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       CAST(NULL AS VARCHAR) AS ntee_source,
       CAST(NULL AS VARCHAR) AS nteev2,
       '%s'                                   AS source_vintage
-    FROM bmf_src", newest, newest, vintage))
-  n_entity <- .md_n(con, "entity")
-  msg("  entity  %s rows", format(n_entity, big.mark = ","))
+    FROM bmf_src", newest, newest, vintage)
 
-  ## ---- name -----------------------------------------------------------------
   # Three variant classes come straight off the BMF row. `legal` uses
   # org_name_raw rather than org_name_join: the database stores what the source
   # wrote, and normalization is a derived column built later (§3).
-  DBI::dbExecute(con, sprintf("
-    CREATE OR REPLACE TABLE name AS
+  #
+  # Ids are numbered in a fixed order so the same file always gets the same ids
+  # relative to `base` (PAIN-POINTS.md: no order-dependent results in an ingest).
+  name_sql <- function(base) sprintf("
     WITH v AS (
       SELECT EIN2 AS ein, org_name_raw      AS name_raw, 'legal'      AS variant_class FROM bmf_src
       WHERE org_name_raw IS NOT NULL AND org_name_raw <> ''
@@ -97,7 +123,7 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       WHERE in_care_of_name_raw IS NOT NULL AND in_care_of_name_raw <> ''
     )
     SELECT
-      row_number() OVER ()      AS name_id,
+      %s + row_number() OVER (ORDER BY ein, variant_class, name_raw) AS name_id,
       ein, name_raw, variant_class,
       'bmf'                     AS source,
       '%s'                      AS source_vintage,
@@ -107,15 +133,11 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
       -- the first one (the return headers)
       CAST(NULL AS INTEGER)     AS first_year,
       CAST(NULL AS INTEGER)     AS last_year
-    FROM v", vintage))
-  n_name <- .md_n(con, "name")
-  msg("  name    %s rows", format(n_name, big.mark = ","))
+    FROM v", format(base, scientific = FALSE), vintage)
 
-  ## ---- address --------------------------------------------------------------
-  DBI::dbExecute(con, sprintf("
-    CREATE OR REPLACE TABLE address AS
+  address_sql <- function(base) sprintf("
     SELECT
-      row_number() OVER ()      AS address_id,
+      %s + row_number() OVER (ORDER BY EIN2) AS address_id,
       EIN2                      AS ein,
       CAST(NULL AS BIGINT)      AS name_id,
       org_addr_street_raw       AS street_raw,
@@ -139,16 +161,86 @@ md_ingest_bmf <- function(version, con = NULL, validate = TRUE) {
     -- a place without a street (city, state or ZIP only) is still a place: the
     -- pfmatch reference keeps it, and a ZIP alone still blocks and scores
     WHERE coalesce(trim(org_addr_street_raw), '') <> '' OR coalesce(trim(org_addr_city_raw), '') <> ''
-       OR coalesce(trim(org_addr_state), '') <> '' OR coalesce(trim(org_addr_zip5), '') <> ''", vintage))
-  n_addr <- .md_n(con, "address")
+       OR coalesce(trim(org_addr_state), '') <> '' OR coalesce(trim(org_addr_zip5), '') <> ''",
+    format(base, scientific = FALSE), vintage)
+
+  ## ---- write: delete our own rows, insert the new ones ------------------------
+  # One transaction, so a failure part-way cannot leave the BMF's names deleted
+  # and its new ones not yet written.
+  replaced <- c(entity = 0, name = 0, address = 0)
+  superseded <- 0; restored <- 0
+  is_bmf_entity <- "starts_with(coalesce(source_vintage, ''), 'bmf_unified-')"
+
+  DBI::dbWithTransaction(con, {
+    ## entity
+    if (!DBI::dbExistsTable(con, "entity")) {
+      DBI::dbExecute(con, paste("CREATE TABLE entity AS", entity_sql))
+    } else {
+      replaced["entity"] <- DBI::dbGetQuery(con, sprintf(
+        "SELECT count(*) AS n FROM entity WHERE %s", is_bmf_entity))$n
+      superseded <- DBI::dbGetQuery(con, sprintf(
+        "SELECT count(*) AS n FROM entity
+         WHERE NOT %s AND ein IN (SELECT EIN2 FROM bmf_src)", is_bmf_entity))$n
+      DBI::dbExecute(con, sprintf(
+        "DELETE FROM entity WHERE %s OR ein IN (SELECT EIN2 FROM bmf_src)",
+        is_bmf_entity))
+      DBI::dbExecute(con, paste("INSERT INTO entity BY NAME", entity_sql))
+    }
+
+    ## name
+    if (!DBI::dbExistsTable(con, "name")) {
+      DBI::dbExecute(con, paste("CREATE TABLE name AS", name_sql(0)))
+    } else {
+      replaced["name"] <- DBI::dbExecute(con, "DELETE FROM name WHERE source = 'bmf'")
+      base <- DBI::dbGetQuery(con, "SELECT coalesce(max(name_id), 0) AS m FROM name")$m
+      DBI::dbExecute(con, paste("INSERT INTO name BY NAME", name_sql(base)))
+    }
+
+    ## address
+    if (!DBI::dbExistsTable(con, "address")) {
+      DBI::dbExecute(con, paste("CREATE TABLE address AS", address_sql(0)))
+    } else {
+      replaced["address"] <- DBI::dbExecute(con, "DELETE FROM address WHERE source = 'bmf'")
+      base <- DBI::dbGetQuery(con, "SELECT coalesce(max(address_id), 0) AS m FROM address")$m
+      DBI::dbExecute(con, paste("INSERT INTO address BY NAME", address_sql(base)))
+    }
+
+    ## EINs an earlier BMF had, this one does not, and another source still uses.
+    restored <- .md_restore_unlisted_entities(con)
+
+    n_entity <- DBI::dbGetQuery(con, sprintf(
+      "SELECT count(*) AS n FROM entity WHERE source_vintage = '%s'", vintage))$n
+    n_name <- DBI::dbGetQuery(con, "SELECT count(*) AS n FROM name WHERE source = 'bmf'")$n
+    n_addr <- DBI::dbGetQuery(con, "SELECT count(*) AS n FROM address WHERE source = 'bmf'")$n
+
+    for (tb in list(c("entity", n_entity), c("name", n_name), c("address", n_addr))) {
+      md_record_vintage(con, "bmf_unified", version, tb[1], as.integer(tb[2]),
+                        build_note = sprintf("md_ingest_bmf(); active vintage %s", newest),
+                        content_vintage = newest, content_vintage_rule = "measured")
+    }
+  })
+
+  msg("  entity  %s rows", format(n_entity, big.mark = ","))
+  msg("  name    %s rows", format(n_name, big.mark = ","))
   msg("  address %s rows", format(n_addr, big.mark = ","))
 
-  DBI::dbExecute(con, "DROP VIEW IF EXISTS bmf_src")
-
-  for (tb in list(c("entity", n_entity), c("name", n_name), c("address", n_addr))) {
-    md_record_vintage(con, "bmf_unified", version, tb[1], as.integer(tb[2]),
-                      build_note = sprintf("md_ingest_bmf(); active vintage %s", newest),
-                      content_vintage = newest, content_vintage_rule = "measured")
+  if (sum(replaced) + superseded + restored > 0) {
+    msg("  replaced earlier BMF rows: %s entity, %s name, %s address",
+        format(replaced[["entity"]], big.mark = ","),
+        format(replaced[["name"]], big.mark = ","),
+        format(replaced[["address"]], big.mark = ","))
+    if (superseded > 0) {
+      msg("  %s filer_only placeholder(s) replaced by their BMF row",
+          format(superseded, big.mark = ","))
+    }
+    if (restored > 0) {
+      msg("  %s EIN(s) no longer in the BMF kept as filer_only - other sources refer to them",
+          format(restored, big.mark = ","))
+    }
+    msg(paste("  replaced rows lost later enrichment and have new ids. Re-run the",
+              "steps after the ingests in dev/build-matchdb.R: NTEE, geocode, guards,",
+              "derived columns (incremental = TRUE), compaction, groups, keys,",
+              "clusters, statistics"))
   }
 
   counts <- stats::setNames(c(n_entity, n_name, n_addr), c("entity", "name", "address"))
@@ -183,6 +275,44 @@ md_validate_bmf <- function(con) {
     required = c("variant_class", "source_vintage")))
 
   invisible(TRUE)
+}
+
+# The layer each ingest gives an EIN it admits that no BMF lists, in the order
+# dev/build-matchdb.R runs them. The first ingest to see an EIN sets its layer,
+# so an EIN put back after leaving the BMF takes the layer of the earliest-built
+# source that still refers to it - the layer a fresh build would give it.
+# A source not listed here falls back to filer_only, after the listed ones.
+.md_admit_layers <- data.frame(
+  source = c("f1023ez", "efile990", "schedi", "schedr", "e_postcard", "revocations"),
+  layer  = c("approved_only", "filer_only", "filer_only", "filer_only",
+             "postcard_only", "revoked_only"),
+  rk     = c(1L, 2L, 2L, 2L, 3L, 4L),
+  stringsAsFactors = FALSE)
+
+# Put back every EIN that some name, address or event row refers to but entity
+# no longer has, so no row points at a missing entity. Returns the count.
+.md_restore_unlisted_entities <- function(con) {
+  refs <- c("SELECT ein, source, source_vintage FROM name",
+            "SELECT ein, source, source_vintage FROM address")
+  if (DBI::dbExistsTable(con, "entity_event")) {
+    refs <- c(refs, "SELECT ein, source, source_vintage FROM entity_event")
+  }
+  m <- .md_admit_layers
+  case <- function(col, default) sprintf("CASE r.source %s ELSE %s END",
+    paste(sprintf("WHEN '%s' THEN %s", m$source,
+                  if (col == "layer") sprintf("'%s'", m$layer) else m$rk),
+          collapse = " "), default)
+  DBI::dbExecute(con, sprintf("
+    INSERT INTO entity (ein, layer, active, source_vintage)
+    SELECT ein, layer, FALSE, source_vintage FROM (
+      SELECT r.ein, r.source_vintage, %s AS layer,
+             row_number() OVER (PARTITION BY r.ein
+                                ORDER BY %s, r.source_vintage) AS pick
+      FROM (%s) r
+      WHERE r.ein NOT IN (SELECT ein FROM entity)
+    ) WHERE pick = 1",
+    case("layer", "'filer_only'"), case("rk", "99"),
+    paste(refs, collapse = " UNION ALL ")))
 }
 
 .md_n <- function(con, tb) {

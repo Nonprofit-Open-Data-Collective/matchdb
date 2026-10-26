@@ -137,9 +137,19 @@ md_build_clusters <- function(con = NULL,
   }
 
   if ("co_tenant" %in% types) {
+    # Where md_build_places() has run, only a plain cluster place forms a
+    # family: an accountant's c/o address, a mailbox store or an agent's
+    # address with a churning client list holds unrelated organisations however
+    # few there are (dev/PLACES.md section 6). ein_key writes a place as
+    # street_key|zip5, place as npmatch's "street_key zip5".
+    not_family <- if (DBI::dbExistsTable(con, "place")) "
+                 AND NOT EXISTS (SELECT 1 FROM place p
+                   WHERE p.place_key = replace(ein_key.key, '|', ' ')
+                     AND (p.place_class <> 'cluster' OR p.flag_care_of OR p.flag_cmra
+                          OR p.flag_bank_trust OR p.flag_agent_churn))" else ""
     add(sprintf("SELECT 'CTN-' || key, 'co_tenant', ein, 'member', 'shared_place', NULL, key
-                 FROM ein_key WHERE kind = 'place' AND n_eins_sharing BETWEEN 2 AND %d",
-                as.integer(max_cotenants)))
+                 FROM ein_key WHERE kind = 'place' AND n_eins_sharing BETWEEN 2 AND %d%s",
+                as.integer(max_cotenants), not_family))
   }
 
   ## ---- write the three tables ---------------------------------------------------

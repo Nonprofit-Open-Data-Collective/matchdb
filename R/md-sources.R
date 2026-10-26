@@ -120,8 +120,58 @@ md_sources <- function() {
   out$origin <- ifelse(!is.na(out$url), "remote",
                 ifelse(out$source %in% local,   "local",
                 ifelse(out$source %in% derived, "derived", "unrecorded")))
-  out[, c("source", "feeds", "origin", "url", "format", "pointer", "years", "size", "note")]
+
+  # How a new release of each source changes the database, and what one
+  # observation of it means (dev/IDENTITY.md section 2, ?md_source_kinds).
+  kind <- c(
+    bmf_unified = "seed", bmf_active = "snapshot", e_postcard = "snapshot",
+    efile_header = "series", efile_orgtext = "series", efile_officers = "series",
+    f1023ez = "series", irs527 = "series",
+    # a cumulative list re-pulled whole: each row is one revocation, and a
+    # reinstated organisation stays on it with its reinstatement date
+    revocations = "series",
+    schedi = "mentions", efile_related = "mentions", efile_disregarded = "mentions",
+    efile_related_ptr = "mentions", efile_related_corp = "mentions",
+    efile_affiliate_listing = "mentions", efile_sched_c_affil = "mentions",
+    irs527_related = "mentions",
+    meta_names = "cache", meta_addresses = "cache", meta_group_aff = "cache",
+    meta_group_number = "cache", meta_group_return = "cache",
+    ntee_crosswalk = "cache", address_crosswalk = "cache", address_geocoded = "cache")
+  out$kind <- unname(kind[out$source])
+  out[, c("source", "feeds", "kind", "origin", "url", "format", "pointer", "years",
+          "size", "note")]
 }
+
+#' The kinds of source
+#'
+#' Every source in [md_sources()] has a `kind`, which decides how a new release
+#' of it changes the database and what one observation of it means
+#' (`dev/IDENTITY.md` section 2):
+#'
+#' \describe{
+#'   \item{`cache`}{Compiled once; a new release is a correction. One observation
+#'     is one row as delivered. A new release is diffed as a whole file.}
+#'   \item{`snapshot`}{Republishes the current state, one row per EIN,
+#'     overwriting old values (the monthly BMF, the e-Postcard). One observation
+#'     is a spell: an unbroken run of releases with the same value.}
+#'   \item{`seed`}{A snapshot that has already been folded into one row per EIN
+#'     (`bmf_unified`). Loaded once; its date ranges bound the EIN, not the
+#'     value.}
+#'   \item{`series`}{An organisation describing itself once per period (the 990
+#'     header, 1023-EZ), or a cumulative list re-pulled whole. One observation is
+#'     one period; corroboration is how many periods a value appeared in.}
+#'   \item{`mentions`}{Third parties writing about an organisation as often as
+#'     they like (Schedule I grants, Schedule R). One observation is one row,
+#'     repeats included; corroboration is how many times, and by how many
+#'     filers.}
+#' }
+#'
+#' "Snapshot" rather than "roster": in this package a roster is a group-return
+#' roster (`md_ingest_affiliate_listing()`).
+#'
+#' @return A character vector of kinds.
+#' @export
+md_source_kinds <- function() c("cache", "snapshot", "seed", "series", "mentions")
 
 # NCCS metadata crosswalks. Static keys, not pointers - dated 2023-09 (group)
 # and 2024-05/07 (names, addresses).
@@ -234,13 +284,16 @@ md_source_pin <- function(source, file, version = NULL) {
   if (length(file) > 1L) {
     per <- stats::setNames(unname(tools::md5sum(file)), basename(file))
     per <- per[order(names(per))]
-    return(.md_write_pin(source, version %||% "v-set", row, list(
+    version <- version %||% "v-set"
+    pin <- .md_write_pin(source, version, row, list(
       local_file = sprintf("%d files: %s ... %s", length(file),
                            names(per)[1], names(per)[length(per)]),
       local_size = as.character(sum(file.info(file)$size)),
       local_md5  = .md_md5_string(paste(names(per), per, collapse = "\n")),
       file_count = as.character(length(file))
-    ), dirname(file[1])))
+    ), dirname(file[1]))
+    .md_write_files(md_path("sources", source, version), file)
+    return(invisible(pin))
   }
 
   # A monthly snapshot's url names its month with %s; fill it from the version
@@ -292,6 +345,7 @@ md_source_pin <- function(source, file, version = NULL) {
 
   write.dcf(as.data.frame(pin, stringsAsFactors = FALSE),
             file.path(dest, "PIN.dcf"))
+  .md_write_files(dest, file)
   invisible(pin)
 }
 
@@ -301,6 +355,32 @@ md_source_read_pin <- function(source, version) {
   f <- md_path("sources", source, version, "PIN.dcf")
   if (!file.exists(f)) return(NULL)
   as.list(as.data.frame(read.dcf(f), stringsAsFactors = FALSE))
+}
+
+#' @rdname md_source_pin
+#' @details Every pin also writes `FILES.csv` beside `PIN.dcf`: one row per
+#'   file with its name, size and md5. A set pin's own `local_md5` is a digest
+#'   of these, so it says *that* a year changed; `FILES.csv` says *which*, which
+#'   is what lets a re-release skip the year files that did not change
+#'   (`dev/IDENTITY.md` section 5). `md_source_read_files()` returns it, or
+#'   `NULL` for a pin written before `FILES.csv` existed.
+#' @export
+md_source_read_files <- function(source, version) {
+  f <- md_path("sources", source, version, "FILES.csv")
+  if (!file.exists(f)) return(NULL)
+  utils::read.csv(f, colClasses = "character", stringsAsFactors = FALSE)
+}
+
+# One row per pinned file, sorted by name so the file is the same however the
+# caller listed them.
+.md_write_files <- function(dest, file) {
+  d <- data.frame(file = basename(file),
+                  size = as.character(file.info(file)$size),
+                  md5  = unname(tools::md5sum(file)),
+                  stringsAsFactors = FALSE)
+  d <- d[order(d$file), , drop = FALSE]
+  utils::write.csv(d, file.path(dest, "FILES.csv"), row.names = FALSE)
+  invisible(d)
 }
 
 #' Has an upstream pointer moved since we pinned it?

@@ -31,7 +31,9 @@ compact_fixture <- function(con, with_guards = TRUE) {
     n_obs = c(NA, 1L, NA, 2L), n_corroborators = NA_integer_,
     first_vintage = "2020", last_vintage = "2024")
   DBI::dbWriteTable(con, "address", ad)
-  DBI::dbWriteTable(con, "address_derived", data.frame(address_id = ad$address_id))
+  # address compaction reads the normalized street key (Phase 5 step 6)
+  DBI::dbWriteTable(con, "address_derived",
+                    data.frame(address_id = ad$address_id, street_key = toupper(ad$street_raw)))
 }
 
 with_compact <- function(code, with_guards = TRUE) {
