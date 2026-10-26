@@ -625,10 +625,18 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    *Tested on fixtures* (`test-normalizer-diff.R`), including a replay of the
    `ddfd967` defect: an old signature writing the text "NA" as `street_name`
    where there is no street. The diff finds exactly those cells, and reports
-   no address regrouping, since `street_key` did not move. *Pending:* the real
-   run, with the pre-`ddfd967` npmatch's rows and the current one's in one
-   database. The next real test is npmatch's unmerged
-   `fix/normalizer-special-letters` (ß), which changes the signature.
+   no address regrouping, since `street_key` did not move. **First real run,
+   2026-10-26**, at sample scale, across the upgrade from `ddfd967`
+   (`v1-6dcb…`) to `26a5910` (`v1-3e7b…`: the ß fix and the new suite parser),
+   on a database built from the S3 samples:
+   * **Names:** 0 of 37,029 changed.
+   * **Addresses:** `street_key` changed on 585 of 30,527 (1.9%; npmatch
+     measured 1.78% on the BMF).
+   * **Rows:** 759 address rows were rekeyed, 4 groups merged, 4 EINs
+     regrouped.
+   The workflow below worked as written. *Pending:* the same run on a full
+   database. The `ddfd967` replay itself still needs the pre-`ddfd967` rows,
+   which no database here holds.
    *Workflow for any npmatch upgrade:* with the old npmatch installed, run
    `md_build_text_derived()`; install the new one and run it again (it adds
    the new signature beside the old); then run `md_normalizer_diff(con, old)`

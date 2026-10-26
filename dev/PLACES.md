@@ -1,8 +1,28 @@
 # Places: what matchdb should compute about shared addresses
 
-**Status: built, 2026-10-26, and tested on fixtures. The full-database checks
-in §7 are pending, and so are the parity tests that wait for npmatch's
-`fix/address-class` to be merged and installed (§8).**
+**Status: built, 2026-10-26. Tested on fixtures, and against npmatch `main`
+(`26a5910`, signature `v1-3e7b9f9d59bbb19e`), which merged `fix/address-class`
+in its PR #18. Every parity test now runs and passes (674 checks, none
+skipped). The full-database checks in §7 are pending.**
+
+**What installing npmatch `26a5910` showed (2026-10-26):**
+* **Normalizer diff.** `md_normalizer_diff()` on a sample database built from
+  the S3 samples (37,029 names, 30,527 addresses), `v1-6dcb…` → `v1-3e7b…`:
+  * **Names:** none changed.
+  * **Addresses:** `street_key` changed on 585 (1.9%), close to npmatch's 1.78%
+    on the full BMF. 3,478 (11.4%) gained a `street_unit_id`.
+  * **Rows:** 759 address rows were rekeyed, 4 address groups merged, and 4
+    EINs regrouped.
+* **Parsing.** "1 HARDY RD PMB 173" now keys as "1 HARDY RD" with unit PMB
+  173, and "10 OLDE CENTURY FARM RD" is no longer cut at "FA".
+* **The second address line works end to end:** a suite there lands in
+  `street_unit_id`, and a PO box there stays out of the street.
+* **Integration.** `md_addr_freq()` calls npmatch's exported `np_addr_freq()`.
+  The place key, suite id and light key equal npmatch's own functions.
+* **Consequence:** bundles stamped `v1-6dcb…`, which includes the four
+  published tiers, are refused by `md_reference()` under this npmatch until
+  they are republished, and the Phase 1 baseline must be re-frozen on the new
+  signature.
 
 This note answers npmatch's `dev/MATCHDB-ADDRESS-UNIQUENESS.md` (branch
 `fix/address-class`, commits `4bc7fa7`, `9337d75`, `f8229b6`). It covers what
