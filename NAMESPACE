@@ -50,6 +50,8 @@ export(md_compare_rollups)
 export(md_install_rollups)
 export(md_link_derived)
 export(md_build_ledger)
+export(md_normalizer_diff)
+S3method(print, md_normalizer_diff)
 
 export(md_canon)
 export(md_hash_id)

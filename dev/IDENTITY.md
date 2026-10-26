@@ -1,9 +1,9 @@
 # Stable IDs, change detection and folding in new vintages
 
-**Status: in progress, 2026-10-25, reconciled with `main` at `d75d73c` (Phases
-0–3 complete, four tiers published). Steps 0–6 are built and tested on
-fixtures. Pending on a full database: step 3's measurement and step 6's three
-regression checks. Step 7 is not started.**
+**Status: built, 2026-10-25, reconciled with `main` at `d75d73c` (Phases 0–3
+complete, four tiers published). All eight steps (0–7) are built and tested on
+fixtures. Pending on a full database: step 3's measurement, step 6's three
+regression checks, and step 7's run across real npmatch versions.**
 
 This plan takes on three problems that remain after Phases 0–3:
 
@@ -615,7 +615,31 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
      tax years;
    * address compaction merges street spellings.
 7. **`md_normalizer_diff()`.** *Check:* run across `npmatch@ddfd967`; it finds
-   the cells the Phase 1 gate found.
+   the cells the Phase 1 gate found. **Built 2026-10-25**
+   (`R/md-normalizer-diff.R`). For two signatures stored side by side, it
+   reports how many strings each has, how many changed in each derived column
+   (with examples), and what that does to `name` and `address` rows: how many
+   are rekeyed, how many key groups merge or split within an EIN, and how many
+   EINs regroup. Those are the rows whose compiled reference rows would change.
+   It works on today's ingest-built tables as well as on installed rollups.
+   *Tested on fixtures* (`test-normalizer-diff.R`), including a replay of the
+   `ddfd967` defect: an old signature writing the text "NA" as `street_name`
+   where there is no street. The diff finds exactly those cells, and reports
+   no address regrouping, since `street_key` did not move. *Pending:* the real
+   run, with the pre-`ddfd967` npmatch's rows and the current one's in one
+   database. The next real test is npmatch's unmerged
+   `fix/normalizer-special-letters` (ß), which changes the signature.
+   *Workflow for any npmatch upgrade:* with the old npmatch installed, run
+   `md_build_text_derived()`; install the new one and run it again (it adds
+   the new signature beside the old); then run `md_normalizer_diff(con, old)`
+   and read the report before rebuilding on the new signature.
+
+**The light key and npmatch, 2026-10-25.** At npmatch's request,
+`md_light_key()` was checked against npmatch's `.np_basic_clean()` and brought
+into line: apostrophes and in-word periods are deleted, and every other mark
+becomes a space. `test-light-key.R` compares the two directly. It skips until
+an npmatch with the special-letter table is installed, because the current
+`ddfd967` still turns ß into a space.
 
 `orgtext`, `ein_relation`, `entity_event` and `person_key` would gain from the
 same pattern but are left out of the first pass. Names and addresses are what
