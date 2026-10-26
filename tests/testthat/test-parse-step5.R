@@ -147,3 +147,21 @@ test_that("revocations key on EIN and date, and a second revocation is a second 
   r <- apply_raw(con, raw2, md_parse_revocations, "revocations", "v2026-08")
   expect_equal(c(r$n_new, r$n_kept, r$n_retracted), c(1, 4, 0))
 })
+
+test_that("the second address line is kept as the unit, not joined to the street", {
+  skip_if_no_parse_deps()
+  con <- parse_con(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  # measured in the 2022 Schedule I sample: line 2 holds suites, PO boxes, buildings
+  raw <- data.frame(
+    EIN2 = "EIN-11-1111111", OBJECTID = "701", TABLE_ID = c("TID-1", "TID-2"), TAX_YEAR = "2022",
+    RETURN_TIME_STAMP = "2023-05-01", SI_02_GRANT_US_ORG_EIN = c("133039601", "530196605"),
+    SI_02_GRANT_US_ORG_NAME_L1 = c("ALPHA TRUST", "BETA FUND"), SI_02_GRANT_US_ORG_NAME_L2 = "",
+    SI_02_GRANT_US_ORG_ADDR_L1 = c("93 COTTAGE STREET", "103 MAINE AVENUE"),
+    SI_02_GRANT_US_ORG_ADDR_L2 = c("SUITE 1", "PO BOX 1358"),
+    SI_02_GRANT_US_ORG_ADDR_CITY = "BATH", SI_02_GRANT_US_ORG_ADDR_STATE = "ME",
+    SI_02_GRANT_US_ORG_ADDR_ZIP = "04530", stringsAsFactors = FALSE)
+  apply_raw(con, raw, md_parse_schedi, "schedi", "v3_1", part = 2022)
+  a <- DBI::dbGetQuery(con, "SELECT street_raw, unit_raw FROM address_text ORDER BY street_raw")
+  expect_equal(a$street_raw, c("103 MAINE AVENUE", "93 COTTAGE STREET"))
+  expect_equal(a$unit_raw, c("PO BOX 1358", "SUITE 1"))
+})

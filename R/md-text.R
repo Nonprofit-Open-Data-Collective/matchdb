@@ -132,14 +132,15 @@ md_build_text_derived <- function(con, what = c("name", "address"), chunk = 1000
         state = blank(nrow(d)), stringsAsFactors = FALSE))
   }
   if ("address" %in% what) {
-    # the same four inputs md_build_derived() gives the normalizer
+    # the same inputs md_build_derived() gives the normalizer, the second
+    # address line included as `unit`
     out["address"] <- .md_text_derive_pass(con, "address_text", "address_text_id",
-      "address_text_derived", .md_derived_address_cols, sig, chunk,
-      select = "SELECT address_text_id AS id, street_raw, zip5, zip_plus4, state FROM address_text",
+      "address_text_derived", .md_address_cols(), sig, chunk,
+      select = "SELECT address_text_id AS id, street_raw, unit_raw, zip5, zip_plus4, state FROM address_text",
       shape = function(d) data.frame(
         name = blank(nrow(d)), dba = blank(nrow(d)), division = blank(nrow(d)),
-        street = e(d$street_raw), zip5 = e(d$zip5), zip_plus4 = e(d$zip_plus4),
-        state = e(d$state), stringsAsFactors = FALSE))
+        street = e(d$street_raw), unit = e(d$unit_raw), zip5 = e(d$zip5),
+        zip_plus4 = e(d$zip_plus4), state = e(d$state), stringsAsFactors = FALSE))
   }
   invisible(out)
 }
@@ -196,6 +197,9 @@ md_text_stats <- function(con) {
 .md_text_derive_pass <- function(con, src, id, dest, keep, sig, chunk, select, shape) {
   msg <- function(...) message(sprintf(...))
   if (!DBI::dbExistsTable(con, dest)) .md_text_derived_create(con, dest, id, keep, shape)
+  # a newer npmatch can add a column (street_unit_id): add it to the table, empty
+  # for the older signatures' rows, rather than fail the append
+  .md_text_derived_add_cols(con, dest, keep, shape)
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE txt_todo AS
     SELECT %s FROM %s
@@ -226,17 +230,31 @@ md_text_stats <- function(con) {
 # normalizer's own output for a one-row input, so they follow npmatch rather
 # than a list kept here.
 .md_text_derived_create <- function(con, dest, id, keep, shape) {
-  probe <- npmatch::np_normalize(shape(data.frame(
-    id = "x", name_raw = "PROBE", street_raw = "1 MAIN ST", zip5 = "60601",
-    zip_plus4 = "", state = "IL", stringsAsFactors = FALSE)))[, keep, drop = FALSE]
-  sql_type <- function(v) {
-    if (is.logical(v)) "BOOLEAN" else if (is.integer(v)) "INTEGER"
-    else if (is.numeric(v)) "DOUBLE" else "VARCHAR"
-  }
-  cols <- vapply(names(probe), function(nm) sprintf('"%s" %s', nm, sql_type(probe[[nm]])),
-                 character(1))
+  types <- .md_text_derived_types(keep, shape)
+  cols <- sprintf('"%s" %s', names(types), types)
   DBI::dbExecute(con, sprintf(
     "CREATE TABLE %s (%s VARCHAR NOT NULL, normalize_signature VARCHAR NOT NULL, %s,
        PRIMARY KEY (%s, normalize_signature))",
     dest, id, paste(cols, collapse = ", "), id))
+}
+
+.md_text_derived_add_cols <- function(con, dest, keep, shape) {
+  missing <- setdiff(keep, DBI::dbListFields(con, dest))
+  if (!length(missing)) return(invisible(character(0)))
+  types <- .md_text_derived_types(missing, shape)
+  for (nm in names(types)) {
+    DBI::dbExecute(con, sprintf('ALTER TABLE %s ADD COLUMN "%s" %s', dest, nm, types[[nm]]))
+  }
+  invisible(missing)
+}
+
+# SQL types of the normalizer's output columns, read off a one-row probe.
+.md_text_derived_types <- function(keep, shape) {
+  probe <- npmatch::np_normalize(shape(data.frame(
+    id = "x", name_raw = "PROBE", street_raw = "1 MAIN ST", unit_raw = "", zip5 = "60601",
+    zip_plus4 = "", state = "IL", stringsAsFactors = FALSE)))[, keep, drop = FALSE]
+  vapply(probe, function(v) {
+    if (is.logical(v)) "BOOLEAN" else if (is.integer(v)) "INTEGER"
+    else if (is.numeric(v)) "DOUBLE" else "VARCHAR"
+  }, character(1))
 }

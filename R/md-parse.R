@@ -72,8 +72,7 @@ md_parse_schedi <- function(con, relation, view = "frame_schedi") {
     SELECT md_ein2(SI_02_GRANT_US_ORG_EIN) AS ein, 'observed' AS role,
            trim(coalesce(SI_02_GRANT_US_ORG_NAME_L1, '') || ' ' ||
                 coalesce(SI_02_GRANT_US_ORG_NAME_L2, '')) AS name_raw,
-           trim(coalesce(SI_02_GRANT_US_ORG_ADDR_L1, '') || ' ' ||
-                coalesce(SI_02_GRANT_US_ORG_ADDR_L2, '')) AS street_raw,
+           SI_02_GRANT_US_ORG_ADDR_L1 AS street_raw, SI_02_GRANT_US_ORG_ADDR_L2 AS unit_raw,
            SI_02_GRANT_US_ORG_ADDR_CITY AS city_raw, SI_02_GRANT_US_ORG_ADDR_STATE AS state,
            md_zip5(SI_02_GRANT_US_ORG_ADDR_ZIP) AS zip5,
            md_zip4(SI_02_GRANT_US_ORG_ADDR_ZIP) AS zip_plus4,
@@ -197,8 +196,7 @@ md_parse_efile_related <- function(con, relation, view = "frame_efile_related") 
     SELECT md_ein2(SR_02_RLTD_ORG_EIN) AS ein, 'observed' AS role,
            trim(coalesce(SR_02_RLTD_ORG_NAME_L1, '') || ' ' ||
                 coalesce(SR_02_RLTD_ORG_NAME_L2, '')) AS name_raw,
-           trim(coalesce(SR_02_RLTD_ORG_ADDR_L1, '') || ' ' ||
-                coalesce(SR_02_RLTD_ORG_ADDR_L2, '')) AS street_raw,
+           SR_02_RLTD_ORG_ADDR_L1 AS street_raw, SR_02_RLTD_ORG_ADDR_L2 AS unit_raw,
            SR_02_RLTD_ORG_ADDR_CITY AS city_raw, SR_02_RLTD_ORG_ADDR_STATE AS state,
            md_zip5(SR_02_RLTD_ORG_ADDR_ZIP) AS zip5, md_zip4(SR_02_RLTD_ORG_ADDR_ZIP) AS zip_plus4,
            md_ein2(EIN2) AS asserted_by, OBJECTID AS record_key, TABLE_ID AS trace_key,
@@ -218,10 +216,9 @@ md_parse_affiliate_listing <- function(con, relation, view = "frame_affiliate_li
   # the published tables (e-file v3_1) carry the subordinate's address; the
   # older local extract does not
   addr <- if ("F9_00_AFFIL_ADDR_L1" %in% cols) {
-    "trim(coalesce(F9_00_AFFIL_ADDR_L1, '') || ' ' || coalesce(F9_00_AFFIL_ADDR_L2, '')),
-     F9_00_AFFIL_ADDR_CITY, F9_00_AFFIL_ADDR_STATE,
+    "F9_00_AFFIL_ADDR_L1, F9_00_AFFIL_ADDR_L2, F9_00_AFFIL_ADDR_CITY, F9_00_AFFIL_ADDR_STATE,
      md_zip5(F9_00_AFFIL_ADDR_ZIP), md_zip4(F9_00_AFFIL_ADDR_ZIP)"
-  } else "NULL, NULL, NULL, NULL, NULL"
+  } else "NULL, NULL, NULL, NULL, NULL, NULL"
   filer <- if ("ORG_EIN" %in% cols) "coalesce(ORG_EIN, EIN2)" else "EIN2"
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP VIEW %s AS
@@ -232,7 +229,7 @@ md_parse_affiliate_listing <- function(con, relation, view = "frame_affiliate_li
              md_ein2(%s), OBJECTID, TABLE_ID, TAX_YEAR, RETURN_TIME_STAMP
       FROM %s
       WHERE length(md_digits(F9_00_AFFIL_EIN)) = 9 AND length(md_digits(%s)) = 9
-    ) AS f (ein, role, name_raw, street_raw, city_raw, state, zip5, zip_plus4,
+    ) AS f (ein, role, name_raw, street_raw, unit_raw, city_raw, state, zip5, zip_plus4,
             asserted_by, record_key, trace_key, period, filed_at)
     WHERE ein <> asserted_by AND name_raw <> ''", view, addr, filer, relation, filer))
   view
@@ -242,22 +239,27 @@ md_parse_affiliate_listing <- function(con, relation, view = "frame_affiliate_li
 #' @export
 md_parse_e_postcard <- function(con, relation, view = "frame_e_postcard") {
   .md_ledger_macros(con)
+  # the second address line, kept apart as the unit (dev/PLACES.md section 3)
+  line2 <- if ("organization_address_line_2" %in%
+               names(DBI::dbGetQuery(con, sprintf("SELECT * FROM %s LIMIT 0", relation)))) {
+    "organization_address_line_2"
+  } else "NULL"
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP VIEW %s AS
     WITH p AS (SELECT *, md_ein2(ein) AS ein2 FROM %s)
     SELECT ein2 AS ein, 'legal' AS role, legal_name AS name_raw,
-           NULL AS street_raw, NULL AS city_raw, NULL AS state, NULL AS zip5, NULL AS zip_plus4,
-           ein2 AS record_key FROM p WHERE md_nonblank(legal_name)
-    UNION ALL SELECT ein2, 'dba', dba_name_1, NULL, NULL, NULL, NULL, NULL, ein2
+           NULL AS street_raw, NULL AS unit_raw, NULL AS city_raw, NULL AS state, NULL AS zip5,
+           NULL AS zip_plus4, ein2 AS record_key FROM p WHERE md_nonblank(legal_name)
+    UNION ALL SELECT ein2, 'dba', dba_name_1, NULL, NULL, NULL, NULL, NULL, NULL, ein2
     FROM p WHERE md_nonblank(dba_name_1)
-    UNION ALL SELECT ein2, 'dba', dba_name_2, NULL, NULL, NULL, NULL, NULL, ein2
+    UNION ALL SELECT ein2, 'dba', dba_name_2, NULL, NULL, NULL, NULL, NULL, NULL, ein2
     FROM p WHERE md_nonblank(dba_name_2)
-    UNION ALL SELECT ein2, 'dba', dba_name_3, NULL, NULL, NULL, NULL, NULL, ein2
+    UNION ALL SELECT ein2, 'dba', dba_name_3, NULL, NULL, NULL, NULL, NULL, NULL, ein2
     FROM p WHERE md_nonblank(dba_name_3)
     UNION ALL
-    SELECT ein2, 'mailing', NULL, organization_address_line_1, organization_city,
+    SELECT ein2, 'mailing', NULL, organization_address_line_1, %s, organization_city,
            organization_state, md_zip5(organization_zip), md_zip4(organization_zip), ein2
-    FROM p", view, relation))
+    FROM p", view, relation, line2))
   view
 }
 

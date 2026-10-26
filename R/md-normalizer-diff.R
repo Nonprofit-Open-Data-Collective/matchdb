@@ -41,7 +41,7 @@ md_normalizer_diff <- function(con, old, new = npmatch::np_normalize_signature()
     list(tbl = "name", dtable = "name_text_derived", text = "name_text", id = "name_text_id",
          label = "name_raw", cols = .md_derived_name_cols, key = "name_key", by_zip = FALSE),
     list(tbl = "address", dtable = "address_text_derived", text = "address_text",
-         id = "address_text_id", label = "street_raw", cols = .md_derived_address_cols,
+         id = "address_text_id", label = "street_raw", cols = .md_address_cols(),
          key = "street_key", by_zip = TRUE))
   coverage <- columns <- ex <- groups <- list()
 

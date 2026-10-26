@@ -288,7 +288,7 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
     LEFT JOIN cp_dba d ON d.ein = p.ein
     %s
     ORDER BY p.ein, n.variant_class, n.class_rank, p.street_key NULLS LAST, p.zip5, p.link_key",
-    sel("nd", .md_derived_name_cols), sel("ad", .md_derived_address_cols),
+    sel("nd", .md_derived_name_cols), sel("ad", .md_address_cols()),
     if (!stored) "" else
       "LEFT JOIN name_derived nd ON nd.name_id = n.name_id
        LEFT JOIN address_derived ad ON ad.address_id = a.address_id"))
@@ -451,7 +451,7 @@ print.md_reference <- function(x, ...) {
 .md_assemble_stored <- function(ref) {
   proto <- .md_blank_frame()
   has <- ref$.has_address %in% TRUE
-  for (col in .md_derived_address_cols) {
+  for (col in .md_address_cols()) {
     v <- ref[[paste0(".a_", col)]]
     v[!has] <- proto[[col]]
     ref[[col]] <- v                    # zip5 here is np_normalize()'s parsed zip5

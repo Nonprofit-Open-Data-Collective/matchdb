@@ -88,7 +88,7 @@ test_that("text-keyed columns equal what md_build_derived() stores per row", {
      ORDER BY n.name_id", cols, sig))
   expect_equal(by_text, by_row, ignore_attr = TRUE)
 
-  acols <- paste(sprintf("d.%s", .md_derived_address_cols), collapse = ", ")
+  acols <- paste(sprintf("d.%s", .md_address_cols()), collapse = ", ")
   a_row <- DBI::dbGetQuery(con, sprintf(
     "SELECT a.address_id, %s FROM address a JOIN address_derived d USING (address_id)
      ORDER BY a.address_id", acols))

@@ -84,7 +84,7 @@ md_build_rollups <- function(con) {
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP TABLE ru_obs AS
     WITH o AS (
-      SELECT o.*, m.tag, m.addr_class, n.name_raw, a.street_raw, a.city_raw,
+      SELECT o.*, m.tag, m.addr_class, n.name_raw, a.street_raw, a.unit_raw, a.city_raw,
              a.state, a.zip5, a.zip_plus4,
              first_value(o.record_key) OVER (
                PARTITION BY o.source, o.asserted_by, o.period
@@ -196,15 +196,17 @@ md_build_rollups <- function(con) {
     ), sp AS (
       SELECT * FROM (
         SELECT ein, tag, cls, link_lk, street_lk, city_lk, state_k, zip5_k, address_text_id,
-               street_raw, city_raw, state, zip5, zip_plus4,
+               street_raw, unit_raw, city_raw, state, zip5, zip_plus4,
                row_number() OVER (PARTITION BY ein, tag, cls, link_lk, street_lk, city_lk, state_k, zip5_k
-                                  ORDER BY count(*) DESC, street_raw, city_raw, state, zip5, zip_plus4) AS rk
+                                  ORDER BY count(*) DESC, street_raw, unit_raw NULLS FIRST, city_raw,
+                                           state, zip5, zip_plus4) AS rk
         FROM src
         GROUP BY ein, tag, cls, link_lk, street_lk, city_lk, state_k, zip5_k, address_text_id,
-                 street_raw, city_raw, state, zip5, zip_plus4)
+                 street_raw, unit_raw, city_raw, state, zip5, zip_plus4)
       WHERE rk = 1
     ), j AS (
-      SELECT g.*, sp.address_text_id, sp.street_raw, sp.city_raw, sp.state, sp.zip5, sp.zip_plus4,
+      SELECT g.*, sp.address_text_id, sp.street_raw, sp.unit_raw, sp.city_raw, sp.state, sp.zip5,
+             sp.zip_plus4,
         %s AS n_support,
         md_hash_id_8('av.v1', g.ein, g.tag, g.cls, g.link_lk, g.street_lk, g.city_lk,
                      g.state_k, g.zip5_k) AS address_uid,
@@ -219,7 +221,7 @@ md_build_rollups <- function(con) {
     SELECT CAST(row_number() OVER (ORDER BY j.address_uid) AS BIGINT) AS address_id,
            j.address_uid, j.address_text_id, j.ein,
            CAST(NULL AS BIGINT) AS name_id,
-           j.street_raw, j.city_raw, j.state, j.zip5, j.zip_plus4,
+           j.street_raw, j.unit_raw, j.city_raw, j.state, j.zip5, j.zip_plus4,
            CASE WHEN j.cls = 'recency' THEN CASE WHEN j.spell_rank = 0 THEN 'mailing' ELSE 'historical' END
                 ELSE j.cls END AS variant_class,
            j.spell_rank, j.tag AS source, v.source_vintage,
@@ -357,6 +359,6 @@ md_link_derived <- function(con, signature = npmatch::np_normalize_signature()) 
   }
   n <- c(name = one("name", "name_id", "name_text_id", "name_text_derived", .md_derived_name_cols),
          address = one("address", "address_id", "address_text_id", "address_text_derived",
-                       .md_derived_address_cols))
+                       .md_address_cols()))
   invisible(n)
 }
