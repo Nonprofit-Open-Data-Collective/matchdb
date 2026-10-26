@@ -330,13 +330,17 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
   # the ledger writes blanks where ingests wrote NULLs, and collapses runs of
   # spaces (md_canon), so keys are compared that way
   k <- function(p, col) sprintf("trim(regexp_replace(coalesce(%s%s, ''), '\\s+', ' ', 'g'))", p, col)
+  # each value in the rollup's type: today's BMF ingest stores is_po_box as text
+  ty <- DBI::dbGetQuery(con, "SELECT column_name, data_type FROM duckdb_columns()
+                              WHERE table_name = 'rollup_address' AND NOT internal")
+  ty <- stats::setNames(ty$data_type, ty$column_name)[cols]
   n <- DBI::dbExecute(con, sprintf("
     UPDATE rollup_address r SET %s
     FROM (SELECT %s, %s FROM address
           WHERE %s
           GROUP BY ALL) o
     WHERE %s",
-    paste(sprintf("%s = coalesce(r.%s, o.%s)", cols, cols, cols), collapse = ", "),
+    paste(sprintf("%s = coalesce(r.%s, TRY_CAST(o.%s AS %s))", cols, cols, cols, ty), collapse = ", "),
     paste(sprintf("%s AS k_%s", k("", keys), keys), collapse = ", "),
     paste(sprintf("any_value(%s) AS %s", cols, cols), collapse = ", "),
     paste(sprintf("%s IS NOT NULL", cols), collapse = " OR "),

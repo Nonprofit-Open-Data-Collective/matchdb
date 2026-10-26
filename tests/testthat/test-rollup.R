@@ -124,13 +124,17 @@ test_that("installing keeps the BMF's own geography for the same address", {
   r <- DBI::dbGetQuery(con, "SELECT ein, source, street_raw, city_raw, state, zip5 FROM rollup_address")
   # a live row for the same spelling with geography, and one for another street
   # (the live row spaced differently, as ingests left it)
-  live <- rbind(cbind(transform(r, street_raw = "1  MAIN ST "), county = "Cook County", lat = 41.88),
-                cbind(transform(r, street_raw = "9 ELSEWHERE"), county = "Lake County", lat = 42.0))
+  # is_po_box as text, as today's BMF ingest stores it
+  live <- rbind(cbind(transform(r, street_raw = "1  MAIN ST "), county = "Cook County", lat = 41.88,
+                      is_po_box = "FALSE"),
+                cbind(transform(r, street_raw = "9 ELSEWHERE"), county = "Lake County", lat = 42.0,
+                      is_po_box = "TRUE"))
   DBI::dbWriteTable(con, "address", cbind(address_id = 1:2, live))
   .md_carry_address_attrs(con)
-  got <- DBI::dbGetQuery(con, "SELECT county, lat FROM rollup_address")
+  got <- DBI::dbGetQuery(con, "SELECT county, lat, is_po_box FROM rollup_address")
   expect_equal(got$county, "Cook County")
   expect_equal(got$lat, 41.88)
+  expect_identical(got$is_po_box, FALSE)
 })
 
 test_that("an observed address is one row per name and place, whatever the street spelling", {
