@@ -21,23 +21,35 @@ abbreviations, word order - for the normalizer's derived columns. So
 FOUNDATION and FOUNDAITON stay apart here.
 }
 \details{
-The steps, in order:
+The rule is npmatch's own name cleaning (\code{.np_basic_clean()}), so a key
+built here and a key npmatch builds for a query agree. The steps, in order:
 \enumerate{
 \item Accent marks are removed: É to E, ñ to n, ö to o.
 \item Letters that are not an accented form of another letter are written
 the way English text writes them: Ø to O, Ł to L, Đ to D, ı to i, Æ to
-AE, Œ to OE, ß to SS, Þ to TH.
+AE, Œ to OE, ß and ẞ to SS, Þ to TH (npmatch's \code{.np_special_letters}).
 \item \code{&} becomes the word AND, so "A & B", "A&B" and "A AND B" are one.
 \item Uppercase.
-\item Tabs, newlines and no-break spaces become spaces.
-\item Every remaining character other than A-Z, 0-9 and space is deleted:
-"ST. MARY'S" is "ST MARYS".
+\item Joiners are \strong{deleted}: every apostrophe (' ‘ ’ ʼ ´ `) and any
+period between two letters or digits. "BO'S PLACE" is "BOS PLACE" and
+"F.I.N.D." is "FIND", as the BMF holds them. A period that already
+separates words keeps its break: "ST. LUKES" is "ST LUKES".
+\item Every other character outside A-Z and 0-9 becomes a \strong{space}:
+punctuation, tabs and newlines, and any non-Latin character. So
+"WINSTON-SALEM", "A/B" and "SMITH,JONES" keep two words each.
 \item Runs of spaces become one; leading and trailing spaces go.
 }
 
-Until 2026-10-25 steps 1-3 and 5 did not exist: accented and other non-ASCII
-letters were deleted ("CAFÉ" became "CAF", "STRAßE" "STRAE"), \code{&} was deleted
-while AND was kept, and a tab joined the words either side of it.
+History. Until 2026-10-25 (morning) steps 1-3 did not exist and every
+non-alphanumeric character was deleted: "CAFÉ" became "CAF", \code{&} vanished
+while AND was kept, and a tab joined two words. The first fix kept deletion
+for punctuation, which glued "WINSTON-SALEM" into one word where npmatch
+keeps two; steps 5-6 now follow npmatch exactly.
+
+One known residual: npmatch transliterates with ICU's Latin-ASCII, which also
+spells out rarer forms (ligatures such as "ﬁ", for example). SQL has no
+Latin-ASCII, so here those become a space. They are vanishingly rare in
+organisation names.
 
 Ingests compute the key in SQL through the macro \code{md_light_key(x)}
 (installed by \code{.md_light_key_macro()}); this R function is the same rule, and
