@@ -1,8 +1,9 @@
 # Stable IDs, change detection and folding in new vintages
 
 **Status: in progress, 2026-10-25, reconciled with `main` at `d75d73c` (Phases
-0–3 complete, four tiers published). Steps 0–5 are done, except step 3's
-measurement on a full database, which is pending. Steps 6–7 are not started.**
+0–3 complete, four tiers published). Steps 0–6 are built and tested on
+fixtures. Pending on a full database: step 3's measurement and step 6's three
+regression checks. Step 7 is not started.**
 
 This plan takes on three problems that remain after Phases 0–3:
 
@@ -379,34 +380,48 @@ orphaned.
 
 | table | grain | id |
 |---|---|---|
-| `name` | `(ein, name_text_id)` | `md5('nv.v1' ␟ ein ␟ name_text_id)` |
-| `address` | `(ein, address_text_id)` | `md5('av.v1' ␟ ein ␟ address_text_id)` |
+| `name` | `(ein, source, variant_class, light key)`: today's grain | `name_uid = md5('nv.v1' ␟ ein ␟ source ␟ role ␟ light key)` |
+| `address` | `(ein, source, class, paired name, street, city, state, ZIP)` under the light key | `address_uid = md5('av.v1' ␟ …)` |
 | `entity` | `ein` | `EIN2` |
 | `name_compact` | `(ein, name_key)` under one normalizer signature | — |
 | `address_compact` | `(ein, street_key, city_key, state, zip5)` under one signature | — |
 
+**Built in step 6 at today's grain, not at `(ein, name_text_id)`.** An earlier
+draft rolled names up per exact spelling and merged across sources. Building it
+showed why that waits. Compile, the corroboration bands, the guards and the
+source bitmask all read one row per source and spelling group. A per-spelling
+grain would split a name's filers across its spellings and move rows between
+bands, which would change the published tiers for a reason that has nothing to
+do with this plan. So the rollups reproduce today's grouping, and the ledger
+underneath keeps every spelling. A finer grain is a separate change, with its
+own gate run.
+
 `name` and `address` keep the columns `md_compile()`, `md_build_stats()`, the
 guards, groups and clusters read today (`variant_class`, `source`,
-`n_corroborators`, `first_year`, `last_year`, ...). They are computed from the
-ledger instead of written by each ingest, so everything downstream keeps working
-during the change.
+`n_corroborators`, `first_year`, `last_year`, ...), and add `name_uid`/
+`address_uid`, the chosen spelling's text id, and `n_periods`, `n_mentions`,
+`n_spells`, `n_support`. `n_obs` is set to `n_support`, which is how compile's
+tiebreak moved onto it without a code change. `name_id` and `address_id` stay
+integers because compile joins on them. They are renumbered on every rebuild,
+and `name_derived`/`address_derived` are rebuilt with them from the text-keyed
+columns by a join (`md_link_derived()`), so nothing can be orphaned.
 
 Things that are written at ingest today become rollup-time derivations, which is
 where `PLAN.md` §7d already wanted them:
 
 * `former`: a legal name superseded by a later legal name, from the ledger's
   periods. Today it is computed inside `md_ingest_efile_header()`.
-* `active` and `layer`: from the open snapshot spells and which sources an EIN
-  has. `active` = an open spell in the newest `bmf_active` release. `layer`
-  follows the first-ingest-wins order step 0 encoded
-  (`.md_admit_layers` in `R/md-ingest-bmf.R`).
+* A 990-header address is `mailing` if it is the EIN's most recent, otherwise
+  `historical`, as `md_ingest_efile_header()` decides today.
 * Guard inputs (`n_self_filers`, `filer_ein_lo/hi`): from `asserted_by`.
+* `active` and `layer`: **not yet.** The ledger holds names and addresses, not
+  the BMF's other attributes, so `entity` is still built by the ingests. The
+  rollups keep only EINs `entity` knows, as today's ingests do.
 
-The `name` rollup can be larger than today's `name` table, because it keeps every
-raw spelling where today's ingests keep only the most common spelling per light
-key. It also merges rows across sources, which pulls the size the other way.
-Measure both in step 3. Compile reads the compact tables either way, and those
-stay keyed on `name_key`.
+**Not carried:** the BMF's own `lat`, `lon`, `county` and `cbsa` are not in the
+ledger. `md_ingest_geocode()` refills geography after the install, as the build
+already runs it. Whether its coverage matches the BMF's own fields is one of the
+things the full-database comparison will show.
 
 ---
 
@@ -458,6 +473,11 @@ rule stays as it is. Two things are needed first:
 * **A measurement.** Check whether `street_key` includes the unit. If it does,
   suite variants of one building stay apart. That may be right for matching but
   wrong for counting places. Report the reduction against the current table.
+  **Answered 2026-10-25: it does not.** npmatch puts the unit in `street_unit`,
+  so "123 Main St Suite 5" and "123 Main St Ste 5" both have the `street_key`
+  "123 MAIN ST", the same as "123 MAIN STREET". Suites in one building count as
+  one place. Built in step 6, with the city keyed on `md_light_key()` until
+  npmatch normalizes cities. The reduction is pending the full database.
 
 ---
 
@@ -558,6 +578,42 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    address compaction onto normalized keys. Groups, keys, clusters and
    statistics rebuild unchanged on top. *Check:* the three regression checks
    above; any change to a published tier explained before republishing.
+   **Built 2026-10-25; the full-database checks are pending.** Pieces:
+   * `md_build_rollups()` writes `rollup_name` and `rollup_address` beside the
+     live tables. `md_compare_rollups()` reports, per source and class, row
+     counts and how many rows of each side find a match in the other.
+     `md_install_rollups()` swaps them in, keeping `name_legacy` and
+     `address_legacy`, but only after checking that every spelling has derived
+     columns: a failed install changes nothing. `md_link_derived()` rebuilds
+     `name_derived` and `address_derived` from the text-keyed columns.
+   * `md_build_ledger()` loads every pinned file into the ledger, one release
+     per file, skipping files already applied by their md5. `dev/build-ledger.R`
+     runs it on a built database and prints the comparison and the step 3
+     measurement; with `--install` it swaps the rollups in and reruns
+     everything downstream. Versions now live in `dev/build-versions.R`, which
+     `dev/build-matchdb.R` reads too.
+   * Address compaction keys on npmatch's `street_key` and the city's light key
+     instead of `upper(trim(raw))`.
+   *Tested on fixtures*:
+   * **Parity:** on the same BMF and Schedule I files, the rollups equal what
+     today's ingests write, row for row: names, addresses, counts, years and
+     the observed-address pairing (`test-ingest-bmf.R`).
+   * **Rollup rules:** former names, header address recency, the latest-return
+     rule (an amended return counts once), stable `name_uid` across a rebuild
+     that renumbers every integer id, EINs outside `entity` held back, a
+     refused install leaving the database untouched, and two spellings of 123
+     Main St compacting to one place (`test-rollup.R`).
+   * **The driver:** one release per year file, and an unchanged rerun skips
+     every file (`test-ledger-build.R`).
+   *To run the checks:* `Rscript dev/build-matchdb.R`, then
+   `Rscript dev/build-ledger.R` (review the comparison), then
+   `Rscript dev/build-ledger.R --install`, then the Phase 1 gate, the Phase 2
+   measurement and `check-build`. Expect small, explainable differences:
+   * the light key now merges accent and `&` variants;
+   * the affiliate listing gains addresses;
+   * e-Postcard and snapshot years come from release vintages, not postcard
+     tax years;
+   * address compaction merges street spellings.
 7. **`md_normalizer_diff()`.** *Check:* run across `npmatch@ddfd967`; it finds
    the cells the Phase 1 gate found.
 

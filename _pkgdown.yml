@@ -84,6 +84,9 @@ reference:
   - md_ledger
   - md_apply_release
   - md_parse
+  - md_build_ledger
+  - md_rollup
+  - md_link_derived
 - title: Building the database
   desc: >
     The ingests, in the order dev/build-matchdb.R runs them, then the derived

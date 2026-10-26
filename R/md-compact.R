@@ -81,11 +81,10 @@ md_build_compact <- function(con = NULL, what = c("name", "address"),
   msg <- function(...) message(sprintf(...))
   out <- integer(0)
 
-  # name_compact joins name_derived; a stale derived table degrades this to a
-  # silent partial join rather than an error (?md_check_derived_fresh).
-  # address_compact does not join address_derived and is unaffected, but the
-  # check costs one query and catches drift before it is trusted either way.
-  if ("name" %in% what) md_check_derived_fresh(con)
+  # Both compact tables join their derived table (address_compact since Phase 5
+  # step 6, for the normalized street key); a stale one degrades the join to a
+  # silent partial match rather than an error (?md_check_derived_fresh).
+  md_check_derived_fresh(con)
 
   if ("name" %in% what) out["name"] <- .md_compact_name(con, msg, drop_guarded)
   if ("address" %in% what) out["address"] <- .md_compact_address(con, msg, drop_guarded)
@@ -193,21 +192,27 @@ md_build_compact <- function(con = NULL, what = c("name", "address"),
       format(n_guarded, big.mark = ","),
       if (drop_guarded) "excluded (drop_guarded = TRUE)" else "kept, marked in guard_any")
 
+  # Places are counted on normalized keys (Phase 5 step 6): the street is
+  # npmatch's street_key, so "123 Main St" and "123 MAIN STREET" are one place,
+  # and the city is the light key (?md_light_key) until npmatch normalizes
+  # cities. Until 2026-10-25 both were upper(trim(raw)), which counted every
+  # spelling of a street as a separate place.
+  .md_light_key_macro(con)
   DBI::dbExecute(con, "DROP TABLE IF EXISTS address_compact")
   DBI::dbExecute(con, sprintf("
     CREATE TABLE address_compact AS
     WITH ga AS (%s), keyed AS (
-      SELECT ein,
-             nullif(upper(trim(street_raw)), '') AS street_key,
-             nullif(upper(trim(city_raw)), '')   AS city_key,
-             nullif(upper(trim(state)), '')       AS state,
-             nullif(zip5, '')                     AS zip5,
-             n_obs, n_corroborators,
-             TRY_CAST(regexp_extract(coalesce(first_vintage,''), '^[0-9]{4}') AS INTEGER) AS vintage_lo,
-             TRY_CAST(regexp_extract(coalesce(last_vintage,''),  '^[0-9]{4}') AS INTEGER) AS vintage_hi,
+      SELECT a.ein,
+             nullif(d.street_key, '')               AS street_key,
+             nullif(md_light_key(a.city_raw), '')   AS city_key,
+             nullif(upper(trim(a.state)), '')       AS state,
+             nullif(a.zip5, '')                     AS zip5,
+             a.n_obs, a.n_corroborators,
+             TRY_CAST(regexp_extract(coalesce(a.first_vintage,''), '^[0-9]{4}') AS INTEGER) AS vintage_lo,
+             TRY_CAST(regexp_extract(coalesce(a.last_vintage,''),  '^[0-9]{4}') AS INTEGER) AS vintage_hi,
              %s AS source_bit,
-             address_id IN (SELECT address_id FROM ga) AS guarded
-      FROM address
+             a.address_id IN (SELECT address_id FROM ga) AS guarded
+      FROM address a JOIN address_derived d ON CAST(d.address_id AS BIGINT) = a.address_id
       WHERE %s
     ), agg AS (
       SELECT ein, street_key, city_key, state, zip5,
@@ -238,20 +243,20 @@ md_build_compact <- function(con = NULL, what = c("name", "address"),
      AND x.city_key   IS NOT DISTINCT FROM a.city_key
      AND x.state       IS NOT DISTINCT FROM a.state
      AND x.zip5        IS NOT DISTINCT FROM a.zip5
-    WHERE x.ein IS NULL", ga_sql, bit_case,
-    if (drop_guarded) "address_id NOT IN (SELECT address_id FROM ga)" else "TRUE"))
+    WHERE x.ein IS NULL", ga_sql, gsub("source", "a.source", bit_case, fixed = TRUE),
+    if (drop_guarded) "a.address_id NOT IN (SELECT address_id FROM ga)" else "TRUE"))
 
   n <- .md_n(con, "address_compact")
   n_in <- .md_n(con, "address")
   n_exact <- DBI::dbGetQuery(con, "
     SELECT count(*) AS n FROM (
-      SELECT DISTINCT ein,
-             nullif(upper(trim(street_raw)), '') AS street_key,
-             nullif(upper(trim(city_raw)), '')   AS city_key,
-             nullif(upper(trim(state)), '')       AS state,
-             nullif(zip5, '')                     AS zip5
-      FROM address)")$n
-  msg("address_compact: %s raw -> %s after exact dedupe -> %s after domination pruning (%.1f%% total reduction)",
+      SELECT DISTINCT a.ein,
+             nullif(d.street_key, '')               AS street_key,
+             nullif(md_light_key(a.city_raw), '')   AS city_key,
+             nullif(upper(trim(a.state)), '')       AS state,
+             nullif(a.zip5, '')                     AS zip5
+      FROM address a JOIN address_derived d ON CAST(d.address_id AS BIGINT) = a.address_id)")$n
+  msg("address_compact: %s raw -> %s after normalized dedupe -> %s after domination pruning (%.1f%% total reduction)",
       format(n_in, big.mark = ","), format(n_exact, big.mark = ","),
       format(n, big.mark = ","), 100 * (1 - n / n_in))
   n

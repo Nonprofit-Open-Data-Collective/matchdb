@@ -149,6 +149,9 @@ stage_schedi <- function(v = "v2_2") {
     SI_02_GRANT_US_ORG_ADDR_CITY = c("CHICAGO", "CHICAGO", "DENVER", "SALEM"),
     SI_02_GRANT_US_ORG_ADDR_STATE = c("IL", "IL", "CO", "OR"),
     SI_02_GRANT_US_ORG_ADDR_ZIP = c("60601", "60601", "80202", "97301"),
+    # what the ledger parser keys on; today's ingest ignores them
+    OBJECTID = c("o1", "o2", "o3", "o4"), TABLE_ID = "TID-000-000-000",
+    RETURN_TIME_STAMP = "2021-06-01T00:00:00",
     stringsAsFactors = FALSE)
   for (yr in unique(rows$TAX_YEAR)) {
     utils::write.csv(rows[rows$TAX_YEAR == yr, ],
@@ -297,5 +300,52 @@ test_that("Schedule I groups accent and ampersand variants as one name", {
       SELECT n_corroborators FROM name WHERE source = 'schedi' ORDER BY n_corroborators DESC")
     # three filers wrote one name three ways, two wrote another two ways
     expect_equal(n$n_corroborators, c(3, 2))
+  })
+})
+
+## ---- Phase 5 step 6: the ledger reproduces today's name and address tables ----
+
+test_that("rollups from the ledger reproduce what today's BMF and Schedule I ingests write", {
+  skip_if_no_duckdb()
+  skip_if_not_installed("digest")
+  skip_if_not_installed("stringi")
+  with_fake_root({
+    v <- "v2026-08-11"
+    stage_bmf(v)
+    stage_schedi()
+    md_ingest_bmf(v, validate = FALSE)
+    md_ingest_schedi(guard = FALSE)
+
+    con <- md_db(); on.exit(md_db_close(con), add = TRUE)
+    # the same files, through the ledger
+    bmf <- sprintf("read_parquet('%s')",
+                   gsub("\\\\", "/", md_path("sources", "bmf_unified", v, "bmf.parquet")))
+    suppressMessages(md_apply_release(con, md_parse_bmf_unified(con, bmf), "bmf_unified", v))
+    for (yr in c("2020", "2021")) {
+      f <- md_path("sources", "schedi", "v2_2", sprintf("SI-P02-T01-GRANTS-US-ORGS-GOVTS-%s.CSV", yr))
+      rel <- sprintf("read_csv('%s', all_varchar = true)", gsub("\\\\", "/", f))
+      suppressMessages(md_apply_release(con, md_parse_schedi(con, rel), "schedi", "v2_2", part = yr))
+    }
+    suppressMessages(md_build_rollups(con))
+
+    cols <- "ein, source, variant_class, name_raw, n_obs, n_corroborators, first_year, last_year"
+    today <- DBI::dbGetQuery(con, sprintf("SELECT %s FROM name ORDER BY ALL", cols))
+    rolled <- DBI::dbGetQuery(con, sprintf("SELECT %s FROM rollup_name ORDER BY ALL", cols))
+    expect_equal(rolled, today, ignore_attr = TRUE)
+
+    acols <- "ein, source, variant_class, street_raw, city_raw, state, zip5, n_obs, first_vintage, last_vintage"
+    today_a <- DBI::dbGetQuery(con, sprintf("SELECT %s FROM address ORDER BY ALL", acols))
+    rolled_a <- DBI::dbGetQuery(con, sprintf("SELECT %s FROM rollup_address ORDER BY ALL", acols))
+    expect_equal(rolled_a, today_a, ignore_attr = TRUE)
+
+    # observed addresses are paired with the observed name they were written with
+    pairs <- DBI::dbGetQuery(con, "
+      SELECT a.ein, n.name_raw FROM rollup_address a JOIN rollup_name n USING (name_id)
+      WHERE a.variant_class = 'observed' ORDER BY 1")
+    expect_equal(nrow(pairs), nrow(DBI::dbGetQuery(con,
+      "SELECT * FROM rollup_address WHERE variant_class = 'observed'")))
+
+    cmp <- md_compare_rollups(con)
+    expect_true(all(cmp$pct_live_matched == 100 & cmp$pct_rollup_matched == 100))
   })
 })
