@@ -2,8 +2,9 @@
 
 **Status: built, 2026-10-25, reconciled with `main` at `d75d73c` (Phases 0–3
 complete, four tiers published). All eight steps (0–7) are built and tested on
-fixtures. Pending on a full database: step 3's measurement, step 6's three
-regression checks, and step 7's run across real npmatch versions.**
+fixtures. Released 2026-10-26 from `main` at `592b078`: step 6's three
+regression checks pass on the full database, and the ledger ships in
+`MATCHDB-full.duckdb`. Still pending: step 7's run on a full database.**
 
 This plan takes on three problems that remain after Phases 0–3:
 
@@ -578,7 +579,23 @@ the **Phase 2 measurement reproduces +146 YES**, and `dev/check-build.R` stays
    address compaction onto normalized keys. Groups, keys, clusters and
    statistics rebuild unchanged on top. *Check:* the three regression checks
    above; any change to a published tier explained before republishing.
-   **Built 2026-10-25; the full-database checks are pending.** Pieces:
+   **Built 2026-10-25; checked on the full database and released 2026-10-26**
+   (logs in `dev/verify/logs/*-2026-10-26.log`):
+   * Phase 1 gate: three zeros.
+   * Phase 2: +146 YES, unchanged.
+   * `check-build`: 36 of 36.
+   The full run found three defects, all fixed before release:
+   * Compiled frames dropped the second address line, so publish's self-check
+     failed on rows like "STE 1102". `unit_raw` is now carried into the frame.
+   * Installing the rollups lost the BMF's own county and coordinates for
+     1.25M active rows. `md_install_rollups()` now copies `lat`, `lon`,
+     `county`, `cbsa`, `is_po_box` and `n_vintages` from the live `address`
+     rows. It matches them on whitespace- and NULL-normalized keys and casts
+     them to the rollup's column types.
+   * Three ledger bugs, fixed in `fc52bff`.
+   Only maintainer code reads the ledger tables, so the user copy
+   (`MATCHDB.duckdb`, 11.7 GB) leaves them out. The maintainer copy
+   (`MATCHDB-full.duckdb`, 24.3 GB) keeps them. Pieces:
    * `md_build_rollups()` writes `rollup_name` and `rollup_address` beside the
      live tables. `md_compare_rollups()` reports, per source and class, row
      counts and how many rows of each side find a match in the other.

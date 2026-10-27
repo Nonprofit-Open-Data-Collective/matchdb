@@ -2,7 +2,8 @@
 
 **Status: proposal, 2026-08-21. Companion to [`PLAN.md`](PLAN.md). Updated
 2026-10-23: Phase 0 is complete; Phases 1–3 have been run on a from-scratch
-build (§6). Phase 1 passes with three zeros.**
+build (§6). Phase 1 passes with three zeros. Updated 2026-10-26: Phase 5
+released; every gate rerun on the ledger-built database (§6).**
 
 `PLAN.md` decides *what* to build and in what order. This document decides *how
 the work is actually conducted*: what has to be true before the first line of
@@ -455,6 +456,18 @@ Phases are the plan's; the gate column is what this document adds.
 | **2** Schedule I as `observed` | matchdb | **measured.** The three-zero half cannot run: 0a's augmented BMF predates the 2026-09-21 BMF and the current normalizer. 1k delta, `active-legal` → `active-observed`: **+146 YES** (295 gained, 149 lost), the direction 0c measured (+199). One-filer aliases: −527 YES |
 | **3** publication | matchdb | **done.** `md_publish()` / `md_reference()`; the stamp check and an md5 tamper check error by test; `latest.json` rollback exercised by test. Four tiers published (2.75M, 2.89M, 4.98M, 5.14M rows) |
 | **4** remaining layers | matchdb | **ingested**, including the e-Postcard, revocations and officer keys. Shape and absence reports are emitted by `md_compile()` |
+| **5** identity + ledger | matchdb | **released 2026-10-26** (`matchdb@592b078`, npmatch `26a5910`, signature `v1-3e7b9f9d59bbb19e`). Rollups installed from the ledger, then: Phase 1 gate three zeros (0 / 0 rows, 0 of 1,974,830 cells, 0 of 4,715 benchmark rows); Phase 2 +146 YES, as on 2026-10-23; `check-build` 36 of 36; four tiers republished. Uploaded and verified from S3 over public HTTPS. Logs: `dev/verify/logs/*-2026-10-26.log` |
+
+**Release protocol**, as run on 2026-10-26 (scripts in `dev/verify/release/`):
+1. Phase 2 clears.
+2. Merge to `main`.
+3. Drop the legacy tables and copy into a fresh file (`compact.R`: DuckDB does
+   not give space back on DROP).
+4. Write the user copy without the ledger (`slim.R`, checked by
+   `verify-slim.R`).
+5. Write both manifests from `main` (`manifest.R`).
+6. Upload databases first and manifests last (`upload.sh`).
+7. Fetch and compile from S3 as a user would (`verify-remote.R`).
 
 | phase | repo | gate — passes when |
 |---|---|---|
