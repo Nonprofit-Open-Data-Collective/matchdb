@@ -36,7 +36,7 @@ only those.
   name_derived/<layer>/<class>.parquet
   address/<layer>/<class>.parquet    sorted by ein, address_id
   address_derived/<layer>/<class>.parquet
-  tables/<table>.parquet             every other table, whole; sorted by ein where it has one
+  tables/<table>.parquet             every other table, whole; sorted by ein, then every other column
 ```
 
 The build id is the date plus a hash of the file md5s. Builds are never
@@ -144,10 +144,70 @@ credentials:
 * **Reading parquet straight off S3 without downloading** works in DuckDB
   (`read_parquet('https://…')`) and would suit single-EIN lookups. It is not
   wired up, and compiling should download first anyway (§7a).
-* **Rebuilding the same database gives a new build id.** Whole tables are
-  sorted by EIN only, so rows that tie on EIN can come out in a different
-  order and the files' bytes (and md5s) change. The two 2026-10-27 runs gave
-  `9e7ae7a9` and `82c6f0cb`, with identical contents. A full sort would make
-  the id a pure function of the data, at some cost on the big tables.
+* **The live build predates the deterministic sort.** `82c6f0cb` sorted whole
+  tables by EIN only, and 8 of them (1.37 GB) came out in a different row
+  order on each run. Fixed (see "The workspace and its log"): the same
+  database now gives the same build, `d06e747d`. The next upload should be a
+  build made with the fix, so that the update after it can reuse every
+  unchanged file.
 * **Per-cell posting lists** (§6c, §7g) would make `ref_index` a sum as well.
   It is still built from the frame.
+
+## The workspace and its log
+
+**Added 2026-10-27.** Code: `R/md-log.R`, `R/md-tranche-tools.R`. Tests:
+`tests/testthat/test-workspace-log.R`. Real-data check:
+`dev/verify/workspace-check.R`, log in
+`dev/verify/logs/workspace-check-2026-10-27.log`. User guide:
+`vignette("workspace")`.
+
+**Seeing what is published.**
+* `md_tranches(spec)` lists a build's files, marks which are here, and totals
+  what a spec still needs.
+* `md_tranche_manifest()` returns the whole manifest.
+* `md_tranche_diff(old, new)` compares two builds file by file: same, changed,
+  added or removed, the change in rows, and whether the normalizer moved.
+* `md_tranches_prune(keep)` deletes old builds' parquet files and keeps their
+  manifests.
+
+**The log follows panel990** (`logs/runs-index.csv` plus one file per run),
+with two additions panel990 lacks: versions and a current-state record.
+* `logs/runs-index.csv` is append-only. It gets one row per fetch, compile,
+  publish or prune, with the build, spec hash, file counts by status
+  (downloaded, copied, reused, failed), bytes, elapsed time, and the installed
+  matchdb, npmatch (version and commit) and normalizer signature.
+* `logs/<kind>-<run_id>.csv` lists every file an action touched: source URL,
+  status, rows, bytes and md5, with the manifest's own row first.
+  `logs/<kind>-<run_id>.json` holds a compile's spec, stamp and shape.
+* `logs/state.json` is rewritten after every action, and recomputed from disk
+  by `md_status()`. It holds the installed versions, the current build and how
+  much of it is here, the database, the bundles, and the last compile.
+* A `version_change` row is added before an action whenever the installed
+  npmatch or normalizer differs from the last action's, and whenever a fetch
+  moves to a different tranche build or database. These rows answer "why did
+  matching change?". The history is never rewritten; `state.json` carries the
+  current state.
+* Logging never stops an action: a log it cannot write is a warning.
+  `options(matchdb.log = FALSE)` turns it off. Tests run under a throwaway
+  `MATCHDB_DATA` (`tests/testthat/setup-workspace.R`), so they never write
+  into the real folder.
+
+**Updates are file-level, not row-level.** Every build recomputes the derived
+columns, statistics cells, clusters and compact tables over the whole
+database. A release therefore changes files whose own source rows did not
+change, and layering rows into old files would leave them inconsistent. What
+can be saved is the download: `md_fetch_tranches()` copies any file whose md5
+matches one in an older local build. For that to work, a build has to be a
+pure function of its data, so whole tables are now sorted on every column
+after EIN.
+
+**Measured on 2026-10-27:**
+* Two publishes of the release database gave the same build id
+  (`2026-10-27-d06e747d`, 108 of 108 files identical), in 2.6 and 1.9 min.
+* A fresh workspace against the live remote:
+  * `md_tranches()` listed the 108 files and showed `active-legal` needing 17
+    of them (1.03 GB).
+  * Fetching those 17 files and compiling 2,742,924 rows took 1.8 min.
+  * `md_log()` recorded both steps.
+  * The fetch's detail file listed the manifest and 17 files with their md5s.
+  * `md_status()` showed the build, the files present and the last compile.

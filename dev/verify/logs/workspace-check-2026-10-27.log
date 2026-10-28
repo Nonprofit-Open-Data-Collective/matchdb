@@ -1,0 +1,92 @@
+== 1. the same database twice
+  publish a: 2026-10-27-d06e747d, 2.6 min
+  publish b: 2026-10-27-d06e747d, 1.9 min
+  same build id TRUE; files same 108 of 108
+
+== 2. a fresh workspace against https://nccs-efile.s3.amazonaws.com/dev/matchdb 
+<md_tranches 2026-10-27-82c6f0cb> built 2026-10-27 from matchdb@592b078, normalizer v1-3e7b9f9d59bbb19e
+  108 files, 4.64 GB; here: 0 files, 0.00 GB
+  this spec needs 17 files, 1.03 GB; still to download: 17 files, 1.03 GB
+             table         layer files     rows    mb here
+           address approved_only     3    19490   1.2    0
+           address    bmf_active     3 13568639 856.1    0
+           address  bmf_inactive     3  7685589 460.1    0
+           address    filer_only     3   524814  37.1    0
+           address postcard_only     3    94707   5.9    0
+           address  revoked_only     2   133578   8.1    0
+   address_compact       (whole)     1 10315998 152.0    0
+   address_derived approved_only     3    19490   0.5    0
+   address_derived    bmf_active     3 13568639 264.0    0
+   address_derived  bmf_inactive     3  7685589 136.0    0
+   address_derived    filer_only     3   524814  11.8    0
+   address_derived postcard_only     3    94707   2.5    0
+   address_derived  revoked_only     2   133578   4.0    0
+           cluster       (whole)     1   798751  15.8    0
+ cluster_footprint       (whole)     1  1394217   9.3    0
+    cluster_member       (whole)     1  3466485  31.4    0
+           ein_key       (whole)     1 32374096 403.2    0
+     ein_key_layer       (whole)     1 21471464 207.5    0
+      ein_relation       (whole)     1  2184885  33.2    0
+            entity       (whole)     1  4236242  46.7    0
+      entity_event       (whole)     1  2649231   8.9    0
+      entity_group       (whole)     1   450964   3.4    0
+              name approved_only     5    19631   1.2    0
+              name    bmf_active     5  7581660 435.4    0
+              name  bmf_inactive     5  4453231 231.3    0
+              name    filer_only     5   497031  35.1    0
+              name postcard_only     3    99196   6.2    0
+              name  revoked_only     3   150617   9.9    0
+      name_compact       (whole)     1  6773578 171.7    0
+      name_derived approved_only     5    19631   0.6    0
+      name_derived    bmf_active     5  7581660 198.6    0
+      name_derived  bmf_inactive     5  4453231 109.6    0
+      name_derived    filer_only     5   497031  15.9    0
+      name_derived postcard_only     3    99196   3.4    0
+      name_derived  revoked_only     3   150617   5.3    0
+     ntee_observed       (whole)     1   514844   2.9    0
+           orgtext       (whole)     1 15824934 449.8    0
+        person_key       (whole)     1 16556057 148.2    0
+             place       (whole)     1   278892   8.0    0
+       place_layer       (whole)     1   415983   3.3    0
+        place_unit       (whole)     1    36838   0.4    0
+    source_vintage       (whole)     1       45   0.0    0
+         stat_cell       (whole)     1       32   0.0    0
+    stat_name_cell       (whole)     1  5552078  69.1    0
+   stat_token_cell       (whole)     1  1365064   8.7    0
+           website       (whole)     1  1016836  30.0    0
+
+fetched and compiled 2,742,924 rows in 1.8 min
+
+<md_status> D:/matchdb-workspace-check/workspace
+  installed  matchdb 0.0.0.9000, npmatch 0.1.0.9000 @26a5910, normalizer v1-3e7b9f9d59bbb19e
+  tranches   2026-10-27-82c6f0cb (built 2026-10-27, normalizer v1-3e7b9f9d59bbb19e): 17 of 108 files here, 1.03 GB
+  database   none
+  last compile 2026-10-27T18:50:00: spec 2402137493f88c8e, 2,742,924 rows, from tranches 2026-10-27-82c6f0cb
+  last action  2026-10-27T18:50:01 compile (run 20261027T185000-5f4479)
+
+md_log():
+                 run_id           kind               build        spec_hash
+ 20261027T184905-5f4419 fetch_tranches 2026-10-27-82c6f0cb 2402137493f88c8e
+ 20261027T185000-5f4479        compile 2026-10-27-82c6f0cb 2402137493f88c8e
+ files downloaded      bytes elapsed_seconds normalize_signature
+    17         17 1028259600            51.8 v1-3e7b9f9d59bbb19e
+    NA         NA         NA            52.7 v1-3e7b9f9d59bbb19e
+                                                             note
+                                            spec 2402137493f88c8e
+ tranches 2026-10-27-82c6f0cb; label active-legal; 2,742,924 rows
+
+the fetch's detail file, first rows:
+                                path     status   rows    bytes
+                       manifest.json   manifest     NA    27317
+         name/bmf_active/dba.parquet downloaded 511140 32015040
+ name_derived/bmf_active/dba.parquet downloaded 511140 16359707
+      name/bmf_active/former.parquet downloaded 185033 13419235
+                              md5
+ 1f8c1e1f0a2b32a27165d98df7c58012
+ c2be6bc4480836ae63771cfa781c235b
+ 452e9b99c920f6ad7a23746fe3402787
+ 152e16d8428023fbee8f3a4737aa3933
+
+logs/: compile-20261027T185000-5f4479.json  fetch_tranches-20261027T184905-5f4419.csv  runs-index.csv  state.json 
+
+WORKSPACE OK

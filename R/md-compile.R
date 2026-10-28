@@ -76,6 +76,7 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
   own <- is.null(con)
   if (own) { con <- md_db(read_only = TRUE); on.exit(md_db_close(con), add = TRUE) }
   .md_tranche_check(con, spec)      # a connection from md_tranche_db() holding every file needed
+  t_start <- Sys.time()
   msg <- function(...) message(sprintf(...))
   timed <- getOption("matchdb.compile_timing", FALSE)
   tick <- function(t0, sql) if (timed) message(sprintf("  [%5.1fs] %s", as.numeric(
@@ -342,7 +343,29 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
   for (t in c("cp_ein", "cp_name", "cp_dba", "cp_addr_raw", "cp_addr", "cp_pair")) {
     x(sprintf("DROP TABLE IF EXISTS %s", t))
   }
+  .md_log_compile(con, spec, out, t_start)
   structure(out, class = "md_reference")
+}
+
+# Record a compile: the spec, what it was compiled from, the stamp and the shape.
+.md_log_compile <- function(con, spec, out, t_start) {
+  if (!isTRUE(getOption("matchdb.log", TRUE))) return(invisible())
+  build <- tryCatch(if (DBI::dbExistsTable(con, "md_tranche_files"))
+    DBI::dbGetQuery(con, "SELECT build FROM md_tranche_files LIMIT 1")$build else NA_character_,
+    error = function(e) NA_character_)
+  source <- if (is.na(build)) "database" else paste("tranches", build)
+  r <- out$report
+  .md_log("compile", build = build, spec_hash = spec$spec_hash,
+          note = paste0(source, if (is.null(spec$label)) "" else paste0("; label ", spec$label),
+                        sprintf("; %s rows", format(r$rows, big.mark = ","))),
+          elapsed = as.numeric(difftime(Sys.time(), t_start, units = "secs")),
+          detail = list(spec = unclass(spec), source = source, stamp = out$stamp, rows = r$rows,
+                        eins_selected = r$eins_selected, eins_emitted = r$eins_emitted,
+                        stats_method = r$stats_method, shape = r$shape),
+          last_compile = list(spec_hash = spec$spec_hash, label = spec$label %||% NA,
+                              rows = r$rows, source = source,
+                              normalize_signature = out$stamp$normalize_signature,
+                              db_fingerprint = out$stamp$db_fingerprint))
 }
 
 #' @export

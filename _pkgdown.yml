@@ -17,6 +17,10 @@ articles:
   - layers
   - sources
   - corroborators
+- title: Working with the data
+  navbar: ~
+  contents:
+  - workspace
 
 reference:
 - title: Get a reference and match
@@ -28,6 +32,13 @@ reference:
   - md_fetch_reference
   - md_fetch_db
   - md_remote
+- title: Your matchdb folder
+  desc: >
+    What is published and what is here, the log of everything fetched,
+    compiled and published, and updating to a new build.
+  contents:
+  - md_tranches
+  - md_log
 - title: Look things up
   desc: Everything the database knows about an EIN, and the families it belongs to.
   contents:

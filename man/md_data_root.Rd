@@ -38,6 +38,9 @@ version directory. See \code{\link[=md_source_pin]{md_source_pin()}}.}
 (\code{\link[=md_publish]{md_publish()}}).}
 \item{\verb{tranches/<build>/}}{the database as parquet, split by layer and
 class (\code{\link[=md_publish_tranches]{md_publish_tranches()}}).}
+\item{\verb{logs/}}{the workspace log: \code{runs-index.csv} (one row per fetch,
+compile or publish, never rewritten), one detail file per run, and
+\code{state.json} (what is here now). See \code{\link[=md_log]{md_log()}}.}
 \item{\verb{work/}}{scratch. Safe to delete; never an input to anything.}
 }
 }

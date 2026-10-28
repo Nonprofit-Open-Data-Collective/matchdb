@@ -16,6 +16,9 @@
 #'     ([md_publish()]).}
 #'   \item{`tranches/<build>/`}{the database as parquet, split by layer and
 #'     class ([md_publish_tranches()]).}
+#'   \item{`logs/`}{the workspace log: `runs-index.csv` (one row per fetch,
+#'     compile or publish, never rewritten), one detail file per run, and
+#'     `state.json` (what is here now). See [md_log()].}
 #'   \item{`work/`}{scratch. Safe to delete; never an input to anything.}
 #' }
 #'
@@ -41,7 +44,7 @@ md_path <- function(..., create = FALSE) {
 #' @export
 md_data_init <- function(quiet = FALSE) {
   root <- md_data_root()
-  for (d in c("sources", "db", "publish", "tranches", "work")) {
+  for (d in c("sources", "db", "publish", "tranches", "logs", "work")) {
     dir.create(file.path(root, d), recursive = TRUE, showWarnings = FALSE)
   }
   if (!quiet) message("matchdb data root: ", root)
