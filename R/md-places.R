@@ -7,10 +7,11 @@
 #' same way at run time (`np_addr_freq()`, branch `fix/address-class`); these
 #' tables add what it cannot see.
 #'
+#' @details It writes three tables:
 #' \describe{
 #'   \item{`place`}{One row per address that two or more EINs report as their
 #'     own current address. A lookup miss means one occupant, which is about
-#'     88\% of addresses.}
+#'     88% of addresses.}
 #'   \item{`place_layer`}{`(place_key, layer, n_eins)`. Layers partition EINs,
 #'     so the count for any selection of layers - active only, unified - is an
 #'     exact sum, as with `ein_key_layer`.}

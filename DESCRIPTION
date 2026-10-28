@@ -26,8 +26,8 @@ Depends:
 Imports:
     DBI,
     duckdb,
-    data.table,
     jsonlite,
+    methods,
     npnormalize (>= 0.1.1),
     stringr,
     stats,
@@ -41,6 +41,7 @@ Suggests:
     peopleparser,
     arrow,
     digest,
+    fiscal,
     stringi,
     testthat (>= 3.0.0),
     withr
@@ -50,4 +51,5 @@ VignetteBuilder: knitr
 Remotes:
     Nonprofit-Open-Data-Collective/npnormalize,
     Nonprofit-Open-Data-Collective/npmatch,
-    Nonprofit-Open-Data-Collective/peopleparser
+    Nonprofit-Open-Data-Collective/peopleparser,
+    Nonprofit-Open-Data-Collective/fiscal

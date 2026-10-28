@@ -88,6 +88,7 @@ md_ledger_schema <- function(con) {
 #' application is reported as already applied; for the other kinds the diff
 #' simply finds nothing to do.
 #'
+#' @param con A DuckDB connection holding the ledger.
 #' @param frame A table or view in `con` with the standard frame columns.
 #' @param source A source from [md_sources()].
 #' @param version The pinned version.

@@ -16,6 +16,8 @@ md_data_init(quiet = FALSE)
 \item{...}{Path components appended to the root.}
 
 \item{create}{Create the directory if it does not exist.}
+
+\item{quiet}{For \code{md_data_init()}, do not print the root it set up.}
 }
 \value{
 A normalized absolute path.
