@@ -45,6 +45,7 @@ reference:
   - md_compile
   - md_publish
   - md_publish_pointer
+  - md_publish_tranches
   - md_layers
   - md_name_classes
   - md_address_classes

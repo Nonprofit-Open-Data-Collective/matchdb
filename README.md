@@ -67,6 +67,17 @@ s <- md_spec(layers = c("bmf_active", "bmf_inactive"),
 r <- md_compile(s)         # r$reference, r$name_freq, r$token_idf, r$report
 ```
 
+You don't need the whole database for this. The database is also published as
+parquet files split by layer and class, and `md_fetch_tranches()` downloads
+only the files a spec needs:
+
+```r
+md_fetch_tranches(s)       # only these layers and classes, once
+con <- md_tranche_db()     # a connection md_compile(), md_publish() and md_lookup() take
+r <- md_compile(s, con)
+md_db_close(con)
+```
+
 The articles explain each choice:
 [layers](https://nonprofit-open-data-collective.github.io/matchdb/articles/layers.html),
 [sources](https://nonprofit-open-data-collective.github.io/matchdb/articles/sources.html),

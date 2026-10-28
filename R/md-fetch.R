@@ -6,7 +6,8 @@
 #' [md_reference()] reads it; `md_reference(fetch = TRUE)` does both.
 #' `md_fetch_db()` downloads the full database (about 10 GB) for those who
 #' want to compile their own slices with [md_spec()] and [md_compile()], or
-#' browse it with [md_lookup()] and [md_cluster()].
+#' browse it with [md_lookup()] and [md_cluster()]. Between the two,
+#' [md_fetch_tranches()] downloads only the parquet files one spec needs.
 #'
 #' @section The remote:
 #' The default is the public NCCS copy,

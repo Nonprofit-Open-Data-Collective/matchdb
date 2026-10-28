@@ -34,7 +34,10 @@ The layout under the root is fixed, because provenance depends on it:
 upstream file. Never overwritten - a new upstream release is a new
 version directory. See \code{\link[=md_source_pin]{md_source_pin()}}.}
 \item{\verb{db/}}{\code{MATCHDB.duckdb}, the relational source of truth.}
-\item{\verb{publish/<vintage>/}}{compiled references and atom tables.}
+\item{\verb{publish/<label>/<spec_hash>/}}{compiled references
+(\code{\link[=md_publish]{md_publish()}}).}
+\item{\verb{tranches/<build>/}}{the database as parquet, split by layer and
+class (\code{\link[=md_publish_tranches]{md_publish_tranches()}}).}
 \item{\verb{work/}}{scratch. Safe to delete; never an input to anything.}
 }
 }
