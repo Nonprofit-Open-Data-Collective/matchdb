@@ -1,6 +1,6 @@
 Package: matchdb
 Title: A Provenanced Disambiguation Database for Nonprofit Record Linkage
-Version: 0.0.0.9000
+Version: 0.1.1
 Authors@R:
     person("Jesse", "Lecy", email = "jdlecy@gmail.com", role = c("aut", "cre"))
 Description: Builds and distributes the reference side of nonprofit record
@@ -27,7 +27,7 @@ Imports:
     duckdb,
     data.table,
     jsonlite,
-    npmatch (>= 0.1.0.9000),
+    npmatch (>= 0.1.1),
     stringr,
     stats,
     tools,
@@ -44,5 +44,5 @@ Suggests:
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Remotes:
-    Nonprofit-Open-Data-Collective/npmatch,
+    Nonprofit-Open-Data-Collective/npmatch@v0.1.1,
     Nonprofit-Open-Data-Collective/peopleparser

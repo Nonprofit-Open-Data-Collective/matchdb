@@ -12,8 +12,15 @@ tiering live in npmatch.
 ## Install
 
 ```r
-remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb@v0.1.1")  # the current release
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")         # development version
 ```
+
+The current release is **0.1.1**, git tag `v0.1.1`. It pairs with npmatch 0.1.1
+and normalizer signature `v1-3e7b9f9d59bbb19e`, which the published database,
+bundles and tranches were built with. See [NEWS.md](NEWS.md). Pin it, in renv
+or with `@v0.1.1`, for anything that should reproduce results from before the
+normalizer moves into npnormalize.
 
 ## Quick start: download a reference and match
 
