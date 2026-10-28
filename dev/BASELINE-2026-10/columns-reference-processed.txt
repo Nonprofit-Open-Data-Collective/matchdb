@@ -27,6 +27,7 @@ street_name
 street_num
 street_type
 street_unit
+street_unit_id
 unit
 zip_plus4
 zip3
