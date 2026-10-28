@@ -15,6 +15,8 @@ md_apply_release(
 )
 }
 \arguments{
+\item{con}{A DuckDB connection holding the ledger.}
+
 \item{frame}{A table or view in \code{con} with the standard frame columns.}
 
 \item{source}{A source from \code{\link[=md_sources]{md_sources()}}.}

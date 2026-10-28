@@ -42,7 +42,17 @@ same way at run time (\code{np_addr_freq()}, branch \code{fix/address-class}); t
 tables add what it cannot see.
 }
 \details{
-
+It writes three tables:
+\describe{
+\item{\code{place}}{One row per address that two or more EINs report as their
+own current address. A lookup miss means one occupant, which is about
+88\% of addresses.}
+\item{\code{place_layer}}{\verb{(place_key, layer, n_eins)}. Layers partition EINs,
+so the count for any selection of layers - active only, unified - is an
+exact sum, as with \code{ein_key_layer}.}
+\item{\code{place_unit}}{One row per suite that two or more EINs at a place
+share.}
+}
 }
 \section{Who counts as an occupant}{
 

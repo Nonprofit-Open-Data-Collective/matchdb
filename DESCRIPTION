@@ -25,8 +25,8 @@ Depends:
 Imports:
     DBI,
     duckdb,
-    data.table,
     jsonlite,
+    methods,
     npmatch (>= 0.1.1),
     stringr,
     stats,
@@ -39,10 +39,13 @@ Suggests:
     peopleparser,
     arrow,
     digest,
+    fiscal,
     stringi,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Remotes:
     Nonprofit-Open-Data-Collective/npmatch@v0.1.1,
-    Nonprofit-Open-Data-Collective/peopleparser
+    Nonprofit-Open-Data-Collective/peopleparser,
+    Nonprofit-Open-Data-Collective/fiscal
