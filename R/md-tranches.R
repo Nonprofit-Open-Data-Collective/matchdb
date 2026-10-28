@@ -113,11 +113,14 @@ md_publish_tranches <- function(con = NULL, root = md_path("tranches"), tables =
           parts$layer[i], parts$cls[i])
     }
   }
-  # every other table, whole; by EIN where it has one, so a lookup reads few row groups
+  # every other table, whole; by EIN where it has one, so a lookup reads few row
+  # groups, then by every other column, so the same table always writes the same
+  # bytes and an unchanged file keeps its md5 from one build to the next
   for (t in setdiff(tables, names(.md_tranche_split))) {
     cols <- DBI::dbListFields(con, t)
-    ord <- if (t == "entity") " ORDER BY layer, ein" else if ("ein" %in% cols) " ORDER BY ein" else ""
-    put(sprintf('SELECT * FROM "%s"%s', t, ord), sprintf("tables/%s.parquet", t), t)
+    first <- intersect(if (t == "entity") c("layer", "ein") else "ein", cols)
+    ord <- paste(sprintf('"%s"', c(first, setdiff(cols, first))), collapse = ", ")
+    put(sprintf('SELECT * FROM "%s" ORDER BY %s', t, ord), sprintf("tables/%s.parquet", t), t)
   }
 
   files <- do.call(rbind, lapply(rec, as.data.frame, stringsAsFactors = FALSE))
@@ -136,6 +139,12 @@ md_publish_tranches <- function(con = NULL, root = md_path("tranches"), tables =
   unlink(dir, recursive = TRUE)
   if (!file.rename(tmp, dir)) stop("could not move the build into ", dir, call. = FALSE)
   if (set_latest) md_tranche_pointer(build, root)
+  .md_log("publish_tranches", build = build, note = paste("->", dir),
+          elapsed = as.numeric(difftime(Sys.time(), t0, units = "secs")),
+          files = data.frame(path = files$path, table = files$table, layer = files$layer,
+                             variant_class = files$variant_class, status = "written",
+                             rows = files$rows, bytes = files$bytes, md5 = files$md5,
+                             stringsAsFactors = FALSE))
   message(sprintf("published tranches %s: %d files, %.2f GB, %.1f min -> %s", build,
                   nrow(files), sum(files$bytes) / 1e9,
                   as.numeric(difftime(Sys.time(), t0, units = "mins")), dir))
@@ -171,6 +180,7 @@ md_tranche_pointer <- function(build, root = md_path("tranches")) {
 #' @export
 md_fetch_tranches <- function(spec = NULL, tables = NULL, build = NULL, remote = md_remote(),
                               root = md_path("tranches"), overwrite = FALSE) {
+  t0 <- Sys.time()
   base <- paste0(sub("/+$", "", remote), "/tranches")
   if (is.null(build)) build <- jsonlite::fromJSON(.md_download_text(paste0(base, "/latest.json")))$build
   man_txt <- .md_download_text(sprintf("%s/%s/manifest.json", base, build))
@@ -178,22 +188,75 @@ md_fetch_tranches <- function(spec = NULL, tables = NULL, build = NULL, remote =
   .md_tranche_sig_check(man)
   files <- man$files[.md_tranche_select(man$files, spec, tables), ]
   dir <- file.path(root, build)
-  got <- 0; kept <- 0
+  dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+  # the manifest first: it is the record of what this build is, kept even if
+  # its parquet files are later pruned
+  writeLines(man_txt, file.path(dir, "manifest.json"), useBytes = TRUE)
+  prior <- if (file.exists(file.path(root, "latest.json")))
+    jsonlite::read_json(file.path(root, "latest.json"))$build else NA
+  status <- rep(NA_character_, nrow(files)); err <- rep("", nrow(files))
+  record <- function() {
+    note <- paste0(if (is.null(spec)) "" else paste("spec", spec$spec_hash),
+                   if (is.null(tables)) "" else paste(" tables", paste(tables, collapse = " ")))
+    det <- rbind(data.frame(path = "manifest.json", table = NA, layer = NA, variant_class = NA,
+                            source = sprintf("%s/%s/manifest.json", base, build),
+                            status = "manifest", rows = NA, bytes = nchar(man_txt, "bytes"),
+                            md5 = .md_md5_string(man_txt), error = "", stringsAsFactors = FALSE),
+                 data.frame(path = files$path, table = files$table, layer = files$layer,
+                            variant_class = files$variant_class,
+                            source = sprintf("%s/%s/%s", base, build, files$path),
+                            status = ifelse(is.na(status), "not_reached", status),
+                            rows = files$rows, bytes = files$bytes, md5 = files$md5, error = err,
+                            stringsAsFactors = FALSE))
+    # the manifest's own row (its md5 and source) is the provenance record of the run
+    .md_log("fetch_tranches", build = build, spec_hash = spec$spec_hash %||% NA, files = det,
+            note = trimws(note), elapsed = as.numeric(difftime(Sys.time(), t0, units = "secs")))
+  }
   for (i in seq_len(nrow(files))) {
     dest <- file.path(dir, files$path[i])
     if (!overwrite && .md_tranche_intact(dest, files$bytes[i], files$md5[i])) {
-      kept <- kept + 1; next
+      status[i] <- "reused"; next
     }
     dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+    # an identical file in an older build here: copy it rather than download it again
+    src <- if (overwrite) NULL else .md_tranche_find_copy(root, files$md5[i], files$bytes[i], build)
+    if (!is.null(src) && file.copy(src, dest, overwrite = TRUE) &&
+        .md_tranche_intact(dest, files$bytes[i], files$md5[i])) {
+      status[i] <- "copied"; next
+    }
     message(sprintf("fetching %s (%.1f MB)", files$path[i], files$bytes[i] / 1e6))
-    .md_download(sprintf("%s/%s/%s", base, build, files$path[i]), dest, md5 = files$md5[i])
-    got <- got + files$bytes[i]
+    ok <- tryCatch({
+      .md_download(sprintf("%s/%s/%s", base, build, files$path[i]), dest, md5 = files$md5[i])
+      TRUE
+    }, error = function(e) { err[i] <<- conditionMessage(e); FALSE })
+    status[i] <- if (ok) "downloaded" else "failed"
+    if (!ok) { record(); stop(err[i], call. = FALSE) }
   }
-  writeLines(man_txt, file.path(dir, "manifest.json"), useBytes = TRUE)
   md_tranche_pointer(build, root)
-  message(sprintf("tranches %s: %d files here (%d already were), %.2f GB downloaded",
-                  build, nrow(files), kept, got / 1e9))
+  if (!is.na(prior) && !identical(prior, build) && isTRUE(getOption("matchdb.log", TRUE))) {
+    .md_tranche_log_change(prior, build, root)
+  }
+  record()
+  message(sprintf("tranches %s: %d files here (%d already were, %d copied from an older build), %.2f GB downloaded",
+                  build, nrow(files), sum(status == "reused"), sum(status == "copied"),
+                  sum(files$bytes[status == "downloaded"]) / 1e9))
   invisible(dir)
+}
+
+# A version_change row saying what moved between two local tranche builds.
+.md_tranche_log_change <- function(old, new, root) {
+  tryCatch({
+    d <- md_tranche_diff(old, new, root = root)
+    o <- attr(d, "old"); n <- attr(d, "new")
+    s <- table(factor(d$status, c("same", "changed", "added", "removed")))
+    rc <- sum(d$rows_new[d$table %in% c("name", "address", "entity")], na.rm = TRUE) -
+      sum(d$rows_old[d$table %in% c("name", "address", "entity")], na.rm = TRUE)
+    note <- sprintf("tranches %s -> %s: files %s; name+address+entity rows %+d%s", old, new,
+                    paste(names(s), s, collapse = " "), as.integer(rc),
+                    if (identical(o$normalize_signature, n$normalize_signature)) "" else
+                      sprintf("; normalizer %s -> %s", o$normalize_signature, n$normalize_signature))
+    .md_log_version_row(note, build = new)
+  }, error = function(e) .md_log_version_row(sprintf("tranches %s -> %s", old, new), build = new))
 }
 
 #' @rdname md_publish_tranches

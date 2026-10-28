@@ -78,6 +78,11 @@ r <- md_compile(s, con)
 md_db_close(con)
 ```
 
+`md_tranches(s)` shows what a spec will download before you fetch it. Every
+fetch, compile and publish is logged in your matchdb folder: `md_log()` lists
+them, and `md_status()` says what is there now. `md_tranche_diff()` shows
+what a new release changes. See `vignette("workspace")`.
+
 The articles explain each choice:
 [layers](https://nonprofit-open-data-collective.github.io/matchdb/articles/layers.html),
 [sources](https://nonprofit-open-data-collective.github.io/matchdb/articles/sources.html),

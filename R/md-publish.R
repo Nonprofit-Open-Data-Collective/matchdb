@@ -103,6 +103,13 @@ md_publish <- function(spec, root = md_path("publish"), con = NULL, set_latest =
   jsonlite::write_json(stamp, file.path(dir, "stamp.json"), auto_unbox = TRUE, pretty = TRUE,
                        digits = NA, na = "null", null = "null")
   if (set_latest) md_publish_pointer(spec$label, spec$spec_hash, root)
+  .md_log("publish", spec_hash = spec$spec_hash,
+          note = sprintf("label %s; %s rows -> %s", spec$label,
+                         format(nrow(r$reference), big.mark = ","), dir),
+          files = data.frame(path = c(unname(files), "stamp.json"), status = "written",
+                             bytes = file.size(file.path(dir, c(files, "stamp.json"))),
+                             md5 = unname(tools::md5sum(file.path(dir, c(files, "stamp.json")))),
+                             stringsAsFactors = FALSE))
   message(sprintf("published %s %s: %s rows -> %s", spec$label, spec$spec_hash,
                   format(nrow(r$reference), big.mark = ","), dir))
   invisible(dir)

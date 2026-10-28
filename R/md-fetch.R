@@ -50,21 +50,36 @@ md_fetch_reference <- function(label, spec_hash = NULL, remote = md_remote(),
     }
     spec_hash <- latest[[label]]$spec_hash
   }
+  t0 <- Sys.time()
   url <- sprintf("%s/%s/%s", base, label, spec_hash)
   dir <- file.path(root, label, spec_hash)
   dir.create(dir, recursive = TRUE, showWarnings = FALSE)
   stamp_txt <- .md_download_text(paste0(url, "/stamp.json"))
   stamp <- jsonlite::fromJSON(stamp_txt, simplifyVector = FALSE)
-  for (fn in names(stamp$files)) {
-    dest <- file.path(dir, fn)
+  fns <- names(stamp$files)
+  status <- rep("not_reached", length(fns)); err <- rep("", length(fns))
+  record <- function() .md_log(
+    "fetch_reference", spec_hash = spec_hash, note = paste("label", label),
+    elapsed = as.numeric(difftime(Sys.time(), t0, units = "secs")),
+    files = data.frame(path = c("stamp.json", fns), source = paste0(url, "/", c("stamp.json", fns)),
+                       status = c("manifest", status),
+                       bytes = c(nchar(stamp_txt, "bytes"), file.size(file.path(dir, fns))),
+                       md5 = c(.md_md5_string(stamp_txt), unlist(stamp$files)),
+                       error = c("", err), stringsAsFactors = FALSE))
+  for (i in seq_along(fns)) {
+    dest <- file.path(dir, fns[i])
     if (!overwrite && file.exists(dest) &&
-        identical(unname(tools::md5sum(dest)), stamp$files[[fn]])) next
-    message(sprintf("fetching %s/%s/%s", label, spec_hash, fn))
-    .md_download(paste0(url, "/", fn), dest, md5 = stamp$files[[fn]])
+        identical(unname(tools::md5sum(dest)), stamp$files[[fns[i]]])) { status[i] <- "reused"; next }
+    message(sprintf("fetching %s/%s/%s", label, spec_hash, fns[i]))
+    ok <- tryCatch({ .md_download(paste0(url, "/", fns[i]), dest, md5 = stamp$files[[fns[i]]]); TRUE },
+                   error = function(e) { err[i] <<- conditionMessage(e); FALSE })
+    status[i] <- if (ok) "downloaded" else "failed"
+    if (!ok) { record(); stop(err[i], call. = FALSE) }
   }
   writeLines(stamp_txt, file.path(dir, "stamp.json"), useBytes = TRUE)
   # the local latest.json follows what was fetched, so md_reference(label) finds it
   md_publish_pointer(label, spec_hash, root)
+  record()
   invisible(dir)
 }
 
@@ -75,19 +90,41 @@ md_fetch_reference <- function(label, spec_hash = NULL, remote = md_remote(),
 #' @export
 md_fetch_db <- function(remote = md_remote(), dest = md_path("db", "MATCHDB.duckdb"),
                         overwrite = FALSE) {
+  t0 <- Sys.time()
   base <- sub("/+$", "", remote)
   man_txt <- .md_download_text(paste0(base, "/MANIFEST.json"))
   man <- jsonlite::fromJSON(man_txt, simplifyVector = FALSE)
   dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+  old_man <- file.path(dirname(dest), "MANIFEST.json")
+  old_md5 <- if (file.exists(old_man)) tryCatch(jsonlite::read_json(old_man)$md5,
+                                                 error = function(e) NULL) else NULL
+  status <- "reused"; err <- ""
   if (!overwrite && file.exists(dest) && isTRUE(file.size(dest) == man$size_bytes) &&
       identical(unname(tools::md5sum(dest)), man$md5)) {
     message("the database at ", dest, " is already this build")
   } else {
     message(sprintf("fetching MATCHDB.duckdb (%.1f GB, built %s from matchdb@%s)",
                     man$size_bytes / 1e9, man$built, substr(man$matchdb_commit, 1, 7)))
-    .md_download(paste0(base, "/", man$database), dest, md5 = man$md5)
+    status <- tryCatch({ .md_download(paste0(base, "/", man$database), dest, md5 = man$md5)
+                         "downloaded" }, error = function(e) { err <<- conditionMessage(e); "failed" })
   }
-  writeLines(man_txt, file.path(dirname(dest), "MANIFEST.json"), useBytes = TRUE)
+  if (status != "failed") writeLines(man_txt, old_man, useBytes = TRUE)
+  if (status == "downloaded" && !is.null(old_md5) && !identical(old_md5, man$md5) &&
+      isTRUE(getOption("matchdb.log", TRUE))) {
+    tryCatch(.md_log_version_row(sprintf("database md5 %s -> %s (built %s from matchdb@%s)", old_md5,
+                                         man$md5, man$built, substr(man$matchdb_commit, 1, 7))),
+             error = function(e) NULL)
+  }
+  .md_log("fetch_db", build = man$built %||% NA,
+          note = sprintf("matchdb@%s", substr(man$matchdb_commit %||% "?", 1, 7)),
+          elapsed = as.numeric(difftime(Sys.time(), t0, units = "secs")),
+          files = data.frame(path = c("MANIFEST.json", man$database),
+                             source = paste0(base, "/", c("MANIFEST.json", man$database)),
+                             status = c("manifest", status),
+                             bytes = c(nchar(man_txt, "bytes"), man$size_bytes),
+                             md5 = c(.md_md5_string(man_txt), man$md5), error = c("", err),
+                             stringsAsFactors = FALSE))
+  if (status == "failed") stop(err, call. = FALSE)
   invisible(dest)
 }
 
