@@ -1469,6 +1469,24 @@ reproduce earlier results.
 Step 4 of the extraction plan, npmatch getting its reference from matchdb, is
 a separate decision for npmatch and is not part of this phase.
 
+> **Built 2026-10-27** on `feat/import-npnormalize`, after npnormalize 0.1.0
+> and npmatch PR #22 (`b0cedb4`) merged. Results:
+> * the test suite passes, 872 tests with none skipped;
+> * the live bundles, tranches and database are all accepted, under signature
+>   `v1-3e7b9f9d59bbb19e`. The database was checked by its manifest only, not
+>   downloaded;
+> * `active-observed` and `unified-observed` compiled from the live tranches
+>   are identical to their bundles.
+>
+> The check is `dev/verify/npnormalize-check.R`, and its log is in
+> `dev/verify/logs/npnormalize-check-2026-10-27.log`.
+>
+> One finding beyond the plan: matchdb found `.np_unit_id()` and
+> `np_addr_freq()` by looking inside npmatch's namespace. With the new npmatch
+> those lookups missed, and matchdb quietly fell back to its own copies; three
+> tests that compare matchdb with the normalizer were skipping for the same
+> reason. All three now run against npnormalize and pass.
+
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.
 

@@ -26,7 +26,7 @@ database; refused if the stored rows were built by another normalizer.}
 Row counts, invisibly.
 }
 \description{
-Runs \code{\link[npmatch:np_normalize]{npmatch::np_normalize()}} over \code{name} and \code{address} and stores the output
+Runs \code{\link[npnormalize:np_normalize]{npnormalize::np_normalize()}} over \code{name} and \code{address} and stores the output
 as \code{name_derived} and \code{address_derived}, keyed on \code{name_id} / \code{address_id}.
 }
 \section{Why separate tables rather than columns}{

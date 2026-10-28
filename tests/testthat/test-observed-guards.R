@@ -15,8 +15,8 @@ test_that("placeholder names come from npmatch, and behave as the guard needs", 
            "SAME DAY SURGERY CENTER", "NONE BUT THE BRAVE INC", "AA",
            # real organisations a two-letters-in-a-row rule flagged
            "1N10 INC", "S H A R E INC", "18 CORP")
-  expect_true(all(npmatch::np_name_placeholder(bad)))
-  expect_false(any(npmatch::np_name_placeholder(ok)))
+  expect_true(all(npnormalize::np_name_placeholder(bad)))
+  expect_false(any(npnormalize::np_name_placeholder(ok)))
 })
 
 test_that("apostrophes do not split words", {
@@ -44,7 +44,7 @@ test_that("the SQL key and placeholder-EIN rules agree with the R ones", {
   DBI::dbWriteTable(con, "x", data.frame(s = x))
   got <- DBI::dbGetQuery(con, "SELECT s, md_guard_key(s) AS k FROM x")
   expect_equal(got$k[match(x, got$s)], md_guard_key(x))
-  expect_equal(md_guard_key(x), {k <- npmatch::np_name_core(x); k[is.na(k)] <- ""; k})
+  expect_equal(md_guard_key(x), {k <- npnormalize::np_name_core(x); k[is.na(k)] <- ""; k})
   e <- c("EIN-00-0000000", "EIN-12-3456789", "EIN-00-0019818", "EIN-53-0196605")
   DBI::dbWriteTable(con, "e", data.frame(e = e))
   got <- DBI::dbGetQuery(con, "SELECT e, md_placeholder_ein(e) AS p FROM e")

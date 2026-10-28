@@ -133,7 +133,8 @@ md_publish_pointer <- function(label, spec_hash, root = md_path("publish")) {
 
 #' @rdname md_publish
 #' @param build_index Also build npmatch's blocking index ([npmatch::np_ref_index()]),
-#'   so the result can go straight to the cascade.
+#'   so the result can go straight to the cascade. Needs npmatch, which matchdb
+#'   only suggests; without it the index is skipped with a message.
 #' @param fetch Download the bundle first with [md_fetch_reference()]: `TRUE`
 #'   always (a bundle already here and intact is not downloaded again),
 #'   `"missing"` only when the label is not published locally.
@@ -162,9 +163,9 @@ md_reference <- function(label, root = md_path("publish"), spec_hash = NULL,
   }
   dir <- file.path(root, label, spec_hash)
   stamp <- jsonlite::read_json(file.path(dir, "stamp.json"))
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   if (!identical(stamp$normalize_signature, sig)) {
-    stop(sprintf("bundle %s/%s was built by normalizer %s; the installed one is %s. Its derived columns and statistics would be wrong for this npmatch - republish it.",
+    stop(sprintf("bundle %s/%s was built by normalizer %s; the installed one is %s. Its derived columns and statistics would be wrong for this normalizer - republish it.",
                  label, spec_hash, stamp$normalize_signature, sig), call. = FALSE)
   }
   for (fn in names(stamp$files)) {
@@ -196,7 +197,14 @@ md_reference <- function(label, root = md_path("publish"), spec_hash = NULL,
     out$places <- lapply(c(place = "place", layer = "place_layer", unit = "place_unit"),
                          function(t) .md_read_parquet(file.path(dir, paste0(t, ".parquet"))))
   }
-  if (build_index) out$ref_index <- npmatch::np_ref_index(ref)
+  if (build_index) {
+    if (requireNamespace("npmatch", quietly = TRUE)) {
+      out$ref_index <- npmatch::np_ref_index(ref)
+    } else {
+      message("npmatch is not installed, so the blocking index was not built; ",
+              "npmatch builds it itself when given none.")
+    }
+  }
   out
 }
 

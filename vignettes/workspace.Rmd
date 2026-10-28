@@ -75,7 +75,7 @@ md_db_close(con)
 `md_tranche_manifest()` returns the build's whole manifest:
 * the build id;
 * when it was built, and from which matchdb commit;
-* the npmatch normalizer it was built with;
+* the normalizer it was built with, and the npnormalize and npmatch versions;
 * every file's rows, bytes and md5.
 
 A copy of the manifest is kept in the build's folder. It records what you
@@ -105,7 +105,7 @@ are never changed or removed. Each row records:
 * the tranche build and spec;
 * how many files were downloaded, copied from an older build, reused or
   failed, and the bytes moved;
-* the installed matchdb, npmatch and normalizer signature.
+* the installed matchdb, npnormalize, npmatch and normalizer signature.
 
 ```{r}
 md_log()
@@ -130,7 +130,7 @@ bundles, and the last compile. The same record is written to
 ```{r}
 md_status()
 #> <md_status> D:/matchdb
-#>   installed  matchdb 0.0.0.9000, npmatch 0.1.0.9000 @26a5910, normalizer v1-3e7b9f9d59bbb19e
+#>   installed  matchdb 0.1.1.9000, npnormalize 0.1.0, npmatch 0.1.1.9000, normalizer v1-3e7b9f9d59bbb19e
 #>   tranches   2026-10-27-82c6f0cb (built 2026-10-27, normalizer v1-3e7b9f9d59bbb19e): 17 of 108 files here, 1.03 GB
 #>   database   none
 #>   last compile 2026-10-27T18:50:00: spec 2402137493f88c8e, 2,742,924 rows, from tranches 2026-10-27-82c6f0cb
@@ -147,7 +147,8 @@ md_tranche_diff("2026-10-27-82c6f0cb")      # your build against the newest
 
 The diff lists:
 * every file as same, changed, added or removed, with its change in rows;
-* whether the normalizer, the npmatch version or the matchdb commit changed;
+* whether the normalizer, the npnormalize or npmatch version, or the matchdb
+  commit changed;
 * how much a full update would download.
 
 Then fetch as before. Files whose md5 matches one in your older build are
@@ -180,10 +181,11 @@ md_tranches_prune(keep = 1)
 
 A match can move for two reasons:
 * the data changed: a new build;
-* the matching changed: a new npmatch, above all a new normalizer.
+* the matching changed: a new npnormalize or npmatch, above all a new
+  normalizer.
 
-The log records both. Before each action it compares the installed npmatch
-and normalizer with what the last action used. If they differ, it adds a
+The log records both. Before each action it compares the installed npnormalize,
+npmatch and normalizer with what the last action used. If they differ, it adds a
 `version_change` row first. Fetching a different build or database adds one
 too:
 
@@ -200,6 +202,6 @@ which normalizer produced each set of results.
 
 A build made by another normalizer is refused rather than used:
 `md_tranche_db()` and `md_reference()` stop with an error naming both
-signatures. Install the matching npmatch, or fetch a build made with yours.
+signatures. Install the matching npnormalize, or fetch a build made with yours.
 
 To turn logging off, set `options(matchdb.log = FALSE)`.

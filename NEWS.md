@@ -1,3 +1,35 @@
+# matchdb (development version)
+
+## The normalizer comes from npnormalize
+
+* matchdb now imports **npnormalize** for the normalizer and its signature,
+  and only *suggests* npmatch. Every call to the 9 normalizer functions
+  (`np_normalize()`, `np_normalize_signature()`, `np_stopwords()`,
+  `np_name_freq()`, `np_token_idf()`, `np_name_core()`, `np_name_rules()`,
+  `np_name_placeholder()`, `np_addr_freq()`) goes to npnormalize.
+* The signature is unchanged, `v1-3e7b9f9d59bbb19e`, so the published
+  database, bundles and tranches are all still accepted. Nothing needs
+  rebuilding.
+* npmatch is needed only to match, and for `md_reference(build_index = TRUE)`,
+  which builds npmatch's blocking index. Without npmatch the index is skipped
+  with a message; npmatch builds it itself when given none.
+* `md_place_key()`, `md_unit_id()` and `md_addr_freq()` call npnormalize
+  directly. Before, they looked for these functions in npmatch, and with an
+  npmatch that no longer holds the normalizer they quietly fell back to
+  matchdb's own copies. The copy of `np_addr_freq()` is removed.
+
+## Stamps and the workspace log record npnormalize
+
+* Compile stamps, bundle stamps, tranche manifests, source pins and
+  `source_vintage` gain `npnormalize_version` beside `npmatch_version`, which is
+  now `NA` when npmatch is not installed. Old stamps stay readable. A database
+  built before this gains the `source_vintage` column the next time a source is
+  recorded; its old rows keep `NULL`.
+* The workspace log records `npnormalize_version` and `npnormalize_commit`,
+  and a change in either is a `version_change` row. An older
+  `logs/runs-index.csv` is rewritten once, adding the two columns, the next time
+  an action is logged.
+
 # matchdb 0.1.1
 
 The first tagged release, `v0.1.1`. Its number matches **npmatch 0.1.1**, the

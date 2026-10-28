@@ -8,7 +8,7 @@ compile_db <- function() {
   skip_if_not_installed("duckdb")
   con <- DBI::dbConnect(duckdb::duckdb())
   x <- function(sql) DBI::dbExecute(con, sql)
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   x("CREATE TABLE entity (ein VARCHAR, layer VARCHAR, active BOOLEAN)")
   x(sprintf("INSERT INTO entity VALUES ('%s','bmf_active',TRUE), ('%s','bmf_active',TRUE),
              ('%s','bmf_inactive',FALSE), ('%s','filer_only',NULL)", e(1), e(2), e(3), e(4)))

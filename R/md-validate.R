@@ -3,7 +3,7 @@
 #' The gate for every ingest phase. These are properties the database is checked
 #' against *on its own terms* - key uniqueness, EIN wellformedness, referential
 #' integrity, provenance completeness, and agreement between the stored derived
-#' columns and a live [npmatch::np_normalize()] call.
+#' columns and a live [npnormalize::np_normalize()] call.
 #'
 #' It is deliberately not a comparison against a previously built artifact.
 #' matchdb is built from the freshest available sources, so "matches the file we

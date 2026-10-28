@@ -29,13 +29,13 @@ sums are exact for EIN counts too, not just row counts.
 \item{\code{stat_name_cell}}{\verb{layer, variant_class, band, name_key, n_eins}:
 EINs holding the name in that cell}
 \item{\code{stat_token_cell}}{\verb{layer, variant_class, band, token, n_rows}: name
-rows containing the token, by \code{\link[npmatch:np_token_idf]{npmatch::np_token_idf()}}'s rules - split
+rows containing the token, by \code{\link[npnormalize:np_token_idf]{npnormalize::np_token_idf()}}'s rules - split
 on space, unique per name, at least two characters, no stopwords}
 }
 }
 \section{Name rows, not frame rows}{
 
-npmatch's own \code{\link[npmatch:np_name_freq]{npmatch::np_name_freq()}} and \code{\link[npmatch:np_token_idf]{npmatch::np_token_idf()}} count
+npmatch's own \code{\link[npnormalize:np_name_freq]{npnormalize::np_name_freq()}} and \code{\link[npnormalize:np_token_idf]{npnormalize::np_token_idf()}} count
 rows of the compiled frame, where a name is repeated once per paired address.
 These cells count names, so an EIN with three addresses counts once. The
 difference is real and \code{\link[=md_compile]{md_compile()}} reports both.

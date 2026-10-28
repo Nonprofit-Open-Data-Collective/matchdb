@@ -15,7 +15,7 @@ test_that("a published bundle reads back as the compiled frame and statistics", 
   expect_identical(got$name_freq, direct$name_freq)
   expect_identical(got$token_idf, direct$token_idf)
   expect_equal(got$stamp$spec_hash, sp$spec_hash)
-  expect_equal(got$stamp$normalize_signature, npmatch::np_normalize_signature())
+  expect_equal(got$stamp$normalize_signature, npnormalize::np_normalize_signature())
 })
 
 test_that("a changed file or another normalizer's bundle is refused", {

@@ -116,9 +116,8 @@ md_build_text <- function(con) {
 #' @return `md_build_text_derived()`: strings normalized per table, invisibly.
 #' @export
 md_build_text_derived <- function(con, what = c("name", "address"), chunk = 1000000L) {
-  if (!requireNamespace("npmatch", quietly = TRUE)) stop("npmatch is required", call. = FALSE)
   md_text_schema(con)
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   out <- integer(0)
   blank <- function(n) rep("", n)
   e <- function(x) ifelse(is.na(x), "", x)
@@ -153,7 +152,7 @@ md_build_text_derived <- function(con, what = c("name", "address"), chunk = 1000
 #' @return `md_check_text_derived()`: a data frame per table of strings,
 #'   strings with a row for the signature, and strings missing one.
 #' @export
-md_check_text_derived <- function(con, signature = npmatch::np_normalize_signature(),
+md_check_text_derived <- function(con, signature = npnormalize::np_normalize_signature(),
                                   stop_on_missing = FALSE) {
   one <- function(src, id, dest) {
     n <- .md_n(con, src)
@@ -214,7 +213,7 @@ md_text_stats <- function(con) {
       "%s WHERE %s IN (SELECT %s FROM txt_todo ORDER BY %s LIMIT %d OFFSET %d) ORDER BY %s",
       select, id, id, id, chunk, off, id))
     if (!nrow(d)) break
-    o <- npmatch::np_normalize(shape(d))
+    o <- npnormalize::np_normalize(shape(d))
     res <- cbind(stats::setNames(data.frame(d$id, stringsAsFactors = FALSE), id),
                  normalize_signature = sig, o[, keep, drop = FALSE],
                  stringsAsFactors = FALSE)
@@ -250,7 +249,7 @@ md_text_stats <- function(con) {
 
 # SQL types of the normalizer's output columns, read off a one-row probe.
 .md_text_derived_types <- function(keep, shape) {
-  probe <- npmatch::np_normalize(shape(data.frame(
+  probe <- npnormalize::np_normalize(shape(data.frame(
     id = "x", name_raw = "PROBE", street_raw = "1 MAIN ST", unit_raw = "", zip5 = "60601",
     zip_plus4 = "", state = "IL", stringsAsFactors = FALSE)))[, keep, drop = FALSE]
   vapply(probe, function(v) {

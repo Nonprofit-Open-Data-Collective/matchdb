@@ -14,7 +14,7 @@ Logical; \code{NA} for EINs that are not nine digits.
 }
 \description{
 The R version of the rule \code{\link[=md_guard_observed]{md_guard_observed()}} applies in SQL. Placeholder
-\emph{names} are npmatch's rule, \code{\link[npmatch:np_name_core]{npmatch::np_name_placeholder()}}.
+\emph{names} are npmatch's rule, \code{\link[npnormalize:np_name_core]{npnormalize::np_name_placeholder()}}.
 }
 \examples{
 md_placeholder_ein(c("000000000", "12-3456789", "EIN-00-0019818", "EIN-53-0196605"))

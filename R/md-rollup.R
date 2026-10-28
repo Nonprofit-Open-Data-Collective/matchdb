@@ -349,7 +349,7 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
 }
 
 # Every spelling the rollups show has derived columns under the signature.
-.md_check_rollup_derived <- function(con, signature = npmatch::np_normalize_signature()) {
+.md_check_rollup_derived <- function(con, signature = npnormalize::np_normalize_signature()) {
   sig <- DBI::dbQuoteString(con, signature)
   for (p in list(c("rollup_name", "name_text_id", "name_text_derived"),
                  c("rollup_address", "address_text_id", "address_text_derived"))) {
@@ -380,7 +380,7 @@ md_install_rollups <- function(con, keep_legacy = TRUE) {
 #'   npmatch's.
 #' @return Row counts, invisibly.
 #' @export
-md_link_derived <- function(con, signature = npmatch::np_normalize_signature()) {
+md_link_derived <- function(con, signature = npnormalize::np_normalize_signature()) {
   sig <- DBI::dbQuoteString(con, signature)
   one <- function(tbl, id, text_id, dtable, cols) {
     if (!DBI::dbExistsTable(con, dtable)) stop(sprintf(

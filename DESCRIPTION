@@ -1,6 +1,6 @@
 Package: matchdb
 Title: A Provenanced Disambiguation Database for Nonprofit Record Linkage
-Version: 0.1.1
+Version: 0.1.1.9000
 Authors@R:
     person("Jesse", "Lecy", email = "jdlecy@gmail.com", role = c("aut", "cre"))
 Description: Builds and distributes the reference side of nonprofit record
@@ -12,14 +12,15 @@ Description: Builds and distributes the reference side of nonprofit record
     strings for them). Compiled references are published as versioned artifacts
     stamped with the normalizer signature they were built against, so a cached
     artifact cannot be silently used with a normalizer that has since changed.
-    The linkage machinery itself lives in 'npmatch'.
+    Normalization comes from 'npnormalize'; the linkage machinery itself
+    lives in 'npmatch'.
 License: MIT + file LICENSE
 URL: https://github.com/Nonprofit-Open-Data-Collective/matchdb,
     https://nonprofit-open-data-collective.github.io/matchdb/
 BugReports: https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Depends:
     R (>= 4.1.0)
 Imports:
@@ -27,13 +28,14 @@ Imports:
     duckdb,
     data.table,
     jsonlite,
-    npmatch (>= 0.1.1),
+    npnormalize (>= 0.1.0),
     stringr,
     stats,
     tools,
     utils
 Suggests:
     knitr,
+    npmatch (>= 0.1.1),
     rmarkdown,
     openxlsx,
     peopleparser,
@@ -41,8 +43,10 @@ Suggests:
     digest,
     stringi,
     testthat (>= 3.0.0)
+Config/Needs/website: Nonprofit-Open-Data-Collective/pkgstyle
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Remotes:
-    Nonprofit-Open-Data-Collective/npmatch@v0.1.1,
+    Nonprofit-Open-Data-Collective/npnormalize,
+    Nonprofit-Open-Data-Collective/npmatch,
     Nonprofit-Open-Data-Collective/peopleparser

@@ -63,7 +63,7 @@ per name, with the address fields empty.
 
 \section{Derived columns}{
 
-Every column \code{\link[npmatch:np_normalize]{npmatch::np_normalize()}} adds is a function of one input field,
+Every column \code{\link[npnormalize:np_normalize]{npnormalize::np_normalize()}} adds is a function of one input field,
 and \code{\link[=md_build_derived]{md_build_derived()}} stores all of them. \code{derive = "stored"} (the
 default) gives each row the stored columns of a row holding exactly its
 strings - the name row with its spelling, the address row with its street,

@@ -22,6 +22,14 @@ bundles and tranches were built with. See [NEWS.md](NEWS.md). Pin it, in renv
 or with `@v0.1.1`, for anything that should reproduce results from before the
 normalizer moves into npnormalize.
 
+The development version takes the normalizer from
+[npnormalize](https://github.com/Nonprofit-Open-Data-Collective/npnormalize)
+and only suggests npmatch. Install npmatch too to match against a reference:
+
+```r
+remotes::install_github("Nonprofit-Open-Data-Collective/npmatch")
+```
+
 ## Quick start: download a reference and match
 
 [Getting started](https://nonprofit-open-data-collective.github.io/matchdb/articles/matchdb.html) walks through a full example: matching four grant recipients, reading the results, and looking at the cases that are not clear-cut.
@@ -46,7 +54,8 @@ m <- npmatch::np_cascade(my_query, b$reference,
 ```
 
 Each bundle is checked against the md5s it was published with and against the
-installed npmatch normalizer. A stale or altered bundle is refused.
+installed normalizer (npnormalize's signature). A stale or altered bundle is
+refused.
 
 ## Look up an organization
 

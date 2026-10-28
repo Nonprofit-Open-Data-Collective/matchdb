@@ -30,7 +30,7 @@ test_that("the manifest lists every file by table, layer and class, with its md5
   man <- jsonlite::fromJSON(file.path(r$dir, "tranches", latest, "manifest.json"))
   expect_equal(man$build, latest)
   expect_equal(man$matchdb_commit, "abc1234")
-  expect_equal(man$normalize_signature, npmatch::np_normalize_signature())
+  expect_equal(man$normalize_signature, npnormalize::np_normalize_signature())
   f <- man$files
   expect_true("name/bmf_active/observed.parquet" %in% f$path)
   expect_true("address_derived/bmf_active/historical.parquet" %in% f$path)

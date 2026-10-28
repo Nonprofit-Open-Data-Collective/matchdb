@@ -187,11 +187,11 @@ test_that("the place key and suite id agree in R and SQL", {
   expect_equal(md_unit_id(u)[1:5], c("300", "300", "D2", "2", "214"))
 })
 
-test_that("the place key and suite id equal npmatch's own functions", {
-  skip_if_not_installed("npmatch")
-  ns <- asNamespace("npmatch")
+test_that("the place key and suite id equal npnormalize's own functions", {
+  skip_if_not_installed("npnormalize")
+  ns <- asNamespace("npnormalize")
   skip_if_not(exists(".np_addr_key", envir = ns) && exists(".np_unit_id", envir = ns),
-              "installed npmatch predates fix/address-class")
+              "installed npnormalize lacks the address key")
   sk <- c("123 MAIN ST", "PO BOX 12", "P O BOX 7", "", NA, "1 WATERFOWL WAY")
   z <- c("60601", "60601", NA, "3", "4", "38120")
   u <- c("STE 300", "# 300", "STE D-2", "FL 2", NA, "PMB 214")

@@ -32,7 +32,8 @@ md_reference(
 \item{spec_hash}{The bundle to point the label at.}
 
 \item{build_index}{Also build npmatch's blocking index (\code{\link[npmatch:np_ref_index]{npmatch::np_ref_index()}}),
-so the result can go straight to the cascade.}
+so the result can go straight to the cascade. Needs npmatch, which matchdb
+only suggests; without it the index is skipped with a message.}
 
 \item{fetch}{Download the bundle first with \code{\link[=md_fetch_reference]{md_fetch_reference()}}: \code{TRUE}
 always (a bundle already here and intact is not downloaded again),

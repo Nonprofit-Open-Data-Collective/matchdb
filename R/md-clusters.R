@@ -350,7 +350,7 @@ md_build_clusters <- function(con = NULL,
   # A placeholder held as a legal name by many EINs (NOT APPLICABLE) is
   # concentrated too, and is no brand.
   b <- DBI::dbGetQuery(con, "SELECT word, top_key FROM cl_brand")
-  junk <- b$word[npmatch::np_name_placeholder(b$top_key) %in% TRUE]
+  junk <- b$word[npnormalize::np_name_placeholder(b$top_key) %in% TRUE]
   if (length(junk)) {
     DBI::dbExecute(con, sprintf("DELETE FROM cl_brand WHERE word IN (%s)",
                                 paste0("'", gsub("'", "''", junk), "'", collapse = ", ")))

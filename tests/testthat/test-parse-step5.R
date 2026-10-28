@@ -165,11 +165,11 @@ test_that("the second address line is kept as the unit, not joined to the street
   expect_equal(a$street_raw, c("103 MAINE AVENUE", "93 COTTAGE STREET"))
   expect_equal(a$unit_raw, c("PO BOX 1358", "SUITE 1"))
 
-  # with an npmatch that reads `unit` (fix/address-class on), the suite lands in
+  # npnormalize reads `unit`, so the suite lands in
   # street_unit_id and the PO box stays out of both the street and the unit
-  skip_if_not_installed("npmatch")
-  skip_if_not(exists(".np_unit_id", envir = asNamespace("npmatch")),
-              "installed npmatch predates the unit column")
+  skip_if_not_installed("npnormalize")
+  skip_if_not(exists(".np_unit_id", envir = asNamespace("npnormalize")),
+              "installed npnormalize lacks the unit column")
   suppressMessages(md_build_text_derived(con, what = "address"))
   d <- DBI::dbGetQuery(con, "SELECT t.street_raw, d.street_key, d.street_unit_id
     FROM address_text t JOIN address_text_derived d USING (address_text_id) ORDER BY t.street_raw")

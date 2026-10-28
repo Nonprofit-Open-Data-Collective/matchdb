@@ -37,10 +37,13 @@ Everything matchdb downloads or writes lives under one folder,
 \code{\link[=md_data_root]{md_data_root()}}. Its \verb{logs/} folder records each action:
 \describe{
 \item{\code{logs/runs-index.csv}}{One row per action, appended and never
-rewritten: \code{run_id}, \code{kind}, \code{recorded_at}, \code{build}, \code{spec_hash}, counts
+edited: \code{run_id}, \code{kind}, \code{recorded_at}, \code{build}, \code{spec_hash}, counts
 of files downloaded, copied, reused and failed, \code{bytes},
-\code{elapsed_seconds}, the installed \code{matchdb_version}, \code{npmatch_version},
-\code{npmatch_commit} and \code{normalize_signature}, a \code{note}, and \code{log_file}.}
+\code{elapsed_seconds}, the installed \code{matchdb_version},
+\code{npnormalize_version}, \code{npnormalize_commit}, \code{npmatch_version},
+\code{npmatch_commit} and \code{normalize_signature}, a \code{note}, and \code{log_file}.
+An index written by a matchdb before npnormalize is rewritten once, to
+add the npnormalize columns, the next time an action is logged.}
 \item{\verb{logs/<kind>-<run_id>.csv} or \code{.json}}{The detail of one action. A
 fetch lists every file with its status, size and md5, and the manifest it
 came from. A compile records the spec, the stamp and the report's
@@ -54,8 +57,8 @@ run), adding the versions and a current-state record.
 }
 \section{When versions change}{
 
-Before recording an action, the log compares the installed npmatch and its
-normalizer signature with what \code{state.json} last recorded. A difference adds
+Before recording an action, the log compares the installed npnormalize,
+npmatch and normalizer signature with what \code{state.json} last recorded. A difference adds
 a \code{version_change} row first, saying what changed. Fetching a new tranche
 build, or a different database, adds one too. Match results can move when
 the normalizer or the data moves, and these rows are what to read when they

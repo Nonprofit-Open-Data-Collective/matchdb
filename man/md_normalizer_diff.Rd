@@ -7,7 +7,7 @@
 md_normalizer_diff(
   con,
   old,
-  new = npmatch::np_normalize_signature(),
+  new = npnormalize::np_normalize_signature(),
   examples = 5L
 )
 }
