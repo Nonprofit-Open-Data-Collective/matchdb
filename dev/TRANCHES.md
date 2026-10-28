@@ -125,10 +125,22 @@ aws s3 cp "$MATCHDB_DATA/tranches/latest.json" s3://nccs-efile/dev/matchdb/tranc
 `md_fetch_tranches()` reads over plain HTTPS, so like the database and the
 bundles, no AWS account is needed.
 
+**Uploaded 2026-10-27:** build `2026-10-27-82c6f0cb`, 109 objects, 4.64 GB,
+7 min. Every file's md5 was checked before upload; the manifest went after the
+files, and `latest.json` last.
+
+**Fetched back over public HTTPS** (`dev/verify/tranche-remote.R`, log in
+`dev/verify/logs/tranche-remote-2026-10-27.log`), from `md_remote()` with no
+credentials:
+
+| step | download | result |
+|---|---:|---|
+| `active-observed` | 1.18 GB, 1.0 min | compiled in 1.3 min; identical to the bundle |
+| then `unified-observed` | 0.54 GB, 0.5 min (the 19 files it shares were skipped) | compiled in 2.1 min; identical to the bundle |
+| then `tables = "all"` | 2.92 GB, 2.8 min | `md_lookup()` and `md_cluster()` identical to the database |
+
 ## Not done
 
-* **Not on S3 yet.** The README's tranche example fails until a build is
-  uploaded.
 * **Reading parquet straight off S3 without downloading** works in DuckDB
   (`read_parquet('https://…')`) and would suit single-EIN lookups. It is not
   wired up, and compiling should download first anyway (§7a).
