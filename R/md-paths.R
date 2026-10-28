@@ -24,6 +24,7 @@
 #'
 #' @param ... Path components appended to the root.
 #' @param create Create the directory if it does not exist.
+#' @param quiet For `md_data_init()`, do not print the root it set up.
 #' @return A normalized absolute path.
 #' @export
 md_data_root <- function() {

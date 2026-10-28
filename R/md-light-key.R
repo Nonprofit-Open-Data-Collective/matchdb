@@ -67,12 +67,17 @@ md_light_key <- function(x) {
 # Single letters mapped one to one, and letters that become two. The same
 # letters as npmatch's .np_special_letters, plus the dotless i, which npmatch's
 # Latin-ASCII step handles and SQL's strip_accents() does not.
-.md_lk_from <- "ØøŁłĐđı"
+# Written as \u escapes so the code stays ASCII (R CMD check); the letters are,
+# in order, O-slash, L-stroke, D-stroke (each upper then lower) and dotless i.
+.md_lk_from <- "\u00d8\u00f8\u0141\u0142\u0110\u0111\u0131"
 .md_lk_to   <- "OoLlDdi"
-.md_lk_multi <- c("Æ" = "AE", "æ" = "ae", "Œ" = "OE", "œ" = "oe",
-                  "ß" = "ss", "ẞ" = "SS", "Þ" = "TH", "þ" = "th")
-# npmatch's .np_strip_joiners(): apostrophes, and a period inside a token
-.md_lk_apostrophes <- "['‘’ʼ´`]"
+# AE, ae, OE, oe ligatures; sharp s, capital sharp s; thorn upper and lower
+.md_lk_multi <- c("\u00c6" = "AE", "\u00e6" = "ae", "\u0152" = "OE", "\u0153" = "oe",
+                  "\u00df" = "ss", "\u1e9e" = "SS", "\u00de" = "TH", "\u00fe" = "th")
+# npmatch's .np_strip_joiners(): apostrophes, and a period inside a token.
+# The class is ' and the left and right single quotes, modifier apostrophe,
+# acute accent and backtick.
+.md_lk_apostrophes <- "['\u2018\u2019\u02bc\u00b4`]"
 .md_lk_joining_period <- "([A-Z0-9])[.]([A-Z0-9])"
 
 # Install md_light_key(x) in a connection. Temporary, like the identity macros:

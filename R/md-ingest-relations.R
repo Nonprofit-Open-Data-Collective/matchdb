@@ -228,13 +228,13 @@ md_ingest_relations <- function(version = "v2_2", con = NULL, bmf_version = NULL
         END AS ein_b,
         trim(coalesce(SR_02_RLTD_ORG_NAME_L1,'') || ' ' ||
              coalesce(SR_02_RLTD_ORG_NAME_L2,''))         AS related_name,
-        -- §4's contract for relation_raw is the source's own wording of the
+        -- PLAN.md section 4's contract for relation_raw is the source's own wording of the
         -- RELATION. On this form that is the direct controlling entity, or the
         -- explicit 'N/A' where the filer states there is none.
         nullif(trim(coalesce(SR_02_RLTD_ORG_CTRL_NAME_L1,'') || ' ' ||
                     coalesce(SR_02_RLTD_ORG_CTRL_NAME_L2,'')), '') AS ctrl_name,
         nullif(trim(SR_02_RLTD_ORG_CTRL_NA), '')          AS ctrl_na,
-        -- §512(b)(13) controlled entity. The flag is encoded four ways across
+        -- Section 512(b)(13) controlled entity. The flag is encoded four ways across
         -- schema versions - 0/1 and false/true - so both are normalised and
         -- anything else becomes NULL rather than a guessed FALSE.
         CASE WHEN lower(trim(coalesce(SR_02_RLTD_ORG_CTRL_512_X,''))) IN ('1','true','x','yes')
