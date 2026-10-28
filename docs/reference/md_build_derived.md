@@ -1,7 +1,7 @@
 # Build the derived-column tables
 
 Runs
-[`npmatch::np_normalize()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_normalize.html)
+[`npnormalize::np_normalize()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize.html)
 over `name` and `address` and stores the output as `name_derived` and
 `address_derived`, keyed on `name_id` / `address_id`.
 

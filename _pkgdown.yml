@@ -1,14 +1,27 @@
 url: https://nonprofit-open-data-collective.github.io/matchdb/
+destination: docs
 
 template:
-  bootstrap: 5
-  bslib:
-    primary: "#1F5F8B"
+  package: pkgstyle
 
 navbar:
   structure:
-    left:  [intro, reference, articles]
-    right: [search, github]
+    left: [intro, guides, reference, news]
+  components:
+    guides:
+      text: Guides
+      menu:
+      - text: Choosing a reference
+      - text: Layers
+        href: articles/layers.html
+      - text: Sources
+        href: articles/sources.html
+      - text: Corroborators
+        href: articles/corroborators.html
+      - text: -------
+      - text: Working with the data
+      - text: Your matchdb folder
+        href: articles/workspace.html
 
 articles:
 - title: Choosing a reference

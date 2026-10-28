@@ -43,9 +43,22 @@ The layout under the root is fixed, because provenance depends on it:
 
   `MATCHDB.duckdb`, the relational source of truth.
 
-- `publish/<vintage>/`:
+- `publish/<label>/<spec_hash>/`:
 
-  compiled references and atom tables.
+  compiled references
+  ([`md_publish()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)).
+
+- `tranches/<build>/`:
+
+  the database as parquet, split by layer and class
+  ([`md_publish_tranches()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)).
+
+- `logs/`:
+
+  the workspace log: `runs-index.csv` (one row per fetch, compile or
+  publish, never rewritten), one detail file per run, and `state.json`
+  (what is here now). See
+  [`md_log()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_log.md).
 
 - `work/`:
 

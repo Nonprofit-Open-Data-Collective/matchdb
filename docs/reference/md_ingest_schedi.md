@@ -77,12 +77,14 @@ row explosion.
 ## Grouping on a key, storing the raw string
 
 Deduplication needs some normalisation or trivial punctuation
-differences become separate variants. Rows are grouped on a light key -
-uppercased, non-alphanumerics stripped, whitespace collapsed - but the
-stored `name_raw` is the **most frequently written raw form** within the
-group, so the database still holds a string a filer actually typed
-rather than a normalised reconstruction. `np_normalize()` derived
-columns are built from that raw string later, exactly as for BMF rows.
+differences become separate variants. Rows are grouped on the light key
+([`md_light_key()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_light_key.md):
+accents and `&` spelled out, uppercased, punctuation dropped, whitespace
+collapsed) - but the stored `name_raw` is the **most frequently written
+raw form** within the group, so the database still holds a string a
+filer actually typed rather than a normalised reconstruction.
+`np_normalize()` derived columns are built from that raw string later,
+exactly as for BMF rows.
 
 ## Wrong names on the right line
 

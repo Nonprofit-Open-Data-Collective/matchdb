@@ -30,7 +30,10 @@ md_compile(
 - con:
 
   A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md),
+  or from
+  [`md_tranche_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)
+  holding the files the spec needs.
 
 - derive:
 
@@ -76,7 +79,7 @@ address still gets one row per name, with the address fields empty.
 ## Derived columns
 
 Every column
-[`npmatch::np_normalize()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_normalize.html)
+[`npnormalize::np_normalize()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize.html)
 adds is a function of one input field, and
 [`md_build_derived()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_derived.md)
 stores all of them. `derive = "stored"` (the default) gives each row the

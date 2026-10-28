@@ -42,16 +42,16 @@ row - so the sums are exact for EIN counts too, not just row counts.
 
   `layer, variant_class, band, token, n_rows`: name rows containing the
   token, by
-  [`npmatch::np_token_idf()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_token_idf.html)'s
+  [`npnormalize::np_token_idf()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_token_idf.html)'s
   rules - split on space, unique per name, at least two characters, no
   stopwords
 
 ## Name rows, not frame rows
 
 npmatch's own
-[`npmatch::np_name_freq()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_name_freq.html)
+[`npnormalize::np_name_freq()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_name_freq.html)
 and
-[`npmatch::np_token_idf()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_token_idf.html)
+[`npnormalize::np_token_idf()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_token_idf.html)
 count rows of the compiled frame, where a name is repeated once per
 paired address. These cells count names, so an EIN with three addresses
 counts once. The difference is real and
