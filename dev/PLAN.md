@@ -1135,6 +1135,29 @@ documented choice.
 
 ## 9. Package boundary and the drift hazard
 
+> **Changing 2026-10-27: the normalizer moves into its own package,
+> npnormalize.** The plan is `npnormalize/dev/EXTRACTION.md`; matchdb's part is
+> its **step 3**, tracked here as Phase 6 (§11). The boundary below is the one in
+> force through matchdb 0.1.1. After the move it becomes:
+>
+> ```
+> matchdb   --Imports-->   npnormalize   (np_normalize, np_token_idf, np_initials, ...)
+> matchdb   --Suggests-->  npmatch       (only np_ref_index(), and tests that run np_cascade())
+> npmatch   --Imports-->   npnormalize   (re-exports its public functions)
+> pfmatch   --Imports-->   npmatch, matchdb
+> ```
+>
+> Why: matchdb importing npmatch meant npmatch could never import matchdb.
+> With the normalizer on its own, the cycle is gone. Each package keeps one
+> job: npnormalize turns strings into keys, matchdb says which organizations
+> exist and which strings each one carries, and npmatch matches.
+>
+> The drift guard below is unchanged in substance. `np_normalize_signature()`
+> moves with the code, and every function name and body moves unedited, so the
+> signature stays `v1-3e7b9f9d59bbb19e` and every published build stays
+> accepted. Where this section says "npmatch" about the normalizer or its
+> signature, read "npnormalize" after the move.
+
 ```
 matchdb  --Imports-->  npmatch        (np_normalize, np_token_idf, np_initials)
 pfmatch  --Imports-->  npmatch, matchdb
@@ -1412,6 +1435,39 @@ on the string and the normalizer signature. The full plan and its build order ar
 in `dev/IDENTITY.md`. **Success criterion:** the Phase 1 gate stays at three
 zeros, the Phase 2 measurement reproduces, and applying releases one at a time
 gives the same database as rebuilding from the pinned files.
+
+**Phase 6 — import the normalizer from npnormalize.** The plan is
+`npnormalize/dev/EXTRACTION.md`, and this phase is its **step 3**. The order is
+fixed, one PR per repository:
+
+1. npnormalize 0.1.0 is released with the code moved unedited, and a test pins
+   its signature at `v1-3e7b9f9d59bbb19e`.
+2. npmatch imports npnormalize, deletes its own copy, and re-exports the public
+   functions. npmatch's normalizer stays frozen from step 1 until this merges.
+3. **matchdb** (this phase), once both have merged:
+   * change the 9 normalizer functions matchdb calls from `npmatch::` to
+     `npnormalize::`: about 45 references in `R/`, counting roxygen links.
+     All 9 are exported by npnormalize. `md-places.R` checks whether the
+     installed npmatch has `np_addr_freq()`; npnormalize always does, so that
+     check can go;
+   * add npnormalize to Imports, with `Remotes:`;
+   * move npmatch from Imports to Suggests. Package code uses it only in
+     `md_reference(build_index = TRUE)`, for `np_ref_index()`. Build the index
+     there when npmatch is installed; otherwise skip it with a message, since
+     npmatch builds it itself when given none. Tests and dev scripts that run
+     `np_cascade()` keep using npmatch through Suggests;
+   * add `npnormalize_version` beside `npmatch_version` in stamps and
+     manifests, keeping old stamps readable, and record npnormalize's version
+     and commit in the workspace log.
+
+**Success criterion:** matchdb's tests pass; the live bundles, tranches and
+database are still accepted, because the signature has not moved; and a tier
+compiled from tranches is still identical to its published bundle. matchdb
+0.1.1, with npmatch 0.1.1, is the last release before this change; pin both to
+reproduce earlier results.
+
+Step 4 of the extraction plan, npmatch getting its reference from matchdb, is
+a separate decision for npmatch and is not part of this phase.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.
