@@ -1,7 +1,7 @@
-pfmatch          pfmatch-0ad8f7a (git archive at C:/Users/jlecy/AppData/Local/Temp/claude/C--Users-jlecy-Dropbox-00---URBAN-00-GITHUB-matchdb/e134bde0-6a3d-46eb-92b2-e5682780db20/scratchpad/pfmatch-0ad8f7a)
-matchdb          e4f5a6b
+pfmatch          pfmatch-0ad8f7a (git archive at C:/Users/jdlec/AppData/Local/Temp/claude/C--Users-jdlec-Dropbox--Personal--00---URBAN-00-GITHUB-matchdb/ba5ee98a-1af6-4b02-abf2-55e28fdecc5d/scratchpad/pfmatch-0ad8f7a)
+matchdb          9a9c1d5
 npmatch          0.1.0.9000
-normalizer sig   v1-6dcb298522cc5118
+normalizer sig   v1-3e7b9f9d59bbb19e
 BMF              bmf_unified v2026-09-21, md5 636badf26f808aea70750e4932b443b9
-R                R version 4.5.3 (2026-03-11 ucrt)
-built            2026-10-23T20:54:02-0700
+R                R version 4.5.1 (2025-06-13 ucrt)
+built            2026-10-26T04:39:36-0700

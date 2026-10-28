@@ -1,5 +1,5 @@
 "artifact","role","md5","rows","bytes"
-"REF-active-raw.rds","Phase 1 reference, raw BMF strings","ec573b95f81ca618618dd17af207bebf",1974830,293022792
-"benchmark-1k-raw.rds","1k benchmark on the raw reference","1f4272a37c987063d2047f0b951a39cf",4715,162424
-"REF-active-processed.rds","Phase 1 reference, processed BMF strings","b7a719b23d1ea7eb7c2ab38505d109b0",1974830,290798349
-"benchmark-1k-processed.rds","1k benchmark on the processed reference","996defca50cc9c3f600827d9646c06a7",4716,162896
+"REF-active-raw.rds","Phase 1 reference, raw BMF strings","e144fbde0bde141dccda14f6e793f13f",1974830,293640693
+"benchmark-1k-raw.rds","1k benchmark on the raw reference","466ced4640a58a101e0f4cc1bd5f5711",4715,162248
+"REF-active-processed.rds","Phase 1 reference, processed BMF strings","7dbdb7df5a0d76a3617b0acfef9a5c43",1974830,291454588
+"benchmark-1k-processed.rds","1k benchmark on the processed reference","81386e24ec6ec1c0b2f1a0708d86a8eb",4716,162656
