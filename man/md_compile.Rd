@@ -15,7 +15,8 @@ md_compile(
 \arguments{
 \item{spec}{An \code{\link[=md_spec]{md_spec()}}.}
 
-\item{con}{A connection from \code{\link[=md_db]{md_db()}}.}
+\item{con}{A connection from \code{\link[=md_db]{md_db()}}, or from \code{\link[=md_tranche_db]{md_tranche_db()}} holding
+the files the spec needs.}
 
 \item{derive}{\code{"stored"} (the npmatch frame from stored columns),
 \code{"normalize"} (the same frame, by running \code{np_normalize()}) or \code{"none"}

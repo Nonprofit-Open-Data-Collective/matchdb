@@ -873,6 +873,11 @@ spec then becomes a partition-pruned read — DuckDB reads only the partitions t
 spec names, and here remote querying genuinely works, because pruning makes it
 selective again. Compile locally in seconds (§6c).
 
+> **Built 2026-10-27** (`dev/TRANCHES.md`). The files are split by layer and
+> class but not by band, because most bands are tiny. No statistics cell spans
+> two files. A tier compiled from its own tranches (about 1 GB for an
+> active-layer spec) is identical to its published bundle.
+
 > **Make the physical partitioning identical to the statistical cell
 > decomposition.** The partitions in Tier 2 and the per-cell `df` vectors in §6c
 > must be the same cells. One concept, two payoffs: partition pruning for I/O,

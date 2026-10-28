@@ -12,7 +12,10 @@
 #'     upstream file. Never overwritten - a new upstream release is a new
 #'     version directory. See [md_source_pin()].}
 #'   \item{`db/`}{`MATCHDB.duckdb`, the relational source of truth.}
-#'   \item{`publish/<vintage>/`}{compiled references and atom tables.}
+#'   \item{`publish/<label>/<spec_hash>/`}{compiled references
+#'     ([md_publish()]).}
+#'   \item{`tranches/<build>/`}{the database as parquet, split by layer and
+#'     class ([md_publish_tranches()]).}
 #'   \item{`work/`}{scratch. Safe to delete; never an input to anything.}
 #' }
 #'
@@ -38,7 +41,7 @@ md_path <- function(..., create = FALSE) {
 #' @export
 md_data_init <- function(quiet = FALSE) {
   root <- md_data_root()
-  for (d in c("sources", "db", "publish", "work")) {
+  for (d in c("sources", "db", "publish", "tranches", "work")) {
     dir.create(file.path(root, d), recursive = TRUE, showWarnings = FALSE)
   }
   if (!quiet) message("matchdb data root: ", root)

@@ -52,7 +52,8 @@ published bundle from the remote into the local publish directory, where
 \code{\link[=md_reference]{md_reference()}} reads it; \code{md_reference(fetch = TRUE)} does both.
 \code{md_fetch_db()} downloads the full database (about 10 GB) for those who
 want to compile their own slices with \code{\link[=md_spec]{md_spec()}} and \code{\link[=md_compile]{md_compile()}}, or
-browse it with \code{\link[=md_lookup]{md_lookup()}} and \code{\link[=md_cluster]{md_cluster()}}.
+browse it with \code{\link[=md_lookup]{md_lookup()}} and \code{\link[=md_cluster]{md_cluster()}}. Between the two,
+\code{\link[=md_fetch_tranches]{md_fetch_tranches()}} downloads only the parquet files one spec needs.
 }
 \section{The remote}{
 

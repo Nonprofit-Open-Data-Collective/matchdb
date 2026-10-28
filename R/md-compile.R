@@ -55,7 +55,8 @@
 #' this is the count that says how often that can happen.
 #'
 #' @param spec An [md_spec()].
-#' @param con A connection from [md_db()].
+#' @param con A connection from [md_db()], or from [md_tranche_db()] holding
+#'   the files the spec needs.
 #' @param derive `"stored"` (the npmatch frame from stored columns),
 #'   `"normalize"` (the same frame, by running `np_normalize()`) or `"none"`
 #'   (raw fields only).
@@ -74,6 +75,7 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
   derive <- match.arg(derive)
   own <- is.null(con)
   if (own) { con <- md_db(read_only = TRUE); on.exit(md_db_close(con), add = TRUE) }
+  .md_tranche_check(con, spec)      # a connection from md_tranche_db() holding every file needed
   msg <- function(...) message(sprintf(...))
   timed <- getOption("matchdb.compile_timing", FALSE)
   tick <- function(t0, sql) if (timed) message(sprintf("  [%5.1fs] %s", as.numeric(
