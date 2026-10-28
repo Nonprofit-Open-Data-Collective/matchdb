@@ -1141,10 +1141,10 @@ documented choice.
 > force through matchdb 0.1.1. After the move it becomes:
 >
 > ```
-> matchdb   --Imports-->   npnormalize   (np_normalize, np_token_idf, np_initials, ...)
+> matchdb   --Imports-->   npnormalize   (np_normalize, np_name_core, np_token_idf, ...)
 > matchdb   --Suggests-->  npmatch       (only np_ref_index(), and tests that run np_cascade())
 > npmatch   --Imports-->   npnormalize   (re-exports its public functions)
-> pfmatch   --Imports-->   npmatch, matchdb
+> pfmatch   --Imports-->   npmatch;  --Suggests--> matchdb
 > ```
 >
 > Why: matchdb importing npmatch meant npmatch could never import matchdb.
@@ -1458,7 +1458,32 @@ fixed, one PR per repository:
      `np_cascade()` keep using npmatch through Suggests;
    * add `npnormalize_version` beside `npmatch_version` in stamps and
      manifests, keeping old stamps readable, and record npnormalize's version
-     and commit in the workspace log.
+     and commit in the workspace log;
+   * point `.md_np_fn()` in `md-places.R` at npnormalize. Today it looks in
+     npmatch for `np_addr_key` / `.np_addr_key` (used by `md_place_key()`),
+     `np_unit_id` / `.np_unit_id` (used by `md_unit_id()`) and
+     `np_addr_freq`. When a name is missing it uses matchdb's own copy:
+     * Once step 2 merges, npmatch no longer has the first two, so matchdb
+       uses its copies. Measured on 2026-10-28, the copies agree with
+       npnormalize's functions on every distinct value in the database
+       (71,803 suite values, 6,023,439 street-plus-ZIP keys), so results don't
+       change in that window.
+     * npnormalize exports `np_addr_key()` but no suite-id function. Add a thin
+       exported `np_unit_id()` to npnormalize first, outside the signature, or
+       compare through `np_normalize()`'s `street_unit_id`;
+   * re-enable the three tests that compare against npmatch's internals and
+     skip once step 2 merges, by pointing them at npnormalize:
+     * `test-light-key.R`: the light key equals npmatch's own name cleaning;
+     * `test-parse-step5.R`: the second address line is kept as the unit;
+     * `test-places.R`: the place key and suite id equal npmatch's functions.
+
+**Status, 2026-10-28:**
+* Step 1 is done (npnormalize#1).
+* npmatch and matchdb are tagged `v0.1.1` as restore points.
+* Step 2 is open as npmatch#22. matchdb's 211 tests pass against that branch,
+  with the three above skipped.
+* Progress across all four repositories is tracked in
+  `npnormalize/dev/EXTRACTION.md`, "Status".
 
 **Success criterion:** matchdb's tests pass; the live bundles, tranches and
 database are still accepted, because the signature has not moved; and a tier
