@@ -327,10 +327,10 @@ md_build_places <- function(con, share_min = 10L, unit_coverage_min = 0.5,
 #' dropped ("STE D-2" -> `D2`, "# 300" -> `300`), so "STE 300", "Suite 300" and
 #' "# 300" are one office.
 #'
-#' `md_place_key()` calls [npnormalize::np_addr_key()]. `md_unit_id()` calls
-#' npnormalize's internal `.np_unit_id()`, and falls back to a port of the same
-#' rule should a later npnormalize rename it. The SQL macros `md_place_key()` and
-#' `md_unit_id()` are ports too; a test holds them to npnormalize's functions.
+#' `md_place_key()` calls [npnormalize::np_addr_key()] and `md_unit_id()` calls
+#' [npnormalize::np_unit_id()] (npnormalize 0.1.1 and later). The SQL macros
+#' `md_place_key()` and `md_unit_id()` are ports of the same rules; a test holds
+#' them to npnormalize's functions.
 #'
 #' @param street_key npnormalize's `street_key`.
 #' @param zip5 Five-digit ZIP.
@@ -344,25 +344,13 @@ md_place_key <- function(street_key, zip5 = NULL) {
 #' @rdname md_place_key
 #' @export
 md_unit_id <- function(unit) {
-  f <- .md_np_fn(c("np_unit_id", ".np_unit_id"))
-  if (!is.null(f)) return(f(unit))
-  v  <- toupper(as.character(unit))
-  id <- sub(.md_unit_designator_re, "", v)
-  id <- gsub("[^A-Z0-9]", "", id)
-  ifelse(is.na(v) | !nzchar(id), NA_character_, id)
+  npnormalize::np_unit_id(unit)
 }
 
-# npnormalize's .np_pobox_pat and .np_unit_id() designator strip, ported for the
-# SQL macros below.
+# npnormalize's PO box pattern and np_unit_id() designator strip, ported for the
+# SQL macros below; test-places.R holds the macros to npnormalize's functions.
 .md_pobox_pat <- "^(P ?O ?BOX|P ?O ?B|BOX|P ?O) ?#? ?[0-9]+"
 .md_unit_designator_re <- "^(#|[A-Z]+)[ .,]*#?[ .,]*"
-
-# The first of `names` npnormalize defines, exported or internal; NULL if none.
-.md_np_fn <- function(names) {
-  ns <- asNamespace("npnormalize")
-  for (nm in names) if (exists(nm, envir = ns, inherits = FALSE)) return(get(nm, envir = ns))
-  NULL
-}
 
 .md_place_macros <- function(con) {
   DBI::dbExecute(con, sprintf("

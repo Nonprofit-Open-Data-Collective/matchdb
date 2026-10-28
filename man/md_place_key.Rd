@@ -28,8 +28,8 @@ dropped ("STE D-2" -> \code{D2}, "# 300" -> \code{300}), so "STE 300", "Suite 30
 "# 300" are one office.
 }
 \details{
-\code{md_place_key()} calls \code{\link[npnormalize:np_tokenize]{npnormalize::np_addr_key()}}. \code{md_unit_id()} calls
-npnormalize's internal \code{.np_unit_id()}, and falls back to a port of the same
-rule should a later npnormalize rename it. The SQL macros \code{md_place_key()} and
-\code{md_unit_id()} are ports too; a test holds them to npnormalize's functions.
+\code{md_place_key()} calls \code{\link[npnormalize:np_tokenize]{npnormalize::np_addr_key()}} and \code{md_unit_id()} calls
+\code{\link[npnormalize:np_tokenize]{npnormalize::np_unit_id()}} (npnormalize 0.1.1 and later). The SQL macros
+\code{md_place_key()} and \code{md_unit_id()} are ports of the same rules; a test holds
+them to npnormalize's functions.
 }

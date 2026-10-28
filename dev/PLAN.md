@@ -1459,29 +1459,33 @@ fixed, one PR per repository:
    * add `npnormalize_version` beside `npmatch_version` in stamps and
      manifests, keeping old stamps readable, and record npnormalize's version
      and commit in the workspace log;
-   * point `.md_np_fn()` in `md-places.R` at npnormalize. Today it looks in
-     npmatch for `np_addr_key` / `.np_addr_key` (used by `md_place_key()`),
-     `np_unit_id` / `.np_unit_id` (used by `md_unit_id()`) and
-     `np_addr_freq`. When a name is missing it uses matchdb's own copy:
-     * Once step 2 merges, npmatch no longer has the first two, so matchdb
-       uses its copies. Measured on 2026-10-28, the copies agree with
-       npnormalize's functions on every distinct value in the database
-       (71,803 suite values, 6,023,439 street-plus-ZIP keys), so results don't
-       change in that window.
-     * npnormalize exports `np_addr_key()` but no suite-id function. Add a thin
-       exported `np_unit_id()` to npnormalize first, outside the signature, or
-       compare through `np_normalize()`'s `street_unit_id`;
-   * re-enable the three tests that compare against npmatch's internals and
-     skip once step 2 merges, by pointing them at npnormalize:
-     * `test-light-key.R`: the light key equals npmatch's own name cleaning;
+   * call npnormalize for the place helpers instead of looking inside npmatch.
+     `md-places.R` used to find `.np_addr_key`, `.np_unit_id` and
+     `np_addr_freq` in npmatch's namespace by name, and fall back to matchdb's
+     own copies when a name was missing. Once step 2 merged, the first two
+     were missing, so matchdb quietly used its copies. Those copies agree
+     with npnormalize's functions on every distinct value in the database
+     (71,803 suite values, 6,023,439 street-plus-ZIP keys, measured
+     2026-10-28), so no results changed in that window. npnormalize 0.1.1
+     exports `np_unit_id()` for this. `md_place_key()`, `md_unit_id()` and
+     `md_addr_freq()` now call `npnormalize::np_addr_key()`,
+     `np_unit_id()` and `np_addr_freq()` directly, and the copies are gone.
+     The SQL macro ports stay, and a test holds them to npnormalize;
+   * re-enable the three tests that skipped once step 2 merged, because they
+     compared against npmatch's internals. They now compare against
+     npnormalize:
+     * `test-light-key.R`: the light key equals the normalizer's own name
+       cleaning;
      * `test-parse-step5.R`: the second address line is kept as the unit;
-     * `test-places.R`: the place key and suite id equal npmatch's functions.
+     * `test-places.R`: the place key and suite id equal npnormalize's
+       functions.
 
 **Status, 2026-10-28:**
-* Step 1 is done (npnormalize#1).
-* npmatch and matchdb are tagged `v0.1.1` as restore points.
-* Step 2 is open as npmatch#22. matchdb's 211 tests pass against that branch,
-  with the three above skipped.
+* Steps 1 and 2 are done: npnormalize#1 and npmatch#22.
+* npnormalize 0.1.1 is tagged, with `np_unit_id()`.
+* npmatch and matchdb are tagged `v0.1.1` as restore points from before the
+  move.
+* Step 3 is built (see below) as matchdb#25.
 * Progress across all four repositories is tracked in
   `npnormalize/dev/EXTRACTION.md`, "Status".
 
@@ -1494,23 +1498,29 @@ reproduce earlier results.
 Step 4 of the extraction plan, npmatch getting its reference from matchdb, is
 a separate decision for npmatch and is not part of this phase.
 
-> **Built 2026-10-27** on `feat/import-npnormalize`, after npnormalize 0.1.0
-> and npmatch PR #22 (`b0cedb4`) merged. Results:
-> * the test suite passes, 872 tests with none skipped;
-> * the live bundles, tranches and database are all accepted, under signature
->   `v1-3e7b9f9d59bbb19e`. The database was checked by its manifest only, not
->   downloaded;
-> * `active-observed` and `unified-observed` compiled from the live tranches
->   are identical to their bundles.
+> **Built 2026-10-27/28** on `feat/import-npnormalize` (matchdb#25), after
+> npnormalize 0.1.0 and npmatch#22 merged. Finished on 2026-10-28 against
+> npnormalize 0.1.1: matchdb requires `npnormalize (>= 0.1.1)` and calls its
+> `np_unit_id()` directly. Results:
+> * **Tests:** 215 pass, none skipped, with npmatch 0.1.1 and with npmatch
+>   `main` (0.1.1.9000) installed alike.
+> * **`R CMD check`:** 0 errors, 3 warnings, 2 notes, all of which also occur
+>   on `main`:
+>   * non-ASCII characters in `md-ingest-relations.R` and `md-light-key.R`;
+>   * undeclared `fiscal` and `methods`, and an unused `data.table` import;
+>   * two undocumented arguments;
+>   * an empty Rd section;
+>   * the timestamp note.
+>
+>   Tests' use of `withr` is now declared.
+> * **The live bundles, tranches and database** are all accepted, under
+>   signature `v1-3e7b9f9d59bbb19e`. The database was checked by its manifest
+>   only, not downloaded.
+> * **Compiled from tranches:** `active-observed` and `unified-observed`,
+>   compiled from the live tranches, are identical to their bundles.
 >
 > The check is `dev/verify/npnormalize-check.R`, and its log is in
 > `dev/verify/logs/npnormalize-check-2026-10-27.log`.
->
-> One finding beyond the plan: matchdb found `.np_unit_id()` and
-> `np_addr_freq()` by looking inside npmatch's namespace. With the new npmatch
-> those lookups missed, and matchdb quietly fell back to its own copies; three
-> tests that compare matchdb with the normalizer were skipping for the same
-> reason. All three now run against npnormalize and pass.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.

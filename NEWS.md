@@ -14,9 +14,14 @@
   which builds npmatch's blocking index. Without npmatch the index is skipped
   with a message; npmatch builds it itself when given none.
 * `md_place_key()`, `md_unit_id()` and `md_addr_freq()` call npnormalize
-  directly. Before, they looked for these functions in npmatch, and with an
-  npmatch that no longer holds the normalizer they quietly fell back to
-  matchdb's own copies. The copy of `np_addr_freq()` is removed.
+  directly: `np_addr_key()`, `np_unit_id()` and `np_addr_freq()`.
+  * **Before,** they looked for these functions in npmatch. With an npmatch
+    that no longer holds the normalizer, they quietly fell back to matchdb's
+    own copies.
+  * **The copies are removed.** They had agreed with npnormalize on every
+    distinct value in the database.
+  * **matchdb now requires npnormalize 0.1.1,** the first version to export
+    `np_unit_id()`.
 
 ## Stamps and the workspace log record npnormalize
 
