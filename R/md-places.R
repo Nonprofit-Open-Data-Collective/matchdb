@@ -319,58 +319,39 @@ md_build_places <- function(con, share_min = 10L, unit_coverage_min = 0.5,
   "N A", "WELLS FARGO", "JPMORGAN", "CHASE", "CITIBANK", "MELLON", "NORTHERN TRUST",
   "US BANK", "PNC", "FIDUCIARY")
 
-#' npmatch's address key and suite identifier
+#' npnormalize's address key and suite identifier
 #'
-#' `md_place_key()` is npmatch's address key: the normalized street, a space,
+#' `md_place_key()` is npnormalize's address key: the normalized street, a space,
 #' the five-digit ZIP; empty for a PO box, because a box number is the address
 #' and counting records at one counts its owners, not a building's tenants.
 #' `md_unit_id()` is the suite identifier with its designator and separators
 #' dropped ("STE D-2" -> `D2`, "# 300" -> `300`), so "STE 300", "Suite 300" and
 #' "# 300" are one office.
 #'
-#' Both call npmatch's own function when the installed npmatch has it
-#' (`np_addr_key()` / `np_unit_id()` if exported, else the internal versions
-#' from `fix/address-class` on), and otherwise apply a port of the same rule.
-#' The SQL macros `md_place_key()` and `md_unit_id()` are the port; a test
-#' holds them to npmatch's functions whenever those are installed.
+#' `md_place_key()` calls [npnormalize::np_addr_key()] and `md_unit_id()` calls
+#' [npnormalize::np_unit_id()] (npnormalize 0.1.1 and later). The SQL macros
+#' `md_place_key()` and `md_unit_id()` are ports of the same rules; a test holds
+#' them to npnormalize's functions.
 #'
-#' @param street_key npmatch's `street_key`.
+#' @param street_key npnormalize's `street_key`.
 #' @param zip5 Five-digit ZIP.
-#' @param unit npmatch's `street_unit` ("STE 300").
+#' @param unit npnormalize's `street_unit` ("STE 300").
 #' @return A character vector.
 #' @export
 md_place_key <- function(street_key, zip5 = NULL) {
-  f <- .md_np_fn(c("np_addr_key", ".np_addr_key"))
-  if (!is.null(f)) return(f(street_key, zip5))
-  s <- toupper(as.character(street_key)); s[is.na(s)] <- ""
-  z <- if (is.null(zip5)) rep("", length(s)) else as.character(zip5)
-  z[is.na(z)] <- ""
-  out <- ifelse(nzchar(s), paste(s, z), "")
-  out[grepl(.md_pobox_pat, s)] <- ""
-  out
+  npnormalize::np_addr_key(street_key, zip5)
 }
 
 #' @rdname md_place_key
 #' @export
 md_unit_id <- function(unit) {
-  f <- .md_np_fn(c("np_unit_id", ".np_unit_id"))
-  if (!is.null(f)) return(f(unit))
-  v  <- toupper(as.character(unit))
-  id <- sub(.md_unit_designator_re, "", v)
-  id <- gsub("[^A-Z0-9]", "", id)
-  ifelse(is.na(v) | !nzchar(id), NA_character_, id)
+  npnormalize::np_unit_id(unit)
 }
 
-# npmatch's .np_pobox_pat and .np_unit_id() designator strip, ported.
+# npnormalize's PO box pattern and np_unit_id() designator strip, ported for the
+# SQL macros below; test-places.R holds the macros to npnormalize's functions.
 .md_pobox_pat <- "^(P ?O ?BOX|P ?O ?B|BOX|P ?O) ?#? ?[0-9]+"
 .md_unit_designator_re <- "^(#|[A-Z]+)[ .,]*#?[ .,]*"
-
-.md_np_fn <- function(names) {
-  if (!requireNamespace("npmatch", quietly = TRUE)) return(NULL)
-  ns <- asNamespace("npmatch")
-  for (nm in names) if (exists(nm, envir = ns, inherits = FALSE)) return(get(nm, envir = ns))
-  NULL
-}
 
 .md_place_macros <- function(con) {
   DBI::dbExecute(con, sprintf("
@@ -388,7 +369,7 @@ md_unit_id <- function(unit) {
 
 #' Address-sharing statistics for a compiled reference
 #'
-#' What npmatch's `np_addr_freq()` computes, over exactly the rows of a
+#' [npnormalize::np_addr_freq()], over exactly the rows of a
 #' compiled reference: records per address, per address and suite, distinct
 #' suites per address, suite coverage, distinct names and the top name's share,
 #' and the class. [md_publish()] ships it in every bundle as
@@ -396,61 +377,15 @@ md_unit_id <- function(unit) {
 #' shard) still reads the whole tier's counts, and [md_reference()] returns it
 #' as `addr_freq`, the object `np_compare(addr_freq = )` takes.
 #'
-#' Calls `npmatch::np_addr_freq()` when the installed npmatch has it, so the
-#' result is npmatch's by construction; otherwise a port of it.
-#'
 #' @param ref A compiled reference frame (`street_key`, `zip5`, `name_key`, and
 #'   `street_unit_id` or `street_unit`).
-#' @param share_min,unit_coverage_min npmatch's thresholds.
+#' @param share_min,unit_coverage_min npnormalize's thresholds.
 #' @return An object of class `np_addr_freq`.
 #' @export
 md_addr_freq <- function(ref, share_min = 10L, unit_coverage_min = 0.5) {
   units <- if ("street_unit_id" %in% names(ref)) ref$street_unit_id else md_unit_id(ref$street_unit)
-  f <- .md_np_fn("np_addr_freq")
-  if (!is.null(f)) {
-    return(f(ref$street_key, ref$zip5, units, ref$name_key, share_min = share_min,
-             unit_coverage_min = unit_coverage_min))
-  }
-  .md_addr_freq_port(ref$street_key, ref$zip5, units, ref$name_key, share_min, unit_coverage_min)
-}
-
-# npmatch's np_addr_freq() and .np_addr_class(), ported line for line.
-.md_addr_freq_port <- function(street_keys, zip5, unit_ids, name_keys, share_min = 10L,
-                               unit_coverage_min = 0.5) {
-  a <- md_place_key(street_keys, zip5)
-  u <- if (is.null(unit_ids)) rep(NA_character_, length(a)) else as.character(unit_ids)
-  ok    <- nzchar(a)
-  has_u <- ok & !is.na(u) & nzchar(u)
-  addr  <- table(a[ok])
-  aunit <- table(paste(a[has_u], u[has_u], sep = "|"))
-  units <- tapply(u[has_u], a[has_u], function(v) length(unique(v)))
-  n_addr <- stats::setNames(as.integer(addr), names(addr))
-  n_unit <- stats::setNames(as.integer(units), names(units))
-  wu  <- stats::setNames(as.integer(table(a[has_u])), names(table(a[has_u])))
-  cov <- stats::setNames(rep(0, length(n_addr)), names(n_addr))
-  cov[names(wu)] <- wu / n_addr[names(wu)]
-  nk <- if (is.null(name_keys)) NULL else as.character(name_keys)
-  if (!is.null(nk)) {
-    n_names <- vapply(split(nk[ok], a[ok]), function(v) length(unique(v)), integer(1))
-    top_shr <- vapply(split(nk[ok], a[ok]), function(v) max(table(v)) / length(v), numeric(1))
-  } else {
-    n_names <- stats::setNames(rep(NA_integer_, length(n_addr)), names(n_addr))
-    top_shr <- stats::setNames(rep(NA_real_, length(n_addr)), names(n_addr))
-  }
-  cls <- rep("cluster", length(n_addr)); nm <- names(n_addr)
-  big <- n_addr >= share_min
-  uu <- n_unit[nm]; uu[is.na(uu)] <- 0L
-  ts <- top_shr[nm]
-  cls[big] <- "shared"
-  cls[big & uu >= 2 & cov[nm] >= unit_coverage_min] <- "building"
-  cls[big & !is.na(ts) & ts >= 0.5] <- "federated"
-  cls[n_addr < 2] <- "single"
-  structure(list(
-    addr = n_addr, addr_unit = stats::setNames(as.integer(aunit), names(aunit)),
-    units = n_unit, unit_coverage = cov, n_names = n_names[names(n_addr)],
-    top_name_share = top_shr[names(n_addr)], class = stats::setNames(cls, nm),
-    share_min = as.integer(share_min), unit_coverage_min = as.numeric(unit_coverage_min)),
-    class = "np_addr_freq")
+  npnormalize::np_addr_freq(ref$street_key, ref$zip5, units, ref$name_key,
+                            share_min = share_min, unit_coverage_min = unit_coverage_min)
 }
 
 # An np_addr_freq as one long table, and back. kind 'addr' carries the

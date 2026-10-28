@@ -80,11 +80,16 @@ md_record_vintage <- function(con, source, version, table_name, row_count,
     build_note        = build_note,
     npmatch_version   = pin$npmatch_version %||% NA_character_,
     normalize_signature = pin$normalize_signature %||% NA_character_,
+    npnormalize_version = pin$npnormalize_version %||% NA_character_,
     stringsAsFactors  = FALSE
   )
   if (!DBI::dbExistsTable(con, "source_vintage")) {
     DBI::dbWriteTable(con, "source_vintage", row)
   } else {
+    # a database built before npnormalize lacks the column; its old rows stay NULL
+    if (!"npnormalize_version" %in% DBI::dbListFields(con, "source_vintage")) {
+      DBI::dbExecute(con, "ALTER TABLE source_vintage ADD COLUMN npnormalize_version VARCHAR")
+    }
     DBI::dbExecute(con, "DELETE FROM source_vintage WHERE vintage_id = ?",
                    params = list(row$vintage_id))
     DBI::dbAppendTable(con, "source_vintage", row)

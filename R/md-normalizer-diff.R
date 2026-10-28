@@ -32,7 +32,7 @@
 #' @return An object of class `md_normalizer_diff`: a list of the four data
 #'   frames above, plus `old` and `new`.
 #' @export
-md_normalizer_diff <- function(con, old, new = npmatch::np_normalize_signature(),
+md_normalizer_diff <- function(con, old, new = npnormalize::np_normalize_signature(),
                                examples = 5L) {
   if (identical(old, new)) stop("old and new are the same signature", call. = FALSE)
   md_identity_macros(con)

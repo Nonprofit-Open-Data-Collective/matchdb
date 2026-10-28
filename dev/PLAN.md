@@ -1141,10 +1141,10 @@ documented choice.
 > force through matchdb 0.1.1. After the move it becomes:
 >
 > ```
-> matchdb   --Imports-->   npnormalize   (np_normalize, np_token_idf, np_initials, ...)
+> matchdb   --Imports-->   npnormalize   (np_normalize, np_name_core, np_token_idf, ...)
 > matchdb   --Suggests-->  npmatch       (only np_ref_index(), and tests that run np_cascade())
 > npmatch   --Imports-->   npnormalize   (re-exports its public functions)
-> pfmatch   --Imports-->   npmatch, matchdb
+> pfmatch   --Imports-->   npmatch;  --Suggests--> matchdb
 > ```
 >
 > Why: matchdb importing npmatch meant npmatch could never import matchdb.
@@ -1458,7 +1458,36 @@ fixed, one PR per repository:
      `np_cascade()` keep using npmatch through Suggests;
    * add `npnormalize_version` beside `npmatch_version` in stamps and
      manifests, keeping old stamps readable, and record npnormalize's version
-     and commit in the workspace log.
+     and commit in the workspace log;
+   * call npnormalize for the place helpers instead of looking inside npmatch.
+     `md-places.R` used to find `.np_addr_key`, `.np_unit_id` and
+     `np_addr_freq` in npmatch's namespace by name, and fall back to matchdb's
+     own copies when a name was missing. Once step 2 merged, the first two
+     were missing, so matchdb quietly used its copies. Those copies agree
+     with npnormalize's functions on every distinct value in the database
+     (71,803 suite values, 6,023,439 street-plus-ZIP keys, measured
+     2026-10-28), so no results changed in that window. npnormalize 0.1.1
+     exports `np_unit_id()` for this. `md_place_key()`, `md_unit_id()` and
+     `md_addr_freq()` now call `npnormalize::np_addr_key()`,
+     `np_unit_id()` and `np_addr_freq()` directly, and the copies are gone.
+     The SQL macro ports stay, and a test holds them to npnormalize;
+   * re-enable the three tests that skipped once step 2 merged, because they
+     compared against npmatch's internals. They now compare against
+     npnormalize:
+     * `test-light-key.R`: the light key equals the normalizer's own name
+       cleaning;
+     * `test-parse-step5.R`: the second address line is kept as the unit;
+     * `test-places.R`: the place key and suite id equal npnormalize's
+       functions.
+
+**Status, 2026-10-28:**
+* Steps 1 and 2 are done: npnormalize#1 and npmatch#22.
+* npnormalize 0.1.1 is tagged, with `np_unit_id()`.
+* npmatch and matchdb are tagged `v0.1.1` as restore points from before the
+  move.
+* Step 3 is built (see below) as matchdb#25.
+* Progress across all four repositories is tracked in
+  `npnormalize/dev/EXTRACTION.md`, "Status".
 
 **Success criterion:** matchdb's tests pass; the live bundles, tranches and
 database are still accepted, because the signature has not moved; and a tier
@@ -1468,6 +1497,30 @@ reproduce earlier results.
 
 Step 4 of the extraction plan, npmatch getting its reference from matchdb, is
 a separate decision for npmatch and is not part of this phase.
+
+> **Built 2026-10-27/28** on `feat/import-npnormalize` (matchdb#25), after
+> npnormalize 0.1.0 and npmatch#22 merged. Finished on 2026-10-28 against
+> npnormalize 0.1.1: matchdb requires `npnormalize (>= 0.1.1)` and calls its
+> `np_unit_id()` directly. Results:
+> * **Tests:** 215 pass, none skipped, with npmatch 0.1.1 and with npmatch
+>   `main` (0.1.1.9000) installed alike.
+> * **`R CMD check`:** 0 errors, 3 warnings, 2 notes, all of which also occur
+>   on `main`:
+>   * non-ASCII characters in `md-ingest-relations.R` and `md-light-key.R`;
+>   * undeclared `fiscal` and `methods`, and an unused `data.table` import;
+>   * two undocumented arguments;
+>   * an empty Rd section;
+>   * the timestamp note.
+>
+>   Tests' use of `withr` is now declared.
+> * **The live bundles, tranches and database** are all accepted, under
+>   signature `v1-3e7b9f9d59bbb19e`. The database was checked by its manifest
+>   only, not downloaded.
+> * **Compiled from tranches:** `active-observed` and `unified-observed`,
+>   compiled from the live tranches, are identical to their bundles.
+>
+> The check is `dev/verify/npnormalize-check.R`, and its log is in
+> `dev/verify/logs/npnormalize-check-2026-10-27.log`.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.

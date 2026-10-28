@@ -15,12 +15,12 @@
 #'   \item{`stat_name_cell`}{`layer, variant_class, band, name_key, n_eins`:
 #'     EINs holding the name in that cell}
 #'   \item{`stat_token_cell`}{`layer, variant_class, band, token, n_rows`: name
-#'     rows containing the token, by [npmatch::np_token_idf()]'s rules - split
+#'     rows containing the token, by [npnormalize::np_token_idf()]'s rules - split
 #'     on space, unique per name, at least two characters, no stopwords}
 #' }
 #'
 #' @section Name rows, not frame rows:
-#' npmatch's own [npmatch::np_name_freq()] and [npmatch::np_token_idf()] count
+#' npmatch's own [npnormalize::np_name_freq()] and [npnormalize::np_token_idf()] count
 #' rows of the compiled frame, where a name is repeated once per paired address.
 #' These cells count names, so an EIN with three addresses counts once. The
 #' difference is real and [md_compile()] reports both.
@@ -36,7 +36,7 @@ md_build_stats <- function(con = NULL) {
     stop("name_compact does not exist - run md_build_compact() first", call. = FALSE)
   }
   duckdb::duckdb_register(con, "st_stop",
-                          data.frame(word = toupper(npmatch::np_stopwords())))
+                          data.frame(word = toupper(npnormalize::np_stopwords())))
   on.exit(duckdb::duckdb_unregister(con, "st_stop"), add = TRUE)
 
   DBI::dbExecute(con, sprintf("

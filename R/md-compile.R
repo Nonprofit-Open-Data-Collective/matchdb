@@ -23,7 +23,7 @@
 #' per name, with the address fields empty.
 #'
 #' @section Derived columns:
-#' Every column [npmatch::np_normalize()] adds is a function of one input field,
+#' Every column [npnormalize::np_normalize()] adds is a function of one input field,
 #' and [md_build_derived()] stores all of them. `derive = "stored"` (the
 #' default) gives each row the stored columns of a row holding exactly its
 #' strings - the name row with its spelling, the address row with its street,
@@ -310,7 +310,7 @@ md_compile <- function(spec, con = NULL, derive = c("stored", "normalize", "none
     ref[[col]] <- stringr::str_squish(as.character(ref[[col]]))
   }
   if (derive == "normalize") {
-    ref <- npmatch::np_normalize(ref[, setdiff(names(ref), c(".dba_key", ".has_address"))])
+    ref <- npnormalize::np_normalize(ref[, setdiff(names(ref), c(".dba_key", ".has_address"))])
   } else if (stored) {
     raw_zip5 <- ref$zip5
     ref <- .md_assemble_stored(ref)
@@ -404,7 +404,7 @@ print.md_reference <- function(x, ...) {
     method <- "summed from cells"
   } else {
     duckdb::duckdb_register(con, "cp_stop",
-                            data.frame(word = toupper(npmatch::np_stopwords())))
+                            data.frame(word = toupper(npnormalize::np_stopwords())))
     on.exit(duckdb::duckdb_unregister(con, "cp_stop"), add = TRUE)
     ne <- q("SELECT upper(name_key) AS name_key, count(*) AS n FROM cp_name GROUP BY 1")
     td <- q("SELECT token, count(*) AS n FROM (
@@ -445,20 +445,22 @@ print.md_reference <- function(x, ...) {
 # What a compiled reference was built from: the spec, the database's loaded
 # sources, and the normalizer - which must be the one that built name_derived.
 .md_compile_stamp <- function(con, spec) {
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   stored <- DBI::dbGetQuery(con, "SELECT DISTINCT normalize_signature AS s FROM name_derived")$s
   if (length(stored) != 1L || !identical(stored, sig)) {
     stop("installed normalizer ", sig, " does not match the one that built name_derived (",
          paste(stored, collapse = ", "), "). Rebuild the derived tables, or install the ",
-         "npmatch that built them.", call. = FALSE)
+         "npnormalize that built them.", call. = FALSE)
   }
   sv <- DBI::dbGetQuery(con, "
     SELECT vintage_id, coalesce(local_md5, '') AS m, row_count FROM source_vintage ORDER BY 1")
+  v <- .md_normalizer_versions()
   list(spec_hash = spec$spec_hash,
        db_fingerprint = substr(.md_md5_string(paste(sv$vintage_id, sv$m, sv$row_count,
                                                      collapse = "\n")), 1, 16),
        normalize_signature = sig,
-       npmatch_version = as.character(utils::packageVersion("npmatch")),
+       npnormalize_version = v$npnormalize_version,
+       npmatch_version = v$npmatch_version,
        matchdb_version = as.character(utils::packageVersion("matchdb")),
        built = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"))
 }
@@ -475,7 +477,7 @@ print.md_reference <- function(x, ...) {
                   unit = "", city = "", county = "", state = "", zip5 = "", zip_plus4 = "",
                   active = NA, variant_class = "", address_class = "", layer = "",
                   stringsAsFactors = FALSE)
-  npmatch::np_normalize(b)
+  npnormalize::np_normalize(b)
 }
 
 # Turn a compiled frame carrying stored derived columns into the frame
@@ -507,7 +509,7 @@ print.md_reference <- function(x, ...) {
   idx <- unique(round(seq(1, nrow(ref), length.out = min(n, nrow(ref)))))
   raw <- ref[idx, .md_frame_inputs]
   raw$zip5 <- raw_zip5[idx]
-  fresh <- npmatch::np_normalize(raw)
+  fresh <- npnormalize::np_normalize(raw)
   derived <- setdiff(names(fresh), setdiff(.md_frame_inputs, "zip5"))
   same <- function(a, b) identical(ifelse(is.na(a), "<NA>", as.character(a)),
                                    ifelse(is.na(b), "<NA>", as.character(b)))
@@ -529,7 +531,7 @@ print.md_reference <- function(x, ...) {
 # np_stopwords(); idf = log(N / df) with N the frame's rows. The same values
 # as npmatch's, as a named lookup; only the order of the names differs.
 .md_frame_stats <- function(con, n_rows) {
-  duckdb::duckdb_register(con, "cp_fstop", data.frame(word = npmatch::np_stopwords()))
+  duckdb::duckdb_register(con, "cp_fstop", data.frame(word = npnormalize::np_stopwords()))
   on.exit(duckdb::duckdb_unregister(con, "cp_fstop"), add = TRUE)
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE cp_fkeys AS
     SELECT row_number() OVER () AS r, upper(coalesce(name_key, '')) AS k FROM cp_pair")

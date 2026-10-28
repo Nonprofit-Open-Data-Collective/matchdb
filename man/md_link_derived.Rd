@@ -4,7 +4,7 @@
 \alias{md_link_derived}
 \title{Rebuild name_derived and address_derived from the text-keyed columns}
 \usage{
-md_link_derived(con, signature = npmatch::np_normalize_signature())
+md_link_derived(con, signature = npnormalize::np_normalize_signature())
 }
 \arguments{
 \item{con}{A DuckDB connection.}

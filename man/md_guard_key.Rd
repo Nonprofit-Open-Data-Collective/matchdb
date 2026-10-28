@@ -13,7 +13,7 @@ md_guard_key(x)
 Character keys, \code{""} for \code{NA}.
 }
 \description{
-npmatch's exact-lookup key, \code{\link[npmatch:np_name_core]{npmatch::np_name_core()}}: upper case, accents
+npmatch's exact-lookup key, \code{\link[npnormalize:np_name_core]{npnormalize::np_name_core()}}: upper case, accents
 removed, \code{&} to \code{AND}, apostrophes and initialism periods deleted
 (\verb{ST MARY'S} = \verb{SAINT MARYS}), other punctuation to spaces, abbreviations
 expanded, then connector words and legal forms dropped.

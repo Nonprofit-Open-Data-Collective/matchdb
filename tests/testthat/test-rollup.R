@@ -88,7 +88,7 @@ test_that("EINs missing from entity are held back", {
 
 test_that("installing the rollups links derived columns and keeps the old tables", {
   skip_if_no_rollup_deps()
-  skip_if_not_installed("npmatch")
+  skip_if_not_installed("npnormalize")
   con <- rollup_con("EIN-00-0000001"); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   DBI::dbWriteTable(con, "name", data.frame(name_id = 1L, ein = "EIN-00-0000001", name_raw = "OLD"))
   DBI::dbWriteTable(con, "address", data.frame(address_id = 1L, ein = "EIN-00-0000001"))

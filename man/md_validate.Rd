@@ -48,7 +48,7 @@ A \code{data.frame} with one row per check: \code{check}, \code{pass}, \code{n_b
 The gate for every ingest phase. These are properties the database is checked
 against \emph{on its own terms} - key uniqueness, EIN wellformedness, referential
 integrity, provenance completeness, and agreement between the stored derived
-columns and a live \code{\link[npmatch:np_normalize]{npmatch::np_normalize()}} call.
+columns and a live \code{\link[npnormalize:np_normalize]{npnormalize::np_normalize()}} call.
 }
 \details{
 It is deliberately not a comparison against a previously built artifact.

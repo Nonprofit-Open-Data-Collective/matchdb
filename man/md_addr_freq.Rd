@@ -10,21 +10,17 @@ md_addr_freq(ref, share_min = 10L, unit_coverage_min = 0.5)
 \item{ref}{A compiled reference frame (\code{street_key}, \code{zip5}, \code{name_key}, and
 \code{street_unit_id} or \code{street_unit}).}
 
-\item{share_min, unit_coverage_min}{npmatch's thresholds.}
+\item{share_min, unit_coverage_min}{npnormalize's thresholds.}
 }
 \value{
 An object of class \code{np_addr_freq}.
 }
 \description{
-What npmatch's \code{np_addr_freq()} computes, over exactly the rows of a
+\code{\link[npnormalize:np_addr_freq]{npnormalize::np_addr_freq()}}, over exactly the rows of a
 compiled reference: records per address, per address and suite, distinct
 suites per address, suite coverage, distinct names and the top name's share,
 and the class. \code{\link[=md_publish]{md_publish()}} ships it in every bundle as
 \code{addr_freq.parquet}, so a run against a slice of the reference (a state, a
 shard) still reads the whole tier's counts, and \code{\link[=md_reference]{md_reference()}} returns it
 as \code{addr_freq}, the object \code{np_compare(addr_freq = )} takes.
-}
-\details{
-Calls \code{npmatch::np_addr_freq()} when the installed npmatch has it, so the
-result is npmatch's by construction; otherwise a port of it.
 }

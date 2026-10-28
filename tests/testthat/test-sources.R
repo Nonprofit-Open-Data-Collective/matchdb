@@ -42,7 +42,7 @@ with_pin_root <- function(code) {
 }
 
 test_that("a single-file pin records its file in FILES.csv", {
-  skip_if_not_installed("npmatch")
+  skip_if_not_installed("npnormalize")
   with_pin_root({
     dir <- md_path("sources", "ntee_crosswalk", "v1", create = TRUE)
     f <- file.path(dir, "ntee.csv"); writeLines("a,b", f)
@@ -55,7 +55,7 @@ test_that("a single-file pin records its file in FILES.csv", {
 })
 
 test_that("a set pin records each file, so a changed year can be found", {
-  skip_if_not_installed("npmatch")
+  skip_if_not_installed("npnormalize")
   with_pin_root({
     dir <- md_path("sources", "ntee_crosswalk", "v-set", create = TRUE)
     f <- file.path(dir, c("Y-2021.csv", "Y-2020.csv"))

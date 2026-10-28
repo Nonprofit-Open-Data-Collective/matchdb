@@ -20,7 +20,7 @@ md_build_text_derived(con, what = c("name", "address"), chunk = 1000000L)
 
 md_check_text_derived(
   con,
-  signature = npmatch::np_normalize_signature(),
+  signature = npnormalize::np_normalize_signature(),
   stop_on_missing = FALSE
 )
 

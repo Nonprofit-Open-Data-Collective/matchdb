@@ -18,7 +18,7 @@
 #'     `123456789`, `987654321`, or a value below 1,000,000 (`EIN-00-0xxxxxx`;
 #'     the ingests zero-pad, so a written `0` lands here).}
 #'   \item{`flag_placeholder_name`}{Name is no name by npmatch's rule,
-#'     [npmatch::np_name_placeholder()]: `SEE SCHEDULE O`,
+#'     [npnormalize::np_name_placeholder()]: `SEE SCHEDULE O`,
 #'     `SEE ATTACHED`, `VARIOUS`, `N/A`, `NONE`, `SAME AS ABOVE`, blank, or no
 #'     letters - unless it is consistent with the EIN's own names
 #'     (`SEE` for Social and Environmental Entrepreneurs).}
@@ -56,7 +56,7 @@
 #' adds them: flags computed before the return headers load see fewer names.
 #'
 #' The name key, abbreviations, stop words and placeholder rule are npmatch's
-#' ([npmatch::np_name_rules()]). `DENOM_WORDS` and the abbreviation-match rules
+#' ([npnormalize::np_name_rules()]). `DENOM_WORDS` and the abbreviation-match rules
 #' (`md_name_pair_hit()`) are copied from networked990 `R/names.R` (2026-10-21).
 #'
 #' @param con A connection from [md_db()].
@@ -135,7 +135,7 @@ md_guard_observed <- function(con, sources = NULL, common_min_eins = 2000L,
   # placeholder names: npmatch's rule, the one npmatch applies when matching,
   # evaluated in R on the distinct strings (its cleaning step has no SQL twin)
   ph <- DBI::dbGetQuery(con, "SELECT DISTINCT name_raw FROM g_obs")
-  ph$ph <- npmatch::np_name_placeholder(ph$name_raw)
+  ph$ph <- npnormalize::np_name_placeholder(ph$name_raw)
   ph <- ph[ph$ph, "name_raw", drop = FALSE]
   DBI::dbExecute(con, "CREATE OR REPLACE TEMP TABLE g_ph (name_raw VARCHAR)")
   if (nrow(ph)) DBI::dbAppendTable(con, "g_ph", ph)
@@ -264,7 +264,7 @@ md_guard_observed <- function(con, sources = NULL, common_min_eins = 2000L,
 #' Placeholder EINs
 #'
 #' The R version of the rule [md_guard_observed()] applies in SQL. Placeholder
-#' *names* are npmatch's rule, [npmatch::np_name_placeholder()].
+#' *names* are npmatch's rule, [npnormalize::np_name_placeholder()].
 #' @param x EINs in any format.
 #' @return Logical; `NA` for EINs that are not nine digits.
 #' @examples
@@ -277,7 +277,7 @@ md_placeholder_ein <- function(x) {
 
 #' Name key used by the guards
 #'
-#' npmatch's exact-lookup key, [npmatch::np_name_core()]: upper case, accents
+#' npmatch's exact-lookup key, [npnormalize::np_name_core()]: upper case, accents
 #' removed, `&` to `AND`, apostrophes and initialism periods deleted
 #' (`ST MARY'S` = `SAINT MARYS`), other punctuation to spaces, abbreviations
 #' expanded, then connector words and legal forms dropped.
@@ -285,18 +285,18 @@ md_placeholder_ein <- function(x) {
 #' @return Character keys, `""` for `NA`.
 #' @export
 md_guard_key <- function(x) {
-  k <- npmatch::np_name_core(x)
+  k <- npnormalize::np_name_core(x)
   k[is.na(k)] <- ""
   k
 }
 
-# SQL counterparts, generated from npmatch::np_name_rules(). md_guard_key(s)
-# must equal npmatch::np_name_core() (tested). The cleaning steps mirror
+# SQL counterparts, generated from npnormalize::np_name_rules(). md_guard_key(s)
+# must equal npnormalize::np_name_core() (tested). The cleaning steps mirror
 # networked990's g_name_clean(), its tested port of npmatch's: the period rule
 # runs twice because each pass removes every other period of F.I.N.D.
 .md_guard_macros <- function(con) {
   q <- function(x) gsub("'", "''", x)
-  rules <- npmatch::np_name_rules()
+  rules <- npnormalize::np_name_rules()
   stop_sql <- paste0("[", paste(sprintf("'%s'", q(rules$core_stop)), collapse = ", "), "]")
   abbr_sql <- paste(sprintf("WHEN '%s' THEN '%s'", q(names(rules$abbrev)), q(rules$abbrev)),
                     collapse = " ")

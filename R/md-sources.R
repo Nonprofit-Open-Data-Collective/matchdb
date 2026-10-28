@@ -324,8 +324,9 @@ md_source_pin <- function(source, file, version = NULL) {
     local_file        = basename(file),
     local_size        = as.character(file.info(file)$size),
     local_md5         = unname(tools::md5sum(file)),
-    npmatch_version   = as.character(utils::packageVersion("npmatch")),
-    normalize_signature = npmatch::np_normalize_signature()
+    npnormalize_version = .md_pkg_version("npnormalize"),
+    npmatch_version   = .md_pkg_version("npmatch"),
+    normalize_signature = npnormalize::np_normalize_signature()
   )
 
   dest <- md_path("sources", source, version, create = TRUE)
@@ -555,8 +556,9 @@ NULL
          upstream_modified = if (!is.null(head)) head[["last_modified"]] else NA_character_,
          upstream_size     = if (!is.null(head)) head[["size"]] else NA_character_),
     local,
-    list(npmatch_version = as.character(utils::packageVersion("npmatch")),
-         normalize_signature = npmatch::np_normalize_signature())
+    list(npnormalize_version = .md_pkg_version("npnormalize"),
+         npmatch_version = .md_pkg_version("npmatch"),
+         normalize_signature = npnormalize::np_normalize_signature())
   )
   dest <- md_path("sources", source, version, create = TRUE)
   write.dcf(as.data.frame(pin, stringsAsFactors = FALSE), file.path(dest, "PIN.dcf"))

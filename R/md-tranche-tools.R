@@ -119,7 +119,8 @@ print.md_tranche_diff <- function(x, ...) {
   o <- attr(x, "old"); n <- attr(x, "new")
   if (is.null(o)) { print(as.data.frame(unclass(x)), ...); return(invisible(x)) }   # a subset
   cat(sprintf("<md_tranche_diff> %s -> %s\n", o$build, n$build))
-  for (k in c("normalize_signature", "npmatch_version", "matchdb_commit", "db_fingerprint")) {
+  for (k in c("normalize_signature", "npnormalize_version", "npmatch_version", "matchdb_commit",
+              "db_fingerprint")) {
     a <- o[[k]] %||% "?"; b <- n[[k]] %||% "?"
     cat(sprintf("  %-20s %s%s\n", k, a, if (identical(a, b)) "  (same)" else paste0(" -> ", b)))
   }

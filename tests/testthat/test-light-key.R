@@ -61,14 +61,14 @@ test_that("R and SQL compute the same light key", {
   expect_identical(sql, md_light_key(x))
 })
 
-test_that("the light key equals npmatch's own name cleaning", {
+test_that("the light key equals npnormalize's own name cleaning", {
   skip_if_not_installed("stringi")
-  skip_if_not_installed("npmatch")
-  ns <- asNamespace("npmatch")
-  # the special-letter table arrived in npmatch at 08016b7 (before it, eszett
-  # became a space: "STRA E"); an older install cannot be compared
+  skip_if_not_installed("npnormalize")
+  ns <- asNamespace("npnormalize")
+  # the special-letter table arrived in npmatch at 08016b7, before the move to
+  # npnormalize, so every npnormalize has it; the check guards a later rename
   skip_if_not(exists(".np_strip_joiners", envir = ns) && exists(".np_special_letters", envir = ns),
-              "installed npmatch predates the joiner rule or the special-letter table")
+              "installed npnormalize lacks the joiner rule or the special-letter table")
   x <- c("BO'S PLACE", "F.I.N.D.", "ST. LUKES", "ST.LUKES", "WINSTON-SALEM ARTS", "A/B CLUB",
          "SMITH,JONES PLAYERS", "(THE) ALPHA", "ALPHA #2", "ALPHA...BETA", "Café & Co",
          "Øresund Trust", "Straße Fund", "Łódź", "Æon", "AT&T",

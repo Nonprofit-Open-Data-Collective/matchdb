@@ -4,10 +4,13 @@
 #' [md_data_root()]. Its `logs/` folder records each action:
 #' \describe{
 #'   \item{`logs/runs-index.csv`}{One row per action, appended and never
-#'     rewritten: `run_id`, `kind`, `recorded_at`, `build`, `spec_hash`, counts
+#'     edited: `run_id`, `kind`, `recorded_at`, `build`, `spec_hash`, counts
 #'     of files downloaded, copied, reused and failed, `bytes`,
-#'     `elapsed_seconds`, the installed `matchdb_version`, `npmatch_version`,
-#'     `npmatch_commit` and `normalize_signature`, a `note`, and `log_file`.}
+#'     `elapsed_seconds`, the installed `matchdb_version`,
+#'     `npnormalize_version`, `npnormalize_commit`, `npmatch_version`,
+#'     `npmatch_commit` and `normalize_signature`, a `note`, and `log_file`.
+#'     An index written by a matchdb before npnormalize is rewritten once, to
+#'     add the npnormalize columns, the next time an action is logged.}
 #'   \item{`logs/<kind>-<run_id>.csv` or `.json`}{The detail of one action. A
 #'     fetch lists every file with its status, size and md5, and the manifest it
 #'     came from. A compile records the spec, the stamp and the report's
@@ -20,8 +23,8 @@
 #' run), adding the versions and a current-state record.
 #'
 #' @section When versions change:
-#' Before recording an action, the log compares the installed npmatch and its
-#' normalizer signature with what `state.json` last recorded. A difference adds
+#' Before recording an action, the log compares the installed npnormalize,
+#' npmatch and normalizer signature with what `state.json` last recorded. A difference adds
 #' a `version_change` row first, saying what changed. Fetching a new tranche
 #' build, or a different database, adds one too. Match results can move when
 #' the normalizer or the data moves, and these rows are what to read when they
@@ -81,9 +84,11 @@ md_status <- function() {
 print.md_status <- function(x, ...) {
   i <- x$installed
   cat(sprintf("<md_status> %s\n", x$data_root))
-  cat(sprintf("  installed  matchdb %s, npmatch %s%s, normalizer %s\n", i$matchdb_version,
-              i$npmatch_version, if (is.na(i$npmatch_commit %||% NA)) "" else
-                paste0(" @", substr(i$npmatch_commit, 1, 7)), i$normalize_signature))
+  at <- function(commit) if (is.na(commit %||% NA)) "" else paste0(" @", substr(commit, 1, 7))
+  cat(sprintf("  installed  matchdb %s, npnormalize %s%s, npmatch %s%s, normalizer %s\n",
+              i$matchdb_version, i$npnormalize_version %||% NA, at(i$npnormalize_commit),
+              i$npmatch_version %||% "not installed", at(i$npmatch_commit),
+              i$normalize_signature))
   t <- x$tranches
   if (is.null(t$build)) cat("  tranches   none\n") else {
     cat(sprintf("  tranches   %s (built %s, normalizer %s): %d of %d files here, %.2f GB%s\n",
@@ -127,17 +132,19 @@ print.md_status <- function(x, ...) {
 .md_now <- function() format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
 
 .md_installed <- function() {
-  np <- tryCatch(utils::packageDescription("npmatch"), error = function(e) list())
   list(matchdb_version = as.character(utils::packageVersion("matchdb")),
-       npmatch_version = np$Version %||% NA_character_,
-       npmatch_commit = np$RemoteSha %||% np$GithubSHA1 %||% NA_character_,
-       normalize_signature = tryCatch(npmatch::np_normalize_signature(),
+       npnormalize_version = .md_pkg_version("npnormalize"),
+       npnormalize_commit = .md_pkg_commit("npnormalize"),
+       npmatch_version = .md_pkg_version("npmatch"),
+       npmatch_commit = .md_pkg_commit("npmatch"),
+       normalize_signature = tryCatch(npnormalize::np_normalize_signature(),
                                       error = function(e) NA_character_))
 }
 
 .md_log_cols <- c("run_id", "kind", "recorded_at", "build", "spec_hash", "files", "downloaded",
                   "copied", "reused", "failed", "bytes", "elapsed_seconds", "matchdb_version",
-                  "npmatch_version", "npmatch_commit", "normalize_signature", "note", "log_file")
+                  "npnormalize_version", "npnormalize_commit", "npmatch_version",
+                  "npmatch_commit", "normalize_signature", "note", "log_file")
 
 # Record one action. `files` is a per-file data frame (written as the run's CSV)
 # and `detail` a list (written as its JSON); either may be NULL. Never throws.
@@ -171,7 +178,10 @@ print.md_status <- function(x, ...) {
                         downloaded = cnt("downloaded"), copied = cnt("copied"),
                         reused = cnt("reused"), failed = cnt("failed"), bytes = bytes,
                         elapsed_seconds = if (is.na(elapsed)) NA else round(elapsed, 1),
-                        matchdb_version = inst$matchdb_version, npmatch_version = inst$npmatch_version,
+                        matchdb_version = inst$matchdb_version,
+                        npnormalize_version = inst$npnormalize_version,
+                        npnormalize_commit = inst$npnormalize_commit,
+                        npmatch_version = inst$npmatch_version,
                         npmatch_commit = inst$npmatch_commit,
                         normalize_signature = inst$normalize_signature,
                         note = note, log_file = log_file))
@@ -188,18 +198,34 @@ print.md_status <- function(x, ...) {
 .md_log_append <- function(row) {
   f <- file.path(.md_log_dir(), "runs-index.csv")
   had <- file.exists(f)
+  if (had) .md_log_upgrade(f)
   row <- as.data.frame(lapply(row[.md_log_cols], function(v) if (is.null(v)) NA else v),
                        stringsAsFactors = FALSE)
   utils::write.table(row, f, sep = ",", append = had, col.names = !had, row.names = FALSE,
                      qmethod = "double")
 }
 
-# A version_change row when the installed matchdb, npmatch or normalizer is not
-# what the last recorded action ran with.
+# An index written by an older matchdb has fewer columns. Rows are appended
+# without a header, so before the first append rewrite it once with the current
+# columns, the new ones empty in the old rows.
+.md_log_upgrade <- function(f) {
+  head <- names(utils::read.csv(f, nrows = 1L, check.names = FALSE))
+  if (identical(head, .md_log_cols)) return(invisible(FALSE))
+  d <- utils::read.csv(f, stringsAsFactors = FALSE, colClasses = "character",
+                       check.names = FALSE)
+  for (k in setdiff(.md_log_cols, names(d))) d[[k]] <- rep(NA_character_, nrow(d))
+  d <- d[c(.md_log_cols, setdiff(names(d), .md_log_cols))]
+  utils::write.csv(d, f, row.names = FALSE, na = "NA")
+  invisible(TRUE)
+}
+
+# A version_change row when the installed matchdb, npnormalize, npmatch or
+# normalizer is not what the last recorded action ran with.
 .md_log_version_change <- function(was, now) {
   if (is.null(was)) return(invisible())
   ch <- character()
-  for (k in c("normalize_signature", "npmatch_commit", "npmatch_version", "matchdb_version")) {
+  for (k in c("normalize_signature", "npnormalize_commit", "npnormalize_version",
+              "npmatch_commit", "npmatch_version", "matchdb_version")) {
     a <- was[[k]] %||% NA; b <- now[[k]] %||% NA
     if (!identical(as.character(a), as.character(b))) ch <- c(ch, sprintf("%s %s -> %s", k, a, b))
   }
@@ -212,7 +238,10 @@ print.md_status <- function(x, ...) {
   .md_log_append(list(run_id = .md_run_id(), kind = "version_change", recorded_at = .md_now(),
                       build = build, spec_hash = NA, files = NA, downloaded = NA, copied = NA,
                       reused = NA, failed = NA, bytes = NA, elapsed_seconds = NA,
-                      matchdb_version = inst$matchdb_version, npmatch_version = inst$npmatch_version,
+                      matchdb_version = inst$matchdb_version,
+                      npnormalize_version = inst$npnormalize_version,
+                      npnormalize_commit = inst$npnormalize_commit,
+                      npmatch_version = inst$npmatch_version,
                       npmatch_commit = inst$npmatch_commit,
                       normalize_signature = inst$normalize_signature, note = note, log_file = ""))
 }

@@ -47,7 +47,7 @@ raw observation keeps its provenance and the choice stays with the spec.
 \code{123456789}, \code{987654321}, or a value below 1,000,000 (\verb{EIN-00-0xxxxxx};
 the ingests zero-pad, so a written \code{0} lands here).}
 \item{\code{flag_placeholder_name}}{Name is no name by npmatch's rule,
-\code{\link[npmatch:np_name_core]{npmatch::np_name_placeholder()}}: \verb{SEE SCHEDULE O},
+\code{\link[npnormalize:np_name_core]{npnormalize::np_name_placeholder()}}: \verb{SEE SCHEDULE O},
 \verb{SEE ATTACHED}, \code{VARIOUS}, \code{N/A}, \code{NONE}, \verb{SAME AS ABOVE}, blank, or no
 letters - unless it is consistent with the EIN's own names
 (\code{SEE} for Social and Environmental Entrepreneurs).}
@@ -85,7 +85,7 @@ source (BMF, return headers, 1023-EZ). Re-run this after every ingest that
 adds them: flags computed before the return headers load see fewer names.
 
 The name key, abbreviations, stop words and placeholder rule are npmatch's
-(\code{\link[npmatch:np_name_rules]{npmatch::np_name_rules()}}). \code{DENOM_WORDS} and the abbreviation-match rules
+(\code{\link[npnormalize:np_name_rules]{npnormalize::np_name_rules()}}). \code{DENOM_WORDS} and the abbreviation-match rules
 (\code{md_name_pair_hit()}) are copied from networked990 \code{R/names.R} (2026-10-21).
 }
 

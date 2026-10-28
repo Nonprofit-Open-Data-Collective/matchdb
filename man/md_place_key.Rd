@@ -3,24 +3,24 @@
 \name{md_place_key}
 \alias{md_place_key}
 \alias{md_unit_id}
-\title{npmatch's address key and suite identifier}
+\title{npnormalize's address key and suite identifier}
 \usage{
 md_place_key(street_key, zip5 = NULL)
 
 md_unit_id(unit)
 }
 \arguments{
-\item{street_key}{npmatch's \code{street_key}.}
+\item{street_key}{npnormalize's \code{street_key}.}
 
 \item{zip5}{Five-digit ZIP.}
 
-\item{unit}{npmatch's \code{street_unit} ("STE 300").}
+\item{unit}{npnormalize's \code{street_unit} ("STE 300").}
 }
 \value{
 A character vector.
 }
 \description{
-\code{md_place_key()} is npmatch's address key: the normalized street, a space,
+\code{md_place_key()} is npnormalize's address key: the normalized street, a space,
 the five-digit ZIP; empty for a PO box, because a box number is the address
 and counting records at one counts its owners, not a building's tenants.
 \code{md_unit_id()} is the suite identifier with its designator and separators
@@ -28,9 +28,8 @@ dropped ("STE D-2" -> \code{D2}, "# 300" -> \code{300}), so "STE 300", "Suite 30
 "# 300" are one office.
 }
 \details{
-Both call npmatch's own function when the installed npmatch has it
-(\code{np_addr_key()} / \code{np_unit_id()} if exported, else the internal versions
-from \code{fix/address-class} on), and otherwise apply a port of the same rule.
-The SQL macros \code{md_place_key()} and \code{md_unit_id()} are the port; a test
-holds them to npmatch's functions whenever those are installed.
+\code{md_place_key()} calls \code{\link[npnormalize:np_tokenize]{npnormalize::np_addr_key()}} and \code{md_unit_id()} calls
+\code{\link[npnormalize:np_tokenize]{npnormalize::np_unit_id()}} (npnormalize 0.1.1 and later). The SQL macros
+\code{md_place_key()} and \code{md_unit_id()} are ports of the same rules; a test holds
+them to npnormalize's functions.
 }

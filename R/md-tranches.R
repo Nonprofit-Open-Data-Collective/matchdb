@@ -129,6 +129,7 @@ md_publish_tranches <- function(con = NULL, root = md_path("tranches"), tables =
   man <- list(format = "matchdb-tranches/1", build = build,
               built = format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z"),
               matchdb_commit = commit, matchdb_version = stamp$matchdb_version,
+              npnormalize_version = stamp$npnormalize_version,
               npmatch_version = stamp$npmatch_version,
               normalize_signature = stamp$normalize_signature,
               db_fingerprint = stamp$db_fingerprint,
@@ -321,9 +322,9 @@ md_tranche_db <- function(build = NULL, root = md_path("tranches"), verify = TRU
 }
 
 .md_tranche_sig_check <- function(man) {
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   if (!identical(man$normalize_signature, sig)) {
-    stop(sprintf("tranches %s were built by normalizer %s; the installed one is %s. Their derived columns would be wrong for this npmatch.",
+    stop(sprintf("tranches %s were built by normalizer %s; the installed one is %s. Their derived columns would be wrong for this normalizer.",
                  man$build, man$normalize_signature, sig), call. = FALSE)
   }
 }

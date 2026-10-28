@@ -187,11 +187,8 @@ test_that("the place key and suite id agree in R and SQL", {
   expect_equal(md_unit_id(u)[1:5], c("300", "300", "D2", "2", "214"))
 })
 
-test_that("the place key and suite id equal npmatch's own functions", {
-  skip_if_not_installed("npmatch")
-  ns <- asNamespace("npmatch")
-  skip_if_not(exists(".np_addr_key", envir = ns) && exists(".np_unit_id", envir = ns),
-              "installed npmatch predates fix/address-class")
+test_that("the place key and suite id equal npnormalize's own functions", {
+  # the R functions call npnormalize; the SQL macros are ports, held to it here
   sk <- c("123 MAIN ST", "PO BOX 12", "P O BOX 7", "", NA, "1 WATERFOWL WAY")
   z <- c("60601", "60601", NA, "3", "4", "38120")
   u <- c("STE 300", "# 300", "STE D-2", "FL 2", NA, "PMB 214")
@@ -199,6 +196,8 @@ test_that("the place key and suite id equal npmatch's own functions", {
   .md_place_macros(con)
   DBI::dbWriteTable(con, "p", data.frame(i = seq_along(sk), sk = sk, z = z, u = u))
   got <- DBI::dbGetQuery(con, "SELECT md_place_key(sk, z) AS k, md_unit_id(u) AS id FROM p ORDER BY i")
-  expect_identical(got$k, get(".np_addr_key", envir = ns)(sk, z))
-  expect_identical(got$id, get(".np_unit_id", envir = ns)(u))
+  expect_identical(got$k, npnormalize::np_addr_key(sk, z))
+  expect_identical(got$id, npnormalize::np_unit_id(u))
+  expect_identical(md_place_key(sk, z), npnormalize::np_addr_key(sk, z))
+  expect_identical(md_unit_id(u), npnormalize::np_unit_id(u))
 })

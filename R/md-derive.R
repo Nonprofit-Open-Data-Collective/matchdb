@@ -1,6 +1,6 @@
 #' Build the derived-column tables
 #'
-#' Runs [npmatch::np_normalize()] over `name` and `address` and stores the output
+#' Runs [npnormalize::np_normalize()] over `name` and `address` and stores the output
 #' as `name_derived` and `address_derived`, keyed on `name_id` / `address_id`.
 #'
 #' @section Why separate tables rather than columns:
@@ -29,12 +29,9 @@
 #' @export
 md_build_derived <- function(con = NULL, what = c("name", "address"),
                              chunk = 1000000L, incremental = FALSE) {
-  if (!requireNamespace("npmatch", quietly = TRUE)) {
-    stop("npmatch is required", call. = FALSE)
-  }
   own <- is.null(con)
   if (own) { con <- md_db(); on.exit(md_db_close(con), add = TRUE) }
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   msg <- function(...) message(sprintf(...))
   msg("normalizer signature: %s", sig)
 
@@ -151,7 +148,7 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
     d <- DBI::dbGetQuery(con, sprintf("%s ORDER BY %s LIMIT %d OFFSET %d",
                                       select, id, chunk, off))
     if (!nrow(d)) break
-    o <- npmatch::np_normalize(shape(d))
+    o <- npnormalize::np_normalize(shape(d))
     # ids as integers, so joins to name and address compare like types
     res <- cbind(stats::setNames(data.frame(as.integer(d$id)), id), o[, keep, drop = FALSE])
     res$normalize_signature <- sig

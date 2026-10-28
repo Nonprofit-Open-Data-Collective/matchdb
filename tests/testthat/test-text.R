@@ -5,7 +5,7 @@ skip_if_no_text_deps <- function() {
   skip_if_not_installed("duckdb")
   skip_if_not_installed("digest")
   skip_if_not_installed("stringi")
-  skip_if_not_installed("npmatch")
+  skip_if_not_installed("npnormalize")
 }
 
 # A small name and address table shaped like the real ones. Ids are a running
@@ -77,7 +77,7 @@ test_that("text-keyed columns equal what md_build_derived() stores per row", {
   suppressMessages(md_build_derived(con))
   md_build_text(con); suppressMessages(md_build_text_derived(con))
   md_identity_macros(con)
-  sig <- npmatch::np_normalize_signature()
+  sig <- npnormalize::np_normalize_signature()
   cols <- paste(sprintf("d.%s", .md_derived_name_cols), collapse = ", ")
   by_row <- DBI::dbGetQuery(con, sprintf(
     "SELECT n.name_id, %s FROM name n JOIN name_derived d USING (name_id) ORDER BY n.name_id", cols))
@@ -112,7 +112,7 @@ test_that("two normalizer signatures sit side by side", {
     SELECT name_text_id, 'v0-older', 'OLD ' || name_raw FROM name_text LIMIT 1")
   st <- md_text_stats(con)
   sigs <- st$signatures[st$signatures$table == "name_text_derived", ]
-  expect_setequal(sigs$normalize_signature, c(npmatch::np_normalize_signature(), "v0-older"))
+  expect_setequal(sigs$normalize_signature, c(npnormalize::np_normalize_signature(), "v0-older"))
   # the current signature is still complete, the older one is not
   expect_equal(md_check_text_derived(con)$n_missing, c(0, 0))
   old <- md_check_text_derived(con, signature = "v0-older")

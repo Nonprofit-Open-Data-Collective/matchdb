@@ -52,7 +52,7 @@ b <- md_reference("active-observed", fetch = "missing")
 The first call downloads about 260 MB from the public NCCS copy; no AWS
 account is needed. Later calls read the local copy. Every file is checked
 against the md5 it was published with, and the bundle is refused if it was
-built by a different npmatch normalizer than the one installed. `b` holds:
+built by a different normalizer (npnormalize) than the one installed. `b` holds:
 
 - `reference`: the frame;
 - `name_freq` and `token_idf`: corpus statistics, which tell npmatch how
