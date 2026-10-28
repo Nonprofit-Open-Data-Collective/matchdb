@@ -1,7 +1,9 @@
 # matchdb — development plan
 
 **Status: proposal, 2026-08-21. Updated 2026-10-23: Phases 0–3 run; the Phase 1
-gate passes with three zeros; four tiers published.**
+gate passes with three zeros; four tiers published. Updated 2026-10-26: Phase 5
+(stable identity, the observation ledger) built and released from `main` at
+`592b078`.**
 
 > **Where the work stands.** Phase 0 is finished (see `PROCESS.md` §6). Every
 > planned source is ingested, so the archive is Phase 4 in scope: the BMF, NTEE,
@@ -43,13 +45,29 @@ gate passes with three zeros; four tiers published.**
 > up to a family, and the true EIN is in it 90% of the time. Brand-type
 > clusters were the weakest (1 of 5).
 >
-> **Next: stable identity and incremental updates** (`dev/IDENTITY.md`,
-> proposed 2026-10-24, Phase 5 below). Row ids are still a running counter, and
-> every ingest still replaces its source wholesale, so a newer BMF or e-Postcard
-> overwrites the only history those sources have. The plan gives every name,
-> address and observation a content hash and keeps one append-only observation
-> ledger, with an update rule for each kind of source. Its step 0 is done: the BMF
-> ingest no longer deletes every other source when re-run.
+> **Stable identity and incremental updates** (`dev/IDENTITY.md`, Phase 5
+> below) are built. Every name, address and observation has a content hash; one
+> append-only observation ledger records every pinned release; `name` and
+> `address` are rollups rebuilt from it.
+>
+> **Release 2026-10-26.** This is the first release built this way, from `main`
+> at `592b078` with npmatch `26a5910` (signature `v1-3e7b9f9d59bbb19e`) and
+> DuckDB 1.4.1. On the full database:
+> * the Phase 1 gate gives three zeros;
+> * Phase 2 is unchanged at +146 YES;
+> * `check-build` passes 36 of 36;
+> * the four tiers republished at 2.74M, 2.89M, 4.98M and 5.13M rows, now with
+>   place tables.
+>
+> Two files are on S3:
+> * `MATCHDB.duckdb` (11.7 GB, 26 tables, no ledger) is what `md_fetch_db()`
+>   downloads.
+> * `MATCHDB-full.duckdb` (24.3 GB, with the ledger, `MANIFEST-full.json`) is for
+>   maintainers.
+>
+> A download over public HTTPS matched every md5 and compiled the same rows. The
+> logs are in `dev/verify/logs/*-2026-10-26.log`, and the release scripts are in
+> `dev/verify/release/`.
 
 This is the design document for `matchdb`, written before implementation so the
 boundaries can be argued about while they are still cheap to move. It was

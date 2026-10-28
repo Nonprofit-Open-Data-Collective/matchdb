@@ -1,0 +1,19 @@
+active-legal     2402137493f88c8e  2,742,924 rows 
+active-observed  9cc7b76e3e144a87  2,885,032 rows 
+spec 403876f42334529d: 3,466,787 rows over 1,974,830 EINs
+active-observed-1 403876f42334529d  3,466,787 rows 
+
+arm                   YES  MAYBE     NO     ids 
+active-legal         2945    945    853    4743 
+active-observed      3091    942    716    4749 
+active-observed-1    2422   1699    648    4769 
+
+active-legal -> active-observed 
+  YES gained 294, YES lost 148, net +146 
+  MAYBE net -3 
+  YES in both with a different EIN: 32 
+
+active-legal -> active-observed-1 
+  YES gained 389, YES lost 912, net -523 
+  MAYBE net +754 
+  YES in both with a different EIN: 95 

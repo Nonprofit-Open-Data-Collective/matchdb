@@ -1,0 +1,220 @@
+data root: D:/matchdb 
+npmatch signature v1-3e7b9f9d59bbb19e 
+
+==== ledger  [08:07:07]
+bmf_unified                     unchanged         0 rows  +0  kept 0  retracted 0  (0.1s)
+efile_header             2009   unchanged         0 rows  +0  kept 0  retracted 0  (0.1s)
+efile_header             2010   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2011   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2012   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2013   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2014   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2015   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2016   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2017   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2018   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2019   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2020   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2021   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2022   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2023   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2024   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_header             2025   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2009   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2010   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2011   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2012   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2013   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2014   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2015   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2016   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2017   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2018   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2019   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2020   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2021   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2022   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2023   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2024   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+schedi                   2025   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2009   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2010   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2011   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2012   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2013   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2014   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2015   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2016   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2017   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2018   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2019   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2020   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2021   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2022   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2023   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2024   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_related            2025   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2009   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2010   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2011   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2012   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2013   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2014   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2015   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2016   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2017   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2018   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2019   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2020   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2021   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2022   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2023   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2024   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+efile_affiliate_listing  2025   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2014   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2015   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2016   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2017   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2018   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2019   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2020   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2021   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2022   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+f1023ez                  2023   unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+e_postcard                      unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+revocations                     unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+address_crosswalk               unchanged         0 rows  +0  kept 0  retracted 0  (0.0s)
+==== ledger done in 0.5 min (0.5 min total)
+
+==== text-keyed derived columns  [08:07:38]
+name_text: 0 new string(s) to normalize under v1-3e7b9f9d59bbb19e
+address_text: 0 new string(s) to normalize under v1-3e7b9f9d59bbb19e
+==== text-keyed derived columns done in 0.2 min (0.7 min total)
+
+==== rollups  [08:07:50]
+rollups: 2 EIN(s) in the ledger but not in entity held back
+rollup_name: 12,801,366 rows; rollup_address: 22,026,817 rows
+==== rollups done in 34.5 min (35.2 min total)
+
+==== rollups against today's tables
+     tbl       source variant_class live_rows rollup_rows pct_live_matched pct_rollup_matched
+    name          bmf           dba    923305      923305            100.0              100.0
+    name          bmf    in_care_of   1430850     1429600             99.9              100.0
+    name          bmf         legal   3698197     3698197            100.0              100.0
+    name   e_postcard           dba     67058       67058            100.0              100.0
+    name   e_postcard         legal   1534620     1534620            100.0              100.0
+    name     efile990           dba     59879       59879            100.0              100.0
+    name     efile990        former    204926      204926            100.0              100.0
+    name     efile990    in_care_of    169288      169288            100.0              100.0
+    name     efile990         legal    809925      809925            100.0              100.0
+    name     efile990      observed     10311        9479            100.0               99.9
+    name      f1023ez         legal    512470      512470            100.0              100.0
+    name  revocations           dba    238758      238758            100.0              100.0
+    name  revocations         legal   1188531     1188531            100.0              100.0
+    name       schedi      observed   1767331     1767331            100.0              100.0
+    name       schedr      observed    187999      187999            100.0              100.0
+ address          bmf       mailing   3695421     3695421            100.0              100.0
+ address   e_postcard       mailing   1534620     1534620            100.0              100.0
+ address     efile990    historical    607649      606368            100.0              100.0
+ address     efile990       mailing    809497      809497            100.0              100.0
+ address     efile990      observed         0       10430               NA                2.1
+ address      f1023ez    historical    512725      516843            100.0               99.2
+ address meta_address    historical  11299800    11288370            100.0              100.0
+ address  revocations    historical   1186413     1188543            100.0               99.8
+ address       schedi      observed   2153060     2153061             97.4               97.5
+ address       schedr      observed    223668      223664             98.4               98.6
+
+==== step 3 measurement: rows against distinct strings
+$sizes
+    table     rows distinct_text rows_per_text
+1    name 12803448       7784942          1.64
+2 address 22022853      12987311          1.70
+
+$signatures
+                 table normalize_signature        n
+1    name_text_derived v1-3e7b9f9d59bbb19e  7784942
+2 address_text_derived v1-3e7b9f9d59bbb19e 12987311
+
+
+==== install rollups  [08:43:04]
+Error in dbSendQuery(conn, statement, ...) : 
+  Binder Error: Cannot mix values of type BOOLEAN and VARCHAR in COALESCE operator - an explicit cast is required
+ℹ Context: rapi_prepare
+ℹ Error type: BINDER
+ℹ Raw message: Cannot mix values of type BOOLEAN and VARCHAR in COALESCE operator - an explicit cast is required
+Calls: step ... tryCatch -> tryCatchList -> tryCatchOne -> <Anonymous>
+Execution halted
+data root: D:/matchdb 
+npmatch signature v1-3e7b9f9d59bbb19e 
+
+==== install rollups  [08:44:20]
+==== install rollups done in 1.0 min (1.0 min total)
+
+==== guards  [08:45:22]
+  guards efile990 9,479 rows: placeholder EIN 0, placeholder name 1, own EIN 0, group central 1, multi-name 0 (any 2); name inconsistent 139, no names to compare 2
+  guards schedi   1,767,331 rows: placeholder EIN 13,489, placeholder name 149, own EIN 5,892, group central 12,551, multi-name 60,703 (any 73,949); name inconsistent 189,714, no names to compare 427,699
+  guards schedr   187,999 rows: placeholder EIN 704, placeholder name 55, own EIN 599, group central 229, multi-name 1,067 (any 2,054); name inconsistent 5,774, no names to compare 23,253
+  3,522 multi-name (fiscal-sponsor) EINs
+==== guards done in 1.1 min (2.2 min total)
+
+==== census geography  [08:46:29]
+  3,430,100 geocodes parsed
+  7,183,928 address rows enriched, from 2,716,007 of 3,430,100 geocodes placed (79.2%)
+  of those, 4,483,952 are rooftop PointAddress and 1,681,579 are ZIP centroids
+==== census geography done in 0.6 min (2.7 min total)
+
+==== websites  [08:47:03]
+  e_postcard 446,683 non-blank values, 345,389 valid websites, 0 held back (EIN not in entity)
+  efile990   5,475,112 non-blank values, 3,591,542 valid websites, 0 held back (EIN not in entity)
+  f1023ez    164,660 non-blank values, 133,241 valid websites, 0 held back (EIN not in entity)
+  website e_postcard 345,389 rows over 345,389 EINs
+  website efile990   540,732 rows over 460,916 EINs
+  website f1023ez    130,715 rows over 130,235 EINs
+website: 1,016,836 rows, 808,665 EINs, 834,775 distinct sites of which 803,850 belong to one EIN
+==== websites done in 1.8 min (4.6 min total)
+
+==== compact tables  [08:48:54]
+name: excluding 1,598,888 in_care_of rows (not an organisation identity)
+name: 76,005 observed rows flagged by md_guard_observed() excluded (drop_guarded = TRUE)
+name_compact: 6,773,578 rows from 11,202,478 eligible input rows (39.5% reduction)
+address: 79,354 observed rows paired with a flagged name excluded (drop_guarded = TRUE)
+address_compact: 22,026,817 raw -> 12,936,134 after normalized dedupe -> 10,315,998 after domination pruning (53.2% total reduction)
+==== compact tables done in 0.5 min (5.1 min total)
+
+==== groups  [08:49:26]
+group_member edges: 453,568, of which 447,311 are used and 6,257 set aside as weaker evidence for a member that has better
+entity_group: 450,964 EINs in 3,700 groups from 447,311 group_member edges (5 passes)
+  group size: median 16, largest 17,902
+==== groups done in 0.0 min (5.2 min total)
+
+==== places  [08:49:29]
+place: 278,892 shared places (building   4,840, cluster 268,766, federated   2,431, shared   2,855); place_unit: 36,838 shared suites
+==== places done in 0.2 min (5.4 min total)
+
+==== identifier keys  [08:49:44]
+  ein_key email_domain 6,097 rows over 6,035 EINs; 4,096 keys, 3,713 held by one EIN
+  ein_key name         6,773,444 rows over 4,235,969 EINs; 5,184,077 keys, 4,818,472 held by one EIN
+  ein_key person       16,556,057 rows over 805,588 EINs; 8,082,312 keys, 5,757,013 held by one EIN
+  ein_key place        8,131,780 rows over 3,764,248 EINs; 5,959,319 keys, 5,132,023 held by one EIN
+  ein_key website      906,718 rows over 803,692 EINs; 831,406 keys, 801,022 held by one EIN
+  ein_key_layer 21,471,464 rows
+==== identifier keys done in 0.6 min (6.0 min total)
+
+==== clusters  [08:50:22]
+  cluster brand            531 clusters, 351,921 memberships, median 78, largest 25,276
+  cluster care_of_network  2,648 clusters, 8,818 memberships, median 2, largest 265
+  cluster co_tenant        665,867 clusters, 1,468,820 memberships, median 2, largest 3
+  cluster group_exemption  3,700 clusters, 450,962 memberships, median 16, largest 17,902
+  cluster related_system   95,283 clusters, 1,077,889 memberships, median 2, largest 1,023
+  cluster shared_website   30,722 clusters, 108,075 memberships, median 2, largest 1,557
+cluster: 798,751 clusters over 1,656,180 EINs
+==== clusters done in 0.5 min (6.5 min total)
+
+==== statistics cells  [08:50:50]
+  stat_cell 32 cells; stat_name_cell 5,552,078 rows; stat_token_cell 1,365,064 rows
+==== statistics cells done in 0.2 min (6.7 min total)
+[1] 0
+
+installed. Now run the Phase 1 gate, the Phase 2 measurement and check-build.
+
+6.7 min

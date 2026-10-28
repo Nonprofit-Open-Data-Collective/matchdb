@@ -1,0 +1,74 @@
+ check                                                  ok   detail                       
+ entity is non-empty                                    TRUE 4,236,242                    
+ name is non-empty                                      TRUE 12,801,366                   
+ address is non-empty                                   TRUE 22,026,817                   
+ orgtext is non-empty                                   TRUE 15,824,934                   
+ ein_relation is non-empty                              TRUE 2,184,885                    
+ source_vintage is non-empty                            TRUE 45                           
+ name_derived is non-empty                              TRUE 12,801,366                   
+ address_derived is non-empty                           TRUE 22,026,817                   
+ name_compact is non-empty                              TRUE 6,773,578                    
+ address_compact is non-empty                           TRUE 10,315,998                   
+ entity_group is non-empty                              TRUE 450,964                      
+ website is non-empty                                   TRUE 1,016,836                    
+ ein_key is non-empty                                   TRUE 32,374,096                   
+ ein_key_layer is non-empty                             TRUE 21,471,464                   
+ cluster is non-empty                                   TRUE 798,751                      
+ cluster_member is non-empty                            TRUE 3,466,485                    
+ cluster_footprint is non-empty                         TRUE 1,394,217                    
+ entity_event is non-empty                              TRUE 2,649,231                    
+ derived tables are fresh                               TRUE name 0, address 0            
+ every name EIN is in entity                            TRUE 0                            
+ every address EIN is in entity                         TRUE 0                            
+ every website EIN is in entity                         TRUE 0                            
+ every ein_key EIN is in entity                         TRUE 0                            
+ every cluster_member EIN is in entity                  TRUE 0                            
+ name f1023ez spans 2014-2023                           TRUE 2014-2023                    
+ name schedi spans 2009-2025                            TRUE 2009-2025                    
+ name efile990 spans 2009-2025                          TRUE 2009-2025                    
+ affiliate listing spans 2009-2025                      TRUE 2009-2025                    
+ 1023-EZ has all ten approval years                     TRUE 10                           
+ every source is in source_vintage                      TRUE                              
+ website has all three sources                          TRUE 3                            
+ no website key is a placeholder                        TRUE 0                            
+ ein_key_layer sums to n_eins_sharing                   TRUE 0                            
+ every cluster has size >= 2 and matches its members    TRUE 0                            
+ all six cluster types, and no runaway brand            TRUE 6 types, largest brand 25,276
+ largest group is a group, not the related-entity giant TRUE 3,700 groups, largest 17,902 
+
+          layer       n
+1    bmf_active 1974830
+2  bmf_inactive 1723367
+3    filer_only  318389
+4  revoked_only  133572
+5 postcard_only   73503
+6 approved_only   12581
+   variant_class      source       n
+1          legal         bmf 3698197
+2       observed      schedi 1767331
+3          legal  e_postcard 1534620
+4     in_care_of         bmf 1429600
+5          legal revocations 1188531
+6            dba         bmf  923305
+7          legal    efile990  809925
+8          legal     f1023ez  512470
+9            dba revocations  238758
+10        former    efile990  204926
+11      observed      schedr  187999
+12    in_care_of    efile990  169288
+13           dba  e_postcard   67058
+14           dba    efile990   59879
+15      observed    efile990    9479
+             relation                        evidence      n
+1      related_entity              schedule_r_part_ii 874498
+2        group_member             bmf_group_exemption 439774
+3      related_entity schedule_r_part_iii_partnership 420456
+4      related_entity  schedule_r_part_iv_corporation 348583
+5  disregarded_entity   schedule_r_part_i_disregarded  65300
+6      related_entity               irs527_schedule_r  15891
+7        group_member         efile_affiliate_listing   7946
+8        group_member    efile_group_exemption_number   6171
+9      related_entity            schedule_c_part_ii_a   3354
+10       group_member  nccs_group_metadata_historical   2912
+
+36 of 36 checks passed
