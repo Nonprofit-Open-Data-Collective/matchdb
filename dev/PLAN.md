@@ -1504,15 +1504,9 @@ a separate decision for npmatch and is not part of this phase.
 > `np_unit_id()` directly. Results:
 > * **Tests:** 215 pass, none skipped, with npmatch 0.1.1 and with npmatch
 >   `main` (0.1.1.9000) installed alike.
-> * **`R CMD check`:** 0 errors, 3 warnings, 2 notes, all of which also occur
->   on `main`:
->   * non-ASCII characters in `md-ingest-relations.R` and `md-light-key.R`;
->   * undeclared `fiscal` and `methods`, and an unused `data.table` import;
->   * two undocumented arguments;
->   * an empty Rd section;
->   * the timestamp note.
->
->   Tests' use of `withr` is now declared.
+> * **`R CMD check`,** after merging #26 (which cleared the older warnings):
+>   0 errors, 0 warnings, 1 note. The note is the future-timestamp check,
+>   which needs a time server.
 > * **The live bundles, tranches and database** are all accepted, under
 >   signature `v1-3e7b9f9d59bbb19e`. The database was checked by its manifest
 >   only, not downloaded.
