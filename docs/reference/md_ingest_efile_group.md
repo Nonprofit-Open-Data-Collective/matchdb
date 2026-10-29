@@ -38,6 +38,7 @@ Row counts, invisibly.
 Measured over 2009-2024, 259,368 filings carry a usable GEN across
 42,997 EINs and 3,497 groups. Against the pinned BMF:
 
+
       (EIN, GEN) pairs in the e-file        43,603
         BMF records no GEN for that EIN      7,015
         BMF agrees                          34,806

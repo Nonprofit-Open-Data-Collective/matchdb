@@ -58,6 +58,7 @@ Schedule I recipient is written about by whoever happened to fund it.
 **Measured, that is wrong, and in the useful direction.** Schedule R is
 the better corroborated source of the pair:
 
+
       distinct filers    schedi          schedr
       1                  1,339,769 77.8
       2-4                  276,766 16.1

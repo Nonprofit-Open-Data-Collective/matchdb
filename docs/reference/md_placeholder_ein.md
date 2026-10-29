@@ -3,7 +3,7 @@
 The R version of the rule
 [`md_guard_observed()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_guard_observed.md)
 applies in SQL. Placeholder *names* are npmatch's rule,
-[`npmatch::np_name_placeholder()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_name_core.html).
+[`npnormalize::np_name_placeholder()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_name_core.html).
 
 ## Usage
 

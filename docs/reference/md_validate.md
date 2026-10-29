@@ -4,7 +4,7 @@ The gate for every ingest phase. These are properties the database is
 checked against *on its own terms* - key uniqueness, EIN wellformedness,
 referential integrity, provenance completeness, and agreement between
 the stored derived columns and a live
-[`npmatch::np_normalize()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_normalize.html)
+[`npnormalize::np_normalize()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize.html)
 call.
 
 ## Usage

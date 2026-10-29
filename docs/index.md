@@ -13,7 +13,26 @@ and tiering live in npmatch.
 ## Install
 
 ``` r
-remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")
+
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb@v0.1.1")  # the current release
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")         # development version
+```
+
+The current release is **0.1.1**, git tag `v0.1.1`. It pairs with
+npmatch 0.1.1 and normalizer signature `v1-3e7b9f9d59bbb19e`, which the
+published database, bundles and tranches were built with. See
+[NEWS.md](https://nonprofit-open-data-collective.github.io/matchdb/NEWS.md).
+Pin it, in renv or with `@v0.1.1`, for anything that should reproduce
+results from before the normalizer moves into npnormalize.
+
+The development version takes the normalizer from
+[npnormalize](https://github.com/Nonprofit-Open-Data-Collective/npnormalize)
+and only suggests npmatch. Install npmatch too to match against a
+reference:
+
+``` r
+
+remotes::install_github("Nonprofit-Open-Data-Collective/npmatch")
 ```
 
 ## Quick start: download a reference and match
@@ -34,6 +53,7 @@ needs no AWS account.
 | `unified-observed` | every BMF release | legal, DBA, aliases written by 2+ filers | 5.14M |
 
 ``` r
+
 library(matchdb)
 b <- md_reference("active-observed", fetch = "missing")   # ~260 MB, once
 
@@ -43,8 +63,8 @@ m <- npmatch::np_cascade(my_query, b$reference,
 ```
 
 Each bundle is checked against the md5s it was published with and
-against the installed npmatch normalizer. A stale or altered bundle is
-refused.
+against the installed normalizer (npnormalize’s signature). A stale or
+altered bundle is refused.
 
 ## Look up an organization
 
@@ -53,6 +73,7 @@ With the database downloaded
 about 10 GB):
 
 ``` r
+
 md_lookup("53-0196605")    # entity, names, addresses, events, relations, clusters, ...
 md_cluster("53-0196605")   # its families: group ruling, Schedule R system, shared site, ...
 ```
@@ -67,12 +88,36 @@ A reference is described by a spec with these settings:
 - **corroboration**: how many filers must agree on an alias.
 
 ``` r
+
 s <- md_spec(layers = c("bmf_active", "bmf_inactive"),
              names = c("legal", "dba", "observed"),
              addresses = c("mailing", "observed"),
              min_corroborators = 2)
 r <- md_compile(s)         # r$reference, r$name_freq, r$token_idf, r$report
 ```
+
+You don’t need the whole database for this. The database is also
+published as parquet files split by layer and class, and
+[`md_fetch_tranches()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)
+downloads only the files a spec needs:
+
+``` r
+
+md_fetch_tranches(s)       # only these layers and classes, once
+con <- md_tranche_db()     # a connection md_compile(), md_publish() and md_lookup() take
+r <- md_compile(s, con)
+md_db_close(con)
+```
+
+`md_tranches(s)` shows what a spec will download before you fetch it.
+Every fetch, compile and publish is logged in your matchdb folder:
+[`md_log()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_log.md)
+lists them, and
+[`md_status()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_log.md)
+says what is there now.
+[`md_tranche_diff()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_tranches.md)
+shows what a new release changes. See
+[`vignette("workspace")`](https://nonprofit-open-data-collective.github.io/matchdb/articles/workspace.md).
 
 The articles explain each choice:
 [layers](https://nonprofit-open-data-collective.github.io/matchdb/articles/layers.html),

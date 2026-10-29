@@ -15,6 +15,9 @@ or browse it with
 [`md_lookup()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_lookup.md)
 and
 [`md_cluster()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_cluster.md).
+Between the two,
+[`md_fetch_tranches()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)
+downloads only the parquet files one spec needs.
 
 ## Usage
 

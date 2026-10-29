@@ -7,6 +7,7 @@ conventions:
 
 ## Details
 
+
       f1023ez_approvals_2014.xlsx     underscores, lowercase   2014-2016, 2018-2019
       f1023EZ_approvals_2017.xlsx     underscores, EZ upper    2017
       f1023ez-approvals-2020.xlsx     hyphens                  2020-2023

@@ -54,7 +54,8 @@ md_reference(
 
   Also build npmatch's blocking index
   ([`npmatch::np_ref_index()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_ref_index.html)),
-  so the result can go straight to the cascade.
+  so the result can go straight to the cascade. Needs npmatch, which
+  matchdb only suggests; without it the index is skipped with a message.
 
 - fetch:
 
@@ -68,8 +69,10 @@ md_reference(
 The bundle directory, invisibly.
 
 For `md_reference()`, a list: `reference` (an `np_reference`),
-`name_freq`, `token_idf`, `clusters` (when published), `ref_index` (when
-built) and `stamp`.
+`name_freq`, `token_idf`, `addr_freq` (an `np_addr_freq`, when
+published), `places` (a list of the `place`, `place_layer` and
+`place_unit` rows for the bundle's places, when published), `clusters`
+(when published), `ref_index` (when built) and `stamp`.
 
 ## What a bundle is
 
@@ -84,6 +87,20 @@ built) and `stamp`.
 - `name_freq.parquet`, `token_idf.parquet`:
 
   npmatch's corpus statistics for exactly that frame
+
+- `addr_freq.parquet`:
+
+  address sharing over exactly that frame
+  ([`md_addr_freq()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_addr_freq.md)):
+  records per address and suite, suite coverage, name concentration and
+  npmatch's place class
+
+- `place.parquet`, `place_layer.parquet`, `place_unit.parquet`:
+
+  when
+  [`md_build_places()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_places.md)
+  has run: the evidence and flags for the places the frame touches,
+  counted over the whole database
 
 - `report.json`:
 

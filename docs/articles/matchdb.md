@@ -14,6 +14,7 @@ is from the published references of 2026-10-23.
 ## 1. Install
 
 ``` r
+
 remotes::install_github("Nonprofit-Open-Data-Collective/npmatch")
 remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")
 library(matchdb)
@@ -37,13 +38,14 @@ National Red Cross”), and the observed names cover that gap.
 explains when to use the `unified-*` tiers.
 
 ``` r
+
 b <- md_reference("active-observed", fetch = "missing")
 ```
 
 The first call downloads about 260 MB from the public NCCS copy; no AWS
 account is needed. Later calls read the local copy. Every file is
 checked against the md5 it was published with, and the bundle is refused
-if it was built by a different npmatch normalizer than the one
+if it was built by a different normalizer (npnormalize) than the one
 installed. `b` holds:
 
 - `reference`: the frame;
@@ -57,6 +59,7 @@ installed. `b` holds:
 `np_query()` maps your columns onto npmatch’s fields:
 
 ``` r
+
 grants <- data.frame(
   id     = c("g1", "g2", "g3", "g4"),
   name   = c("American Red Cross", "Habitat for Humanity of Greater Boston",
@@ -82,6 +85,7 @@ needs a look) or `NO`. It also gets the best EIN found and the reference
 name that won.
 
 ``` r
+
 as.data.frame(m)[, c(".id", "tier", "overall_ein", "overall_name_y", "overall_score")]
 #>   .id  tier    overall_ein                          overall_name_y overall_score
 #> 1  g1 MAYBE EIN-53-0196605                      AMERICAN RED CROSS         0.680
@@ -126,6 +130,7 @@ shows its families. The database is about 10 GB, and
 downloads it once.
 
 ``` r
+
 md_fetch_db()
 md_cluster("39-1925617", types = c("related_system", "shared_website"))
 #> <md_cluster> EIN-39-1925617: 4 clusters (related_system 3, shared_website 1)
@@ -148,6 +153,7 @@ foundation is a judgement the data can only flag. The club, the
 operating entity, is the usual answer.
 
 ``` r
+
 x <- md_lookup("53-0196605")
 x
 #> <md_lookup> EIN-53-0196605  AMERICAN NATIONAL RED CROSS
@@ -178,6 +184,7 @@ candidates.
 one family:
 
 ``` r
+
 npmatch::np_pair_links(m, b$clusters)[, c(".id", "top_ein", "runner_up_ein", "linked", "link_types")]
 #>   .id        top_ein  runner_up_ein linked                              link_types
 #> 1  g1 EIN-53-0196605 EIN-52-0743599   TRUE                               co_tenant
@@ -197,6 +204,7 @@ known EIN, it placed 60 of 739 non-YES records in a family, and the true
 EIN was in that family 90% of the time.
 
 ``` r
+
 npmatch::np_cluster_rollup(m, b$clusters, query = npmatch::np_normalize(q))
 ```
 
@@ -208,6 +216,7 @@ the slice with
 and compile it from the database:
 
 ``` r
+
 s <- md_spec(layers = c("bmf_active", "bmf_inactive", "postcard_only"),
              names = c("legal", "dba", "observed"),
              addresses = c("mailing", "observed"),

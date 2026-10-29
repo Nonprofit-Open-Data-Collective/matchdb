@@ -17,6 +17,7 @@ lists every upstream input with its URL. Nothing is fetched that is not
 in the registry.
 
 ``` r
+
 library(matchdb)
 md_sources()[, c("source", "feeds", "url")]
 ```
@@ -88,6 +89,7 @@ and what the guards flag; see
 `md_spec(sources = ...)` keeps only strings from the named sources:
 
 ``` r
+
 # exactly what the BMF says, nothing else; this is pfmatch's reference
 bmf_only <- md_spec(layers = "bmf_active", names = c("legal", "dba"),
                     addresses = "mailing", sources = "bmf")
@@ -110,6 +112,7 @@ The source codes
 accepts:
 
 ``` r
+
 names(md_name_sources())
 #> "bmf" "efile990" "f1023ez" "schedi" "schedr" "e_postcard" "revocations"
 names(md_address_sources())
@@ -127,6 +130,7 @@ pinned copy, and the `source_vintage` table records which pinned version
 loaded each table. Two builds from the same pins are the same database.
 
 ``` r
+
 con <- md_db(read_only = TRUE)
 DBI::dbGetQuery(con, "SELECT source, version, table_name, local_md5, row_count
                       FROM source_vintage ORDER BY source")
@@ -137,6 +141,7 @@ The published database on S3 ships a `MANIFEST.json` with every pin, so
 a downloaded copy states exactly what it was built from:
 
 ``` r
+
 md_fetch_db()                                   # about 10 GB
 jsonlite::read_json(md_path("db", "MANIFEST.json"))$sources
 ```
@@ -147,6 +152,7 @@ jsonlite::read_json(md_path("db", "MANIFEST.json"))$sources
 returns every name and address with its source:
 
 ``` r
+
 x <- md_lookup("53-0196605")
 table(x$names$variant_class, x$names$source)
 ```

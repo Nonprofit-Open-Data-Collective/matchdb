@@ -63,7 +63,7 @@ the spec.
 - `flag_placeholder_name`:
 
   Name is no name by npmatch's rule,
-  [`npmatch::np_name_placeholder()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_name_core.html):
+  [`npnormalize::np_name_placeholder()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_name_core.html):
   `SEE SCHEDULE O`, `SEE ATTACHED`, `VARIOUS`, `N/A`, `NONE`,
   `SAME AS ABOVE`, blank, or no letters - unless it is consistent with
   the EIN's own names (`SEE` for Social and Environmental
@@ -118,7 +118,7 @@ fewer names.
 
 The name key, abbreviations, stop words and placeholder rule are
 npmatch's
-([`npmatch::np_name_rules()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_name_rules.html)).
+([`npnormalize::np_name_rules()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_name_rules.html)).
 `DENOM_WORDS` and the abbreviation-match rules
 ([`md_name_pair_hit()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_name_pair_hit.md))
 are copied from networked990 `R/names.R` (2026-10-21).

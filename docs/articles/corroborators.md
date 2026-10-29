@@ -49,6 +49,7 @@ precomputed per band and summed. A threshold between edges would cut
 across bands.
 
 ``` r
+
 library(matchdb)
 s <- md_spec(layers = "bmf_active",
              names = c("legal", "dba", "observed"),
@@ -100,6 +101,7 @@ they wrote could be this organization at all.
 ## Looking at the evidence for one organization
 
 ``` r
+
 x <- md_lookup("53-0196605")
 obs <- x$names[x$names$variant_class == "observed", ]
 head(obs[order(-obs$n_corroborators),

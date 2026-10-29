@@ -54,6 +54,7 @@ Row counts per part, invisibly.
 Part II counterparties are exempt organisations by definition, so their
 EINs resolve well. These do not. Measured on Part I across 2009-2024:
 
+
       rows                              2,000,291
       with a counterparty EIN             317,232
       distinct counterparty EINs           35,306

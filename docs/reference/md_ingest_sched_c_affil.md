@@ -80,6 +80,7 @@ below. Through TY2012 the element is
 TY2013 it is `AffiliatedScheduleGrp` with `USAddress/`. The extract
 matches on field suffix to serve both.
 
+
       2009  355 rows /  58 filings
       2010  543 rows /  90 filings
       2011  554 rows /  98 filings
