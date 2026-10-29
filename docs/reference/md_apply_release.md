@@ -22,6 +22,10 @@ md_apply_release(
 
 ## Arguments
 
+- con:
+
+  A DuckDB connection holding the ledger.
+
 - frame:
 
   A table or view in `con` with the standard frame columns.

@@ -33,6 +33,7 @@ Row counts, invisibly.
 
 Measured against the database before loading it:
 
+
                            meta file     BMF
       EINs with a GEN         33,274   647,569
       distinct GENs            2,958     4,917

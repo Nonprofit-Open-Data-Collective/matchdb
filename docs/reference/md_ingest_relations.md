@@ -52,6 +52,7 @@ self-references disclose a DIFFERENT name under the same EIN**, and the
 examples are exactly the cases where IRS reporting structure and
 operating reality diverge:
 
+
       BACKBONE HOUSING INC          -> Backbone Housing Inc (dba Starner Hill)
       FRANCISCAN HEALTH SYSTEM      -> Franciscan Health System FKA Franciscan ...
       EMBANKMENT SERVICES INC       -> EMBANKMENT SERVICES INC (ESI)
@@ -82,6 +83,7 @@ own wording of the **relation**.
 
 On this form that is the direct controlling entity, with an explicit
 `N/A` where the filer states there is none. Population across 2009-2024:
+
 
       rows                        6,540,823
       direct controlling entity   4,501,572  (68.8
@@ -135,6 +137,7 @@ That requires identifying the parent, and the BMF `affiliation_code`
 does it. The codes are **not ordered by seniority**, which is a trap
 worth spelling out because an earlier version of this function fell into
 it:
+
 
       1  NETWORK-PARENT            parent, no group exemption
       2  NETWORK-INTERM            intermediate, no group exemption

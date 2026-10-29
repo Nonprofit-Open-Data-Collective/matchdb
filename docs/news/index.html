@@ -57,7 +57,14 @@
 <li>The signature is unchanged, <code>v1-3e7b9f9d59bbb19e</code>, so the published database, bundles and tranches are all still accepted. Nothing needs rebuilding.</li>
 <li>npmatch is needed only to match, and for <code>md_reference(build_index = TRUE)</code>, which builds npmatch’s blocking index. Without npmatch the index is skipped with a message; npmatch builds it itself when given none.</li>
 <li>
-<code><a href="../reference/md_place_key.html">md_place_key()</a></code>, <code><a href="../reference/md_place_key.html">md_unit_id()</a></code> and <code><a href="../reference/md_addr_freq.html">md_addr_freq()</a></code> call npnormalize directly. Before, they looked for these functions in npmatch, and with an npmatch that no longer holds the normalizer they quietly fell back to matchdb’s own copies. The copy of <code>np_addr_freq()</code> is removed.</li>
+<code><a href="../reference/md_place_key.html">md_place_key()</a></code>, <code><a href="../reference/md_place_key.html">md_unit_id()</a></code> and <code><a href="../reference/md_addr_freq.html">md_addr_freq()</a></code> call npnormalize directly: <code>np_addr_key()</code>, <code>np_unit_id()</code> and <code>np_addr_freq()</code>.
+<ul><li>
+<strong>Before,</strong> they looked for these functions in npmatch. With an npmatch that no longer holds the normalizer, they quietly fell back to matchdb’s own copies.</li>
+<li>
+<strong>The copies are removed.</strong> They had agreed with npnormalize on every distinct value in the database.</li>
+<li>
+<strong>matchdb now requires npnormalize 0.1.1,</strong> the first version to export <code>np_unit_id()</code>.</li>
+</ul></li>
 </ul></div>
 <div class="section level3">
 <h3 id="stamps-and-the-workspace-log-record-npnormalize-development-version">Stamps and the workspace log record npnormalize<a class="anchor" aria-label="anchor" href="#stamps-and-the-workspace-log-record-npnormalize-development-version"></a></h3>

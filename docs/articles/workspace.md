@@ -42,6 +42,7 @@ For your own spec, see what it will cost first.
 reads the published build’s manifest and marks the files the spec needs:
 
 ``` r
+
 s <- md_spec(layers = "bmf_active", names = c("legal", "dba"), addresses = "mailing")
 md_tranches(s)
 #> <md_tranches 2026-10-27-82c6f0cb> built 2026-10-27 from matchdb@592b078, normalizer v1-3e7b9f9d59bbb19e
@@ -55,6 +56,7 @@ md_tranches(s)
 Then fetch those files, open them, and compile:
 
 ``` r
+
 md_fetch_tranches(s)
 con <- md_tranche_db()
 r <- md_compile(s, con)          # 2,742,924 rows, about a minute
@@ -102,6 +104,7 @@ moved; \* the installed matchdb, npnormalize, npmatch and normalizer
 signature.
 
 ``` r
+
 md_log()
 #>                  run_id           kind               build        spec_hash files downloaded      bytes
 #>  20261027T184905-5f4419 fetch_tranches 2026-10-27-82c6f0cb 2402137493f88c8e    17         17 1028259600
@@ -114,6 +117,7 @@ source URL, status, rows, bytes and md5, plus the manifest it came from.
 For a compile, it is the spec, the stamp and the shape of the result:
 
 ``` r
+
 md_log_run("20261027T184905-5f4419")
 ```
 
@@ -124,6 +128,7 @@ bundles, and the last compile. The same record is written to
 `logs/state.json` after every action:
 
 ``` r
+
 md_status()
 #> <md_status> D:/matchdb
 #>   installed  matchdb 0.1.1.9000, npnormalize 0.1.0, npmatch 0.1.1.9000, normalizer v1-3e7b9f9d59bbb19e
@@ -138,6 +143,7 @@ A new release is a new build, in a new folder. Nothing in the old one is
 overwritten. To see what changed before downloading anything:
 
 ``` r
+
 md_tranche_diff("2026-10-27-82c6f0cb")      # your build against the newest
 ```
 
@@ -150,6 +156,7 @@ Then fetch as before. Files whose md5 matches one in your older build
 are copied from it rather than downloaded:
 
 ``` r
+
 md_fetch_tranches(s)
 #> (an illustration: the first later build will be the first real case)
 #> tranches 2026-11-30-...: 17 files here (0 already were, 14 copied from an older build), 0.21 GB downloaded
@@ -168,6 +175,7 @@ When the new build works,
 deletes the old build’s parquet files and keeps its manifest:
 
 ``` r
+
 md_tranches_prune(keep = 1)
 ```
 
@@ -183,6 +191,7 @@ they differ, it adds a `version_change` row first. Fetching a different
 build or database adds one too:
 
 ``` r
+
 md_log("version_change")
 #> (an illustration of the two kinds of row)
 #>   kind           recorded_at              note

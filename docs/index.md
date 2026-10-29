@@ -13,6 +13,7 @@ and tiering live in npmatch.
 ## Install
 
 ``` r
+
 remotes::install_github("Nonprofit-Open-Data-Collective/matchdb@v0.1.1")  # the current release
 remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")         # development version
 ```
@@ -30,6 +31,7 @@ and only suggests npmatch. Install npmatch too to match against a
 reference:
 
 ``` r
+
 remotes::install_github("Nonprofit-Open-Data-Collective/npmatch")
 ```
 
@@ -51,6 +53,7 @@ needs no AWS account.
 | `unified-observed` | every BMF release | legal, DBA, aliases written by 2+ filers | 5.14M |
 
 ``` r
+
 library(matchdb)
 b <- md_reference("active-observed", fetch = "missing")   # ~260 MB, once
 
@@ -70,6 +73,7 @@ With the database downloaded
 about 10 GB):
 
 ``` r
+
 md_lookup("53-0196605")    # entity, names, addresses, events, relations, clusters, ...
 md_cluster("53-0196605")   # its families: group ruling, Schedule R system, shared site, ...
 ```
@@ -84,6 +88,7 @@ A reference is described by a spec with these settings:
 - **corroboration**: how many filers must agree on an alias.
 
 ``` r
+
 s <- md_spec(layers = c("bmf_active", "bmf_inactive"),
              names = c("legal", "dba", "observed"),
              addresses = c("mailing", "observed"),
@@ -97,6 +102,7 @@ published as parquet files split by layer and class, and
 downloads only the files a spec needs:
 
 ``` r
+
 md_fetch_tranches(s)       # only these layers and classes, once
 con <- md_tranche_db()     # a connection md_compile(), md_publish() and md_lookup() take
 r <- md_compile(s, con)

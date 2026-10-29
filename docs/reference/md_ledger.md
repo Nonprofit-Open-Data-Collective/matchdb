@@ -24,6 +24,7 @@ md_ledger_schema(con)
 
 ## Details
 
+
     obs_id           content-hash id (below)
     source, kind     as in md_sources()
     part             the partition (tax year) the row came from, or NULL

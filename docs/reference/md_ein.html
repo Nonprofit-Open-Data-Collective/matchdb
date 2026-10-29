@@ -105,7 +105,7 @@ number is <code>19818</code>, and an EIN column that has passed through a spread
 an untyped CSV read is a well known way to lose organisations whose EIN begins
 with zero. A string that cannot be coerced to a number cannot be silently
 renumbered.</p>
-<p>Semantics follow <code><a href="https://nonprofit-open-data-collective.github.io/ef2/reference/format_ein.html" class="external-link">ef2::format_ein()</a></code>, which is the upstream definition, with
+<p>Semantics follow <code><a href="https://rdrr.io/pkg/ef2/man/format_ein.html" class="external-link">ef2::format_ein()</a></code>, which is the upstream definition, with
 one deliberate difference described below. matchdb does not depend on ef2 -
 it is an ETL pipeline rather than a library - so the function is reimplemented
 in base R and tested against ef2's documented examples.</p>
@@ -114,7 +114,7 @@ in base R and tested against ef2's documented examples.</p>
     <h2 id="strictness">Strictness<a class="anchor" aria-label="anchor" href="#strictness"></a></h2>
 
 
-<p><code><a href="https://nonprofit-open-data-collective.github.io/ef2/reference/format_ein.html" class="external-link">ef2::format_ein()</a></code> strips non-digits and pads to nine characters, then takes
+<p><code><a href="https://rdrr.io/pkg/ef2/man/format_ein.html" class="external-link">ef2::format_ein()</a></code> strips non-digits and pads to nine characters, then takes
 <code>substr(x, 1, 2)</code> and <code>substr(x, 3, 9)</code>. An input carrying more than nine
 digits is therefore <strong>silently truncated</strong>: <code>"12345678901"</code> becomes
 <code>"EIN-12-3456789"</code>, with the trailing digits discarded and no warning.</p>

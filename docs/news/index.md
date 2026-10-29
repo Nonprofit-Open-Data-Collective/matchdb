@@ -21,10 +21,15 @@
   [`md_unit_id()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_place_key.md)
   and
   [`md_addr_freq()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_addr_freq.md)
-  call npnormalize directly. Before, they looked for these functions in
-  npmatch, and with an npmatch that no longer holds the normalizer they
-  quietly fell back to matchdb’s own copies. The copy of
-  `np_addr_freq()` is removed.
+  call npnormalize directly: `np_addr_key()`, `np_unit_id()` and
+  `np_addr_freq()`.
+  - **Before,** they looked for these functions in npmatch. With an
+    npmatch that no longer holds the normalizer, they quietly fell back
+    to matchdb’s own copies.
+  - **The copies are removed.** They had agreed with npnormalize on
+    every distinct value in the database.
+  - **matchdb now requires npnormalize 0.1.1,** the first version to
+    export `np_unit_id()`.
 
 ### Stamps and the workspace log record npnormalize
 

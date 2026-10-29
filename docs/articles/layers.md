@@ -46,6 +46,7 @@ status without rewriting where it came from.
 takes the layers to include:
 
 ``` r
+
 library(matchdb)
 
 # the default: organizations in the current BMF
@@ -84,6 +85,7 @@ reports this in its absence report: for each cluster type, how many
 family members the chosen layers left out.
 
 ``` r
+
 r <- md_compile(md_spec(layers = "bmf_active"))
 r$report$absence
 ```
@@ -94,6 +96,7 @@ r$report$absence
 shows an EIN’s layer and everything else known about it:
 
 ``` r
+
 md_lookup("53-0196605")
 #> <md_lookup> EIN-53-0196605  AMERICAN NATIONAL RED CROSS
 #>   layer bmf_active, active TRUE, NTEE P210, subsection 3

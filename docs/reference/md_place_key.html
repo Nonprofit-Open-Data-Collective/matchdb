@@ -98,10 +98,10 @@ dropped ("STE D-2" -&gt; <code>D2</code>, "# 300" -&gt; <code>300</code>), so "S
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p><code>md_place_key()</code> calls <code><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_tokenize.html" class="external-link">npnormalize::np_addr_key()</a></code>. <code>md_unit_id()</code> calls
-npnormalize's internal <code>.np_unit_id()</code>, and falls back to a port of the same
-rule should a later npnormalize rename it. The SQL macros <code>md_place_key()</code> and
-<code>md_unit_id()</code> are ports too; a test holds them to npnormalize's functions.</p>
+    <p><code>md_place_key()</code> calls <code><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_tokenize.html" class="external-link">npnormalize::np_addr_key()</a></code> and <code>md_unit_id()</code> calls
+<code><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_tokenize.html" class="external-link">npnormalize::np_unit_id()</a></code> (npnormalize 0.1.1 and later). The SQL macros
+<code>md_place_key()</code> and <code>md_unit_id()</code> are ports of the same rules; a test holds
+them to npnormalize's functions.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

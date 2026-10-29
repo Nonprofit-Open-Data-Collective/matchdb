@@ -84,6 +84,7 @@ Returns through TY2012 use `AffiliateListing/Affiliate` with `Name/`,
 by matching on the field suffix. A run that returns rows for 2013 only
 has silently hit the rename.
 
+
       2009    260 rows /  21 filings
       2010  1,630 rows /  66 filings
       2011  1,276 rows /  79 filings

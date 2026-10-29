@@ -115,10 +115,22 @@ for a building id. 4 is about 11 m of latitude; to be measured.</p></dd>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>It writes three tables:</p><dl><dt><code>place</code></dt>
+<dd><p>One row per address that two or more EINs report as their
+own current address. A lookup miss means one occupant, which is about
+88% of addresses.</p></dd>
+
+<dt><code>place_layer</code></dt>
+<dd><p><code>(place_key, layer, n_eins)</code>. Layers partition EINs,
+so the count for any selection of layers - active only, unified - is an
+exact sum, as with <code>ein_key_layer</code>.</p></dd>
+
+<dt><code>place_unit</code></dt>
+<dd><p>One row per suite that two or more EINs at a place
+share.</p></dd>
 
 
-
-    </div>
+</dl></div>
     <div class="section level2">
     <h2 id="who-counts-as-an-occupant">Who counts as an occupant<a class="anchor" aria-label="anchor" href="#who-counts-as-an-occupant"></a></h2>
 

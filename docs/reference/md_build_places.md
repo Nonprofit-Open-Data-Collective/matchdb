@@ -52,6 +52,24 @@ Row counts, invisibly.
 
 ## Details
 
+It writes three tables:
+
+- `place`:
+
+  One row per address that two or more EINs report as their own current
+  address. A lookup miss means one occupant, which is about 88% of
+  addresses.
+
+- `place_layer`:
+
+  `(place_key, layer, n_eins)`. Layers partition EINs, so the count for
+  any selection of layers - active only, unified - is an exact sum, as
+  with `ein_key_layer`.
+
+- `place_unit`:
+
+  One row per suite that two or more EINs at a place share.
+
 ## Who counts as an occupant
 
 An EIN occupies a place when the place is its **own current address**:

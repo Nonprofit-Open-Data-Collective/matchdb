@@ -45,7 +45,7 @@ organisations whose EIN begins with zero. A string that cannot be
 coerced to a number cannot be silently renumbered.
 
 Semantics follow
-[`ef2::format_ein()`](https://nonprofit-open-data-collective.github.io/ef2/reference/format_ein.html),
+[`ef2::format_ein()`](https://rdrr.io/pkg/ef2/man/format_ein.html),
 which is the upstream definition, with one deliberate difference
 described below. matchdb does not depend on ef2 - it is an ETL pipeline
 rather than a library - so the function is reimplemented in base R and
@@ -53,7 +53,7 @@ tested against ef2's documented examples.
 
 ## Strictness
 
-[`ef2::format_ein()`](https://nonprofit-open-data-collective.github.io/ef2/reference/format_ein.html)
+[`ef2::format_ein()`](https://rdrr.io/pkg/ef2/man/format_ein.html)
 strips non-digits and pads to nine characters, then takes
 `substr(x, 1, 2)` and `substr(x, 3, 9)`. An input carrying more than
 nine digits is therefore **silently truncated**: `"12345678901"` becomes

@@ -25,6 +25,10 @@ md_data_init(quiet = FALSE)
 
   Create the directory if it does not exist.
 
+- quiet:
+
+  For `md_data_init()`, do not print the root it set up.
+
 ## Value
 
 A normalized absolute path.

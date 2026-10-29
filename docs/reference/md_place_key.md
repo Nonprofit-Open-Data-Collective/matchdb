@@ -36,8 +36,9 @@ A character vector.
 ## Details
 
 `md_place_key()` calls
-[`npnormalize::np_addr_key()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_tokenize.html).
-`md_unit_id()` calls npnormalize's internal `.np_unit_id()`, and falls
-back to a port of the same rule should a later npnormalize rename it.
-The SQL macros `md_place_key()` and `md_unit_id()` are ports too; a test
-holds them to npnormalize's functions.
+[`npnormalize::np_addr_key()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_tokenize.html)
+and `md_unit_id()` calls
+[`npnormalize::np_unit_id()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_tokenize.html)
+(npnormalize 0.1.1 and later). The SQL macros `md_place_key()` and
+`md_unit_id()` are ports of the same rules; a test holds them to
+npnormalize's functions.
