@@ -1,0 +1,39 @@
+============================================================================== 
+GATE: phase1 
+baseline: C:\Users\jdlec\Dropbox (Personal)\00 - URBAN\00-GITHUB\matchdb\dev\BASELINE-2026-10 
+============================================================================== 
+pfmatch          pfmatch-0ad8f7a (git archive at C:/Users/jdlec/AppData/Local/Temp/claude/C--Users-jdlec-Dropbox--Personal--00---URBAN-00-GITHUB-matchdb/ced24e55-a6b5-4730-aa0a-9e0a906dc8e5/scratchpad/pfmatch-0ad8f7a)
+npmatch          0.1.1.9000
+normalizer sig   v1-6d90b52d8b781673
+R                R version 4.5.1 (2025-06-13 ucrt)
+ 
+normalizer signature matches: v1-6d90b52d8b781673 
+ 
+<md_spec active-legal> dc8419cede1cb540
+  layers:     bmf_active 
+  names:      dba, legal 
+  addresses:  mailing 
+  sources:    bmf 
+  dba_as:     column 
+spec dc8419cede1cb540: 1,974,830 rows over 1,974,830 EINs
+compiled 1,974,830 rows in 50 s 
+matchdb adds a county to 1,973,585 rows; blanked for this gate 
+--- reference frame vs pfmatch's, same BMF strings --- 
+<md_diff> PASS 
+  rows only in baseline          0
+  rows only in candidate         0
+  cells differing                0   (over 1,974,830 compared rows)
+--- name_freq: identical (1563250 names) --- 
+--- token_idf: identical (268232 names) --- 
+--- 1k benchmark on the compiled reference vs baseline --- 
+<md_diff> PASS 
+  rows only in baseline          0
+  rows only in candidate         0
+  cells differing                0   (over 4,715 compared rows)
+--- not a gate: raw BMF strings vs processed (pfmatch today) --- 
+           YES MAYBE  NO
+processed 2817   989 910
+raw       2858   950 907
+  identities whose verdict or EIN differs: 161 of 4716 
+============================================================================== 
+GATE PASSED 

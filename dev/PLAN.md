@@ -1516,6 +1516,42 @@ a separate decision for npmatch and is not part of this phase.
 > The check is `dev/verify/npnormalize-check.R`, and its log is in
 > `dev/verify/logs/npnormalize-check-2026-10-27.log`.
 
+**The first signature move after the extraction (matchdb#29), 2026-10-31.**
+npnormalize 0.1.2 makes `BUILDING` a unit designator, as `BLDG` already was,
+and moves the signature to `v1-6d90b52d8b781673`. matchdb requires
+`npnormalize (>= 0.1.2)`; no package code changed. The database was moved onto
+it with `dev/rebuild-normalizer.R`, the workflow `md_normalizer_diff()` was
+built for:
+
+* **Derive beside the old** (49 min): 7.78M name strings and 12.99M address
+  strings gained rows under the new signature; the old rows stay.
+* **Diff before adopting:** no name column moved. 7,754 address strings
+  (0.06%) changed `street_unit`, 6,921 `street_key`; on `address`, 6,068 of
+  22.0M rows are rekeyed, 1,666 street-plus-ZIP groups merge and 11 split,
+  over 1,593 EINs. Some changed values look like npnormalize parsing quirks
+  rather than intended results (`BUILDING 114 16TH ST RM 3125` gets
+  `street_num` `16T`; `1 BETHANY RD BUILDING 1 STE 5` now keeps the building
+  as the unit and drops the suite). They are for npnormalize to judge.
+* **Adopt** (`--install`, 3.3 min): relink `name_derived` and
+  `address_derived`, then rebuild compact tables, groups, places, identifier
+  keys, clusters and statistics. `address_compact` lost 1,629 rows, `cluster`
+  85.
+* **Gates:** the Phase 1 baseline was re-frozen under the new signature
+  (`dev/BASELINE-2026-10`, same pfmatch `0ad8f7a`; the 1k benchmark's tier
+  counts are unchanged). The Phase 1 gate gives three zeros, and
+  `check-build` passes 36 of 36.
+* **Republished locally** (`dev/verify/release/publish-tiers.R`, from
+  `7a41893`): the four tiers at 2,742,710, 2,884,796, 4,975,671 and 5,129,859
+  rows (each a few hundred fewer, from the merged address groups; same spec
+  hashes, so each bundle replaces the old one in place), and tranche build
+  `2026-10-31-efc16cf2`. `tranche-check` rebuilt the same build id, and tiers
+  compiled from it are identical to the bundles.
+* **Phase 2** is unchanged: +146 YES (294 gained, 148 lost).
+
+Logs: `dev/verify/logs/*-2026-10-31.log`. Not yet uploaded to S3: until it is,
+the live artifacts are the 2026-10-26 ones under the old signature, which
+matchdb with npnormalize 0.1.2 refuses.
+
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.
 
