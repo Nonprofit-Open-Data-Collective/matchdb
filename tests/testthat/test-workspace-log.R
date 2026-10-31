@@ -155,7 +155,9 @@ test_that("an index written before npnormalize gains its columns, keeping the ol
   expect_equal(lg$npmatch_version[1], "0.1.1")
   expect_true(is.na(lg$npnormalize_version[1]))
   expect_equal(lg$npnormalize_version[2], as.character(utils::packageVersion("npnormalize")))
-  expect_equal(lg$normalize_signature, rep(npnormalize::np_normalize_signature(), 2))
+  # the old row keeps the signature it was written under
+  expect_equal(lg$normalize_signature,
+               c("v1-3e7b9f9d59bbb19e", npnormalize::np_normalize_signature()))
 })
 
 test_that("options(matchdb.log = FALSE) writes nothing", {

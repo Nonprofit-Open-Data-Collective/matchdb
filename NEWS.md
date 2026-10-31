@@ -1,5 +1,33 @@
 # matchdb (development version)
 
+## npnormalize 0.1.2: the signature moves (#29)
+
+* **matchdb now requires npnormalize 0.1.2.** Its normalizer signature is
+  `v1-6d90b52d8b781673` (was `v1-3e7b9f9d59bbb19e`), so an install that
+  would silently produce the old keys cannot happen.
+* **What changed:** `BUILDING` is now a unit designator, as `BLDG` already
+  was. An address that spells a designator out (`100 CAMPUS CENTER BUILDING
+  86E`) now gets `street_key` `100 CAMPUS CENTER` and `street_unit`
+  `BLDG 86E`, which moves its `street_unit_id`, its address compact group and
+  `md_addr_freq()`'s counts. Addresses without a spelled-out designator are
+  unchanged. No matchdb code needed changing: `md_unit_id()` and its SQL port
+  agree with npnormalize 0.1.2 on every canonical `street_unit`.
+* **Measured on the database** (`md_normalizer_diff()`,
+  `dev/verify/logs/rebuild-normalizer-2026-10-31.log`): no name column moved
+  (0 of 12.8M `name` rows rekeyed). 7,754 of 12.99M address strings (0.06%)
+  changed `street_unit`, 6,921 `street_key`. On the `address` table, 6,068 of
+  22.0M rows are rekeyed: 1,666 street-plus-ZIP groups merge and 11 split,
+  touching 1,593 EINs.
+* **Every published artifact is rebuilt** under the new signature: the
+  database, the four tier bundles and the tranches. Artifacts from before are
+  refused by matchdb with npnormalize 0.1.2 installed, and the new ones are
+  refused with 0.1.1, as the signature check intends.
+* `dev/rebuild-normalizer.R` adopts a new signature on a built database:
+  derives the new signature's columns beside the old, reports
+  `md_normalizer_diff()`, and with `--install` relinks the derived columns
+  and rebuilds everything downstream. `dev/verify/release/publish-tiers.R`
+  republishes the four tiers and the tranches.
+
 ## The normalizer comes from npnormalize
 
 * matchdb now imports **npnormalize** for the normalizer and its signature,
