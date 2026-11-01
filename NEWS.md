@@ -1,27 +1,42 @@
 # matchdb (development version)
 
-## npnormalize 0.1.2: the signature moves (#29)
+## npnormalize 0.1.3: the signature moves (#29)
 
-* **matchdb now requires npnormalize 0.1.2.** Its normalizer signature is
-  `v1-6d90b52d8b781673` (was `v1-3e7b9f9d59bbb19e`), so an install that
-  would silently produce the old keys cannot happen.
-* **What changed:** `BUILDING` is now a unit designator, as `BLDG` already
-  was. An address that spells a designator out (`100 CAMPUS CENTER BUILDING
-  86E`) now gets `street_key` `100 CAMPUS CENTER` and `street_unit`
-  `BLDG 86E`, which moves its `street_unit_id`, its address compact group and
-  `md_addr_freq()`'s counts. Addresses without a spelled-out designator are
-  unchanged. No matchdb code needed changing: `md_unit_id()` and its SQL port
-  agree with npnormalize 0.1.2 on every canonical `street_unit`.
+* **matchdb now requires npnormalize 0.1.3.** Its normalizer signature is
+  `v1-592912060053c4c3` (was `v1-3e7b9f9d59bbb19e`), so an install that
+  would silently produce the old keys cannot happen. The database was rebuilt
+  once, under 0.1.3; the 0.1.2 rebuild (`v1-6d90b52d8b781673`) was never
+  published.
+* **What changed in npnormalize:**
+  * 0.1.2 made `BUILDING` a unit designator, as `BLDG` already was, so
+    `100 CAMPUS CENTER BUILDING 86E` keys as `100 CAMPUS CENTER` with unit
+    `BLDG 86E`. This is the only change that moves `street_key`.
+  * 0.1.3, found while measuring 0.1.2 here: a line naming several units keeps
+    the most specific (`1 BETHANY RD BUILDING 1 STE 5` keeps `STE 5`; a mail
+    store's `STE 204 # 22915` keeps the box, `# 22915`), and the house number
+    is a whole token (`16TH ST` has none; it was `16T` on street `H`).
+  * No matchdb code needed changing: `md_unit_id()` and its SQL port agree
+    with npnormalize on every canonical `street_unit`.
 * **Measured on the database** (`md_normalizer_diff()`,
-  `dev/verify/logs/rebuild-normalizer-2026-10-31.log`): no name column moved
-  (0 of 12.8M `name` rows rekeyed). 7,754 of 12.99M address strings (0.06%)
-  changed `street_unit`, 6,921 `street_key`. On the `address` table, 6,068 of
-  22.0M rows are rekeyed: 1,666 street-plus-ZIP groups merge and 11 split,
-  touching 1,593 EINs.
+  `dev/verify/logs/rebuild-normalizer-2026-11-01.log`): no name column moved
+  (0 of 12.8M `name` rows rekeyed). Of 12.99M address strings, 61,016 (0.47%)
+  changed `street_unit`, 19,981 `street_num`, 26,766 `street_name` and 6,921
+  `street_key`. On the `address` table, 6,068 of 22.0M rows are rekeyed:
+  1,666 street-plus-ZIP groups merge and 11 split, touching 1,593 EINs.
+  Shared suites (`place_unit`) fall from 36,838 to 35,439, and shared places
+  from 2,855 to 2,824, as mail-store customers are told apart by their box.
 * **Every published artifact is rebuilt** under the new signature: the
   database, the four tier bundles and the tranches. Artifacts from before are
-  refused by matchdb with npnormalize 0.1.2 installed, and the new ones are
-  refused with 0.1.1, as the signature check intends.
+  refused by matchdb with npnormalize 0.1.3 installed, and the new ones are
+  refused with older npnormalize, as the signature check intends.
+* **Checks on the rebuild** (`dev/verify/logs/*-2026-11-01.log`):
+  * the Phase 1 gate gives three zeros against the re-frozen baseline, whose
+    1k benchmark counts are unchanged;
+  * Phase 2 is unchanged, +146 YES;
+  * `check-build` passes 36 of 36;
+  * the four tiers keep their spec hashes, each a few hundred rows smaller
+    from the merged address groups, and each tier compiled from the new
+    tranches (build `2026-11-01-67c0bd2f`) is identical to its bundle.
 * `dev/rebuild-normalizer.R` adopts a new signature on a built database:
   derives the new signature's columns beside the old, reports
   `md_normalizer_diff()`, and with `--install` relinks the derived columns

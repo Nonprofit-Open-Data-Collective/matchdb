@@ -1,7 +1,7 @@
 pfmatch          pfmatch-0ad8f7a (git archive at C:/Users/jdlec/AppData/Local/Temp/claude/C--Users-jdlec-Dropbox--Personal--00---URBAN-00-GITHUB-matchdb/ced24e55-a6b5-4730-aa0a-9e0a906dc8e5/scratchpad/pfmatch-0ad8f7a)
-matchdb          f593ebc
+matchdb          4eac2d7
 npmatch          0.1.1.9000
-normalizer sig   v1-6d90b52d8b781673
+normalizer sig   v1-592912060053c4c3
 BMF              bmf_unified v2026-09-21, md5 636badf26f808aea70750e4932b443b9
 R                R version 4.5.1 (2025-06-13 ucrt)
-built            2026-10-31T13:53:11-0700
+built            2026-11-01T06:31:57-0700

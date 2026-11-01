@@ -1516,41 +1516,63 @@ a separate decision for npmatch and is not part of this phase.
 > The check is `dev/verify/npnormalize-check.R`, and its log is in
 > `dev/verify/logs/npnormalize-check-2026-10-27.log`.
 
-**The first signature move after the extraction (matchdb#29), 2026-10-31.**
-npnormalize 0.1.2 makes `BUILDING` a unit designator, as `BLDG` already was,
-and moves the signature to `v1-6d90b52d8b781673`. matchdb requires
-`npnormalize (>= 0.1.2)`; no package code changed. The database was moved onto
-it with `dev/rebuild-normalizer.R`, the workflow `md_normalizer_diff()` was
-built for:
+**The first signature move after the extraction (matchdb#29), 2026-11-01.**
+matchdb requires `npnormalize (>= 0.1.3)`, signature `v1-592912060053c4c3`
+(was `v1-3e7b9f9d59bbb19e`); no package code changed. Two npnormalize releases
+went into it:
 
-* **Derive beside the old** (49 min): 7.78M name strings and 12.99M address
-  strings gained rows under the new signature; the old rows stay.
-* **Diff before adopting:** no name column moved. 7,754 address strings
-  (0.06%) changed `street_unit`, 6,921 `street_key`; on `address`, 6,068 of
-  22.0M rows are rekeyed, 1,666 street-plus-ZIP groups merge and 11 split,
-  over 1,593 EINs. Some changed values look like npnormalize parsing quirks
-  rather than intended results (`BUILDING 114 16TH ST RM 3125` gets
-  `street_num` `16T`; `1 BETHANY RD BUILDING 1 STE 5` now keeps the building
-  as the unit and drops the suite). They are for npnormalize to judge.
-* **Adopt** (`--install`, 3.3 min): relink `name_derived` and
+* **0.1.2** makes `BUILDING` a unit designator, as `BLDG` already was
+  (`v1-6d90b52d8b781673`). The database was rebuilt under it on 2026-10-31
+  (logs `*-2026-10-31.log`), and measuring it turned up two parsing quirks:
+  `BUILDING 114 16TH ST RM 3125` got `street_num` `16T`, and
+  `1 BETHANY RD BUILDING 1 STE 5` kept the building and dropped the suite.
+  0.1.2 was never published.
+* **0.1.3** fixes both. A line naming several units keeps the most specific
+  (`.np_unit_rank`: building, then floor, then suite or door, then `PMB`;
+  ties keep the last written), and the house number is a whole token (grid
+  numbers like `16W540` survive; run-together `921AIRPORT` still splits).
+
+The database was rebuilt once more, under 0.1.3, with
+`dev/rebuild-normalizer.R`, the workflow `md_normalizer_diff()` was built for:
+
+* **Derive beside the old** (48 min): 7.78M name strings and 12.99M address
+  strings gained rows under the new signature.
+* **Diff against the published signature:** no name column moved. Of 12.99M
+  address strings, 61,016 (0.47%) changed `street_unit` (mostly `STE` to
+  `PMB` or `#` on mail-store lines), 19,981 `street_num`, 26,766
+  `street_name` and 6,921 `street_key`. `street_key` moves exactly as under
+  0.1.2: on `address`, 6,068 of 22.0M rows are rekeyed, 1,666
+  street-plus-ZIP groups merge and 11 split, over 1,593 EINs.
+* **Adopt** (`--install`, 3.1 min): relink `name_derived` and
   `address_derived`, then rebuild compact tables, groups, places, identifier
-  keys, clusters and statistics. `address_compact` lost 1,629 rows, `cluster`
-  85.
+  keys, clusters and statistics. Shared suites (`place_unit`) fall from
+  36,838 to 35,439 and shared places from 2,855 to 2,824, as mail-store
+  customers are told apart by their box. Against 0.1.2, co-tenant clusters
+  fall by 204 (798,462 clusters in all) and `address_compact` is unchanged
+  (10,314,369 rows).
 * **Gates:** the Phase 1 baseline was re-frozen under the new signature
   (`dev/BASELINE-2026-10`, same pfmatch `0ad8f7a`; the 1k benchmark's tier
   counts are unchanged). The Phase 1 gate gives three zeros, and
   `check-build` passes 36 of 36.
 * **Republished locally** (`dev/verify/release/publish-tiers.R`, from
-  `7a41893`): the four tiers at 2,742,710, 2,884,796, 4,975,671 and 5,129,859
-  rows (each a few hundred fewer, from the merged address groups; same spec
-  hashes, so each bundle replaces the old one in place), and tranche build
-  `2026-10-31-efc16cf2`. `tranche-check` rebuilt the same build id, and tiers
-  compiled from it are identical to the bundles.
+  `a79e519`): the four tiers at 2,742,710, 2,884,796, 4,975,671 and 5,129,859
+  rows (same spec hashes, so each bundle replaces the old one in place), and
+  tranche build `2026-11-01-67c0bd2f` (108 files, 4.53 GB). `tranche-check`
+  rebuilt the same build id, and tiers compiled from it are identical to the
+  bundles.
 * **Phase 2** is unchanged: +146 YES (294 gained, 148 lost).
+* **Old rows dropped** (`--drop-old`, for both old signatures) once no local
+  bundle named them. `D:/matchdb/backup/MATCHDB-pre-0.1.2.duckdb` keeps the
+  database as published.
 
-Logs: `dev/verify/logs/*-2026-10-31.log`. Not yet uploaded to S3: until it is,
+npmatch moved alongside: #24 tells a reviewer when a floor is not the suite it
+shares a number with, #25 pins the 0.1.3 signature and requires that version,
+and #26 lets a bare `#` agree with `PMB` in `geo_unit_same_kind`. They change
+reviewer output, not scores. npmatch is at `main` `7ea7447` for the manifest.
+
+Logs: `dev/verify/logs/*-2026-11-01.log`. Not yet uploaded to S3: until it is,
 the live artifacts are the 2026-10-26 ones under the old signature, which
-matchdb with npnormalize 0.1.2 refuses.
+matchdb with npnormalize 0.1.3 refuses.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.

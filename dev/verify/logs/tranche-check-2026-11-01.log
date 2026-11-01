@@ -1,0 +1,43 @@
+published tranches 2026-11-01-67c0bd2f: 108 files, 4.53 GB, 8.2 min -> D:/matchdb/tranches/2026-11-01-67c0bd2f
+build 2026-11-01-67c0bd2f: 108 files, 4.53 GB, 197,326,014 rows, 8.2 min
+             table          mb     rows
+           address 1368.338816 22026817
+              name  719.307689 12801366
+           orgtext  420.782104 15824934
+   address_derived  418.985383 22026817
+           ein_key  396.926378 32372355
+      name_derived  333.515282 12801366
+      name_compact  171.254189  6773578
+     ein_key_layer  153.916047 21469653
+   address_compact  150.843436 10314369
+        person_key  148.198800 16556057
+    stat_name_cell   50.931189  5552078
+            entity   46.655879  4236242
+      ein_relation   33.178330  2184885
+           website   29.992295  1016836
+    cluster_member   29.431019  3465783
+           cluster   15.765675   798462
+ cluster_footprint    9.299630  1393811
+      entity_event    8.328046  2649231
+             place    7.971790   278930
+   stat_token_cell    6.453594  1365064
+      entity_group    3.373803   450964
+       place_layer    3.259503   416056
+     ntee_observed    2.917115   514844
+        place_unit    0.374702    35439
+    source_vintage    0.007351       45
+         stat_cell    0.001222       32
+
+active-legal      fetched 18 files, 1.01 GB (0.2 min); open, verify and compile 1.1 min
+  rows 2,742,710 vs bundle 2,742,710; identical: frame TRUE, name_freq TRUE, token_idf TRUE, fingerprint TRUE
+
+active-observed   fetched 20 files, 1.16 GB (0.1 min); open, verify and compile 1.1 min
+  rows 2,884,796 vs bundle 2,884,796; identical: frame TRUE, name_freq TRUE, token_idf TRUE, fingerprint TRUE
+
+unified-observed  fetched 32 files, 1.70 GB (0.1 min); open, verify and compile 1.9 min
+  rows 5,129,859 vs bundle 5,129,859; identical: frame TRUE, name_freq TRUE, token_idf TRUE, fingerprint TRUE
+53-0196605: md_lookup() and md_cluster() identical TRUE
+39-1925617: md_lookup() and md_cluster() identical TRUE
+13-1623829: md_lookup() and md_cluster() identical TRUE
+
+TRANCHES MATCH, 15.8 min

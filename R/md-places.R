@@ -330,7 +330,7 @@ md_build_places <- function(con, share_min = 10L, unit_coverage_min = 0.5,
 #'
 #' `md_place_key()` calls [npnormalize::np_addr_key()] and `md_unit_id()` calls
 #' [npnormalize::np_unit_id()] (npnormalize 0.1.1 and later; matchdb requires
-#' 0.1.2, whose unit gate changes `street_unit`). The SQL macros
+#' 0.1.3, whose unit pick changes `street_unit`). The SQL macros
 #' `md_place_key()` and `md_unit_id()` are ports of the same rules; a test holds
 #' them to npnormalize's functions.
 #'

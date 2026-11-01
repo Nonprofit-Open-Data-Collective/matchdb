@@ -1,0 +1,16 @@
+data root: D:/matchdb | signature v1-592912060053c4c3 
+spec 2402137493f88c8e: 2,742,710 rows over 1,974,830 EINs
+published active-legal 2402137493f88c8e: 2,742,710 rows -> D:/matchdb/publish/active-legal/2402137493f88c8e
+active-legal       8.0 min  files: addr_freq.parquet clusters.parquet name_freq.parquet place.parquet place_layer.parquet place_unit.parquet reference.parquet report.json stamp.json token_idf.parquet
+spec 9cc7b76e3e144a87: 2,884,796 rows over 1,974,830 EINs
+published active-observed 9cc7b76e3e144a87: 2,884,796 rows -> D:/matchdb/publish/active-observed/9cc7b76e3e144a87
+active-observed    7.3 min  files: addr_freq.parquet clusters.parquet name_freq.parquet place.parquet place_layer.parquet place_unit.parquet reference.parquet report.json stamp.json token_idf.parquet
+spec 8bf81cf9a74450c3: 4,975,671 rows over 3,698,197 EINs
+published unified-legal 8bf81cf9a74450c3: 4,975,671 rows -> D:/matchdb/publish/unified-legal/8bf81cf9a74450c3
+unified-legal      12.4 min  files: addr_freq.parquet clusters.parquet name_freq.parquet place.parquet place_layer.parquet place_unit.parquet reference.parquet report.json stamp.json token_idf.parquet
+spec 3de00d653e8cb205: 5,129,859 rows over 3,698,197 EINs
+published unified-observed 3de00d653e8cb205: 5,129,859 rows -> D:/matchdb/publish/unified-observed/3de00d653e8cb205
+unified-observed   15.2 min  files: addr_freq.parquet clusters.parquet name_freq.parquet place.parquet place_layer.parquet place_unit.parquet reference.parquet report.json stamp.json token_idf.parquet
+published tranches 2026-11-01-67c0bd2f: 108 files, 4.53 GB, 7.4 min -> D:/matchdb/tranches/2026-11-01-67c0bd2f
+[1] "D:/matchdb/tranches/2026-11-01-67c0bd2f"
+tranches 7.4 min
