@@ -30,7 +30,7 @@ dropped ("STE D-2" -> \code{D2}, "# 300" -> \code{300}), so "STE 300", "Suite 30
 \details{
 \code{md_place_key()} calls \code{\link[npnormalize:np_tokenize]{npnormalize::np_addr_key()}} and \code{md_unit_id()} calls
 \code{\link[npnormalize:np_tokenize]{npnormalize::np_unit_id()}} (npnormalize 0.1.1 and later; matchdb requires
-0.1.2, whose unit gate changes \code{street_unit}). The SQL macros
+0.1.3, whose unit pick changes \code{street_unit}). The SQL macros
 \code{md_place_key()} and \code{md_unit_id()} are ports of the same rules; a test holds
 them to npnormalize's functions.
 }
