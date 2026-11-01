@@ -1,0 +1,11 @@
+BMF v2026-09-21 active rows: 1,974,830 
+
+== raw reference 
+  1,974,830 rows -> D:/matchdb/work/baseline-2026-10/REF-active-raw.rds 
+  1k benchmark in 779 s: YES 2858 / MAYBE 950 / NO 907 
+
+== processed reference 
+  1,974,830 rows -> D:/matchdb/work/baseline-2026-10/REF-active-processed.rds 
+  1k benchmark in 884 s: YES 2817 / MAYBE 989 / NO 910 
+
+wrote dev/BASELINE-2026-10 

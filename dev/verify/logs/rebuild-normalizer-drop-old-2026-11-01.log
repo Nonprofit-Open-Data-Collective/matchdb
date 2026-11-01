@@ -1,0 +1,18 @@
+data root: D:/matchdb 
+npnormalize 0.1.3 | old v1-3e7b9f9d59bbb19e -> new v1-592912060053c4c3
+name_text_derived: 7,784,942 rows under v1-3e7b9f9d59bbb19e dropped
+address_text_derived: 12,987,311 rows under v1-3e7b9f9d59bbb19e dropped
+                table normalize_signature        n
+    name_text_derived v1-592912060053c4c3  7784942
+    name_text_derived v1-6d90b52d8b781673  7784942
+ address_text_derived v1-592912060053c4c3 12987311
+ address_text_derived v1-6d90b52d8b781673 12987311
+exit v1-3e7b9f9d59bbb19e 0
+data root: D:/matchdb 
+npnormalize 0.1.3 | old v1-6d90b52d8b781673 -> new v1-592912060053c4c3
+name_text_derived: 7,784,942 rows under v1-6d90b52d8b781673 dropped
+address_text_derived: 12,987,311 rows under v1-6d90b52d8b781673 dropped
+                table normalize_signature        n
+    name_text_derived v1-592912060053c4c3  7784942
+ address_text_derived v1-592912060053c4c3 12987311
+exit v1-6d90b52d8b781673 0

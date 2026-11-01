@@ -29,6 +29,14 @@
   database, the four tier bundles and the tranches. Artifacts from before are
   refused by matchdb with npnormalize 0.1.3 installed, and the new ones are
   refused with older npnormalize, as the signature check intends.
+* **Checks on the rebuild** (`dev/verify/logs/*-2026-11-01.log`):
+  * the Phase 1 gate gives three zeros against the re-frozen baseline, whose
+    1k benchmark counts are unchanged;
+  * Phase 2 is unchanged, +146 YES;
+  * `check-build` passes 36 of 36;
+  * the four tiers keep their spec hashes, each a few hundred rows smaller
+    from the merged address groups, and each tier compiled from the new
+    tranches (build `2026-11-01-67c0bd2f`) is identical to its bundle.
 * `dev/rebuild-normalizer.R` adopts a new signature on a built database:
   derives the new signature's columns beside the old, reports
   `md_normalizer_diff()`, and with `--install` relinks the derived columns

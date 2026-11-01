@@ -1,0 +1,112 @@
+data root: D:/matchdb 
+npnormalize 0.1.3 | old v1-3e7b9f9d59bbb19e -> new v1-592912060053c4c3
+
+==== text-keyed derived columns  [04:50:53]
+name_text: 7,784,942 new string(s) to normalize under v1-592912060053c4c3
+name_text -> name_text_derived: 7,784,942 string(s) in 19.6 min
+address_text: 12,987,311 new string(s) to normalize under v1-592912060053c4c3
+address_text -> address_text_derived: 12,987,311 string(s) in 28.6 min
+==== text-keyed derived columns done in 48.3 min (48.3 min total)
+                table   n_text n_derived n_missing
+    name_text_derived  7784942   7784942         0
+ address_text_derived 12987311  12987311         0
+
+==== what the new normalizer changes
+normalizer diff: v1-3e7b9f9d59bbb19e -> v1-592912060053c4c3
+
+strings with a row under each signature:
+                table    n_old    n_new   n_both
+    name_text_derived  7784942  7784942  7784942
+ address_text_derived 12987311 12987311 12987311
+
+derived columns changed: 7 of 21
+                table         column n_compared n_changed pct_changed
+ address_text_derived    street_unit   12987311     61016       0.470
+ address_text_derived     street_key   12987311      6921       0.053
+ address_text_derived      is_po_box   12987311        10       0.000
+ address_text_derived     street_num   12987311     19981       0.154
+ address_text_derived    street_name   12987311     26766       0.206
+ address_text_derived    street_type   12987311      3163       0.024
+ address_text_derived street_unit_id   12987311     60003       0.462
+
+effect on name and address rows:
+   table               key   n_rows n_rows_rekeyed n_merged_groups n_split_groups n_eins_regrouped
+    name          name_key 12801366              0               0              0                0
+ address street_key + zip5 22026817           6068            1666             11             1593
+
+examples:
+                table         column                               text                           old                        new
+ address_text_derived    street_unit            0 SNOW RD STE 3 PMB 271                         STE 3                    PMB 271
+ address_text_derived    street_unit            0 SNOW RD STE 3 PMB 442                         STE 3                    PMB 442
+ address_text_derived    street_unit            0 SNOW RD STE 3 PMB 465                         STE 3                    PMB 465
+ address_text_derived    street_unit          0 SNOW ROAD STE 3 PMB 465                         STE 3                    PMB 465
+ address_text_derived    street_unit            0 SNOW ST STE 3 PMB 271                         STE 3                    PMB 271
+ address_text_derived    street_unit  005 FRANKLIN BUILDING 3451 WALNUT                      # STREET                  BLDG 3451
+ address_text_derived    street_unit   019 ADMINISTRATION BUILDING 1001                          <NA>                  BLDG 1001
+ address_text_derived    street_unit       0215B BUILDING 1512 RIVER RD                          <NA>                  BLDG 1512
+ address_text_derived    street_unit       0215B BUILDING 1512 RIVER RD                          <NA>                  BLDG 1512
+ address_text_derived    street_unit    1 AAA DRIVE - BLDG 1A SUITE 206                       BLDG 1A                    STE 206
+ address_text_derived     street_key  005 FRANKLIN BUILDING 3451 WALNUT 005 FRANKLIN BLDG 3451 WALNUT        005 FRANKLIN WALNUT
+ address_text_derived     street_key   019 ADMINISTRATION BUILDING 1001  019 ADMINISTRATION BLDG 1001         019 ADMINISTRATION
+ address_text_derived     street_key       0215B BUILDING 1512 RIVER RD      0215B BLDG 1512 RIVER RD             0215B RIVER RD
+ address_text_derived     street_key       0215B BUILDING 1512 RIVER RD      0215B BLDG 1512 RIVER RD             0215B RIVER RD
+ address_text_derived     street_key       1 AGRICULTURE BUILDING # 28D            1 AGRICULTURE BLDG              1 AGRICULTURE
+ address_text_derived     street_key       1 AGRICULTURE BUILDING # 28D            1 AGRICULTURE BLDG              1 AGRICULTURE
+ address_text_derived     street_key       1 BEAR VALLEY RD BUILDING 70      1 BEAR VALLEY RD BLDG 70           1 BEAR VALLEY RD
+ address_text_derived     street_key     1 BEAR VALLEY ROAD BUILDING 70      1 BEAR VALLEY RD BLDG 70           1 BEAR VALLEY RD
+ address_text_derived     street_key     1 BEAR VALLEY ROAD BUILDING 70      1 BEAR VALLEY RD BLDG 70           1 BEAR VALLEY RD
+ address_text_derived     street_key     1 BEAR VALLEY ROAD BUILDING 70      1 BEAR VALLEY RD BLDG 70           1 BEAR VALLEY RD
+ address_text_derived      is_po_box                  BUILDING 1 BOX 14                         false                       true
+ address_text_derived      is_po_box     BUILDING 208 BOX 6 FORT TOTTEN                         false                       true
+ address_text_derived      is_po_box          BUILDING 26 PO BOX 400085                         false                       true
+ address_text_derived      is_po_box                BUILDING 343 BOX 30                         false                       true
+ address_text_derived      is_po_box   BUILDING 4 APT D BOX 8 ALMOND CT                         false                       true
+ address_text_derived      is_po_box           BUILDING 632 PO BOX 1149                         false                       true
+ address_text_derived      is_po_box                  Building 1 Box 14                         false                       true
+ address_text_derived      is_po_box Building 1 Box 14 Naval Air St Jac                         false                       true
+ address_text_derived      is_po_box            Building 39109 Box 7030                         false                       true
+ address_text_derived      is_po_box   Building 414 PO Box 280048 Naval                         false                       true
+ address_text_derived     street_num     0016IA AMVETS LADIES AUXILIARY                         0016I                       0016
+ address_text_derived     street_num     0016IA AMVETS LADIES AUXILIARY                         0016I                       0016
+ address_text_derived     street_num     0016IA AMVETS Ladies Auxiliary                         0016I                       0016
+ address_text_derived     street_num                0155MANHATTAN COURT                         0155M                       0155
+ address_text_derived     street_num              0221STAMPSTUDENTUNION                         0221S                       <NA>
+ address_text_derived     street_num              0221STAMPSTUDENTUNION                         0221S                       <NA>
+ address_text_derived     street_num                       02Main Drive                           02M                         02
+ address_text_derived     street_num                   02N658 N MAIN ST                           02N                     02N658
+ address_text_derived     street_num                     03063RD SLREET                        03063R                       <NA>
+ address_text_derived     street_num                     03063RD STREET                        03063R                       <NA>
+ address_text_derived    street_name     0016IA AMVETS LADIES AUXILIARY     A AMVETS LADIES AUXILIARY IA AMVETS LADIES AUXILIARY
+ address_text_derived    street_name     0016IA AMVETS LADIES AUXILIARY     A AMVETS LADIES AUXILIARY IA AMVETS LADIES AUXILIARY
+ address_text_derived    street_name     0016IA AMVETS Ladies Auxiliary     A AMVETS LADIES AUXILIARY IA AMVETS LADIES AUXILIARY
+ address_text_derived    street_name  005 FRANKLIN BUILDING 3451 WALNUT     FRANKLIN BLDG 3451 WALNUT            FRANKLIN WALNUT
+ address_text_derived    street_name                0155MANHATTAN COURT                      ANHATTAN                  MANHATTAN
+ address_text_derived    street_name   019 ADMINISTRATION BUILDING 1001      ADMINISTRATION BLDG 1001             ADMINISTRATION
+ address_text_derived    street_name       0215B BUILDING 1512 RIVER RD               BLDG 1512 RIVER                      RIVER
+ address_text_derived    street_name       0215B BUILDING 1512 RIVER RD               BLDG 1512 RIVER                      RIVER
+ address_text_derived    street_name              0221STAMPSTUDENTUNION              TAMPSTUDENTUNION      0221STAMPSTUDENTUNION
+ address_text_derived    street_name              0221STAMPSTUDENTUNION              TAMPSTUDENTUNION      0221STAMPSTUDENTUNION
+ address_text_derived    street_type       1 BEAR VALLEY RD BUILDING 70                          <NA>                         RD
+ address_text_derived    street_type     1 BEAR VALLEY ROAD BUILDING 70                          <NA>                         RD
+ address_text_derived    street_type     1 BEAR VALLEY ROAD BUILDING 70                          <NA>                         RD
+ address_text_derived    street_type     1 BEAR VALLEY ROAD BUILDING 70                          <NA>                         RD
+ address_text_derived    street_type     1 BEAR VALLEY ROAD BUILDING 70                          <NA>                         RD
+ address_text_derived    street_type      1 BETHANY RD BUILDING 1 STE 5                          <NA>                         RD
+ address_text_derived    street_type      1 BETHANY RD BUILDING 1 STE 5                          <NA>                         RD
+ address_text_derived    street_type          1 BETHANY ROAD BUILDING 1                          <NA>                         RD
+ address_text_derived    street_type  1 BETHANY ROAD BUILDING 1 SUITE 5                          <NA>                         RD
+ address_text_derived    street_type 1 BETHANY ROAD BUILDING 3 SUITE 24                          <NA>                         RD
+ address_text_derived street_unit_id            0 SNOW RD STE 3 PMB 271                             3                        271
+ address_text_derived street_unit_id            0 SNOW RD STE 3 PMB 442                             3                        442
+ address_text_derived street_unit_id            0 SNOW RD STE 3 PMB 465                             3                        465
+ address_text_derived street_unit_id          0 SNOW ROAD STE 3 PMB 465                             3                        465
+ address_text_derived street_unit_id            0 SNOW ST STE 3 PMB 271                             3                        271
+ address_text_derived street_unit_id  005 FRANKLIN BUILDING 3451 WALNUT                        STREET                       3451
+ address_text_derived street_unit_id   019 ADMINISTRATION BUILDING 1001                          <NA>                       1001
+ address_text_derived street_unit_id       0215B BUILDING 1512 RIVER RD                          <NA>                       1512
+ address_text_derived street_unit_id       0215B BUILDING 1512 RIVER RD                          <NA>                       1512
+ address_text_derived street_unit_id    1 AAA DRIVE - BLDG 1A SUITE 206                            1A                        206
+
+not installed. Review the diff, then rerun with --install.
+
+49.1 min
