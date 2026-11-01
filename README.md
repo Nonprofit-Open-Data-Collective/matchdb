@@ -17,10 +17,14 @@ remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")         # deve
 ```
 
 The current release is **0.1.1**, git tag `v0.1.1`. It pairs with npmatch 0.1.1
-and normalizer signature `v1-3e7b9f9d59bbb19e`, which the published database,
-bundles and tranches were built with. See [NEWS.md](NEWS.md). Pin it, in renv
-or with `@v0.1.1`, for anything that should reproduce results from before the
-normalizer moves into npnormalize.
+and normalizer signature `v1-3e7b9f9d59bbb19e`. Pin it, in renv or with
+`@v0.1.1`, for anything that should reproduce results from before the
+normalizer moved into npnormalize.
+
+**The published data moved on 2026-11-01.** The database, bundles and tranches
+online are now built with npnormalize 0.1.3, signature `v1-592912060053c4c3`.
+Only the development version reads them; 0.1.1 refuses them, as the signature
+check intends. See [NEWS.md](NEWS.md).
 
 The development version takes the normalizer from
 [npnormalize](https://github.com/Nonprofit-Open-Data-Collective/npnormalize)
@@ -39,10 +43,10 @@ no AWS account.
 
 | label | EINs | names | rows |
 |---|---|---|---:|
-| `active-legal` | current BMF | legal, DBA | 2.75M |
-| `active-observed` | current BMF | legal, DBA, aliases written by 2+ filers | 2.89M |
+| `active-legal` | current BMF | legal, DBA | 2.74M |
+| `active-observed` | current BMF | legal, DBA, aliases written by 2+ filers | 2.88M |
 | `unified-legal` | every BMF release | legal, DBA | 4.98M |
-| `unified-observed` | every BMF release | legal, DBA, aliases written by 2+ filers | 5.14M |
+| `unified-observed` | every BMF release | legal, DBA, aliases written by 2+ filers | 5.13M |
 
 ```r
 library(matchdb)

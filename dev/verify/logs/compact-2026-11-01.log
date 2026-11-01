@@ -1,0 +1,40 @@
+[1] 0
+[1] 0
+[1] 287181164
+[1] 0
+[1] 0
+tables 32, views/macros 0, rows identical
+before 29.95 GB, after 24.23 GB
+                  table     rows
+1               address 22026817
+2       address_compact 10314369
+3       address_derived 22026817
+4          address_text 12987311
+5  address_text_derived 12987311
+6               cluster   798462
+7     cluster_footprint  1393811
+8        cluster_member  3465783
+9               ein_key 32372355
+10        ein_key_layer 21469653
+11         ein_relation  2184885
+12               entity  4236242
+13         entity_event  2649231
+14         entity_group   450964
+15                 name 12801366
+16         name_compact  6773578
+17         name_derived 12801366
+18            name_text  7784942
+19    name_text_derived  7784942
+20        ntee_observed   514844
+21                  obs 48310562
+22              orgtext 15824934
+23           person_key 16556057
+24                place   278930
+25          place_layer   416056
+26           place_unit    35439
+27              release       82
+28       source_vintage       45
+29            stat_cell       32
+30       stat_name_cell  5552078
+31      stat_token_cell  1365064
+32              website  1016836

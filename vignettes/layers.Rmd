@@ -84,7 +84,7 @@ and `unified-*` is `bmf_active` plus `bmf_inactive`.
 A narrow layer choice can split a family. A chapter may be `bmf_inactive`
 while its parent is `bmf_active`. `md_compile()` reports this in its absence
 report: for each cluster type, how many family members the chosen layers
-left out.
+left out. `vignette("clusters")` describes the families and their types.
 
 ```{r}
 r <- md_compile(md_spec(layers = "bmf_active"))

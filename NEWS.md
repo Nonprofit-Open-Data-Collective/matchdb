@@ -25,10 +25,13 @@
   1,666 street-plus-ZIP groups merge and 11 split, touching 1,593 EINs.
   Shared suites (`place_unit`) fall from 36,838 to 35,439, and shared places
   from 2,855 to 2,824, as mail-store customers are told apart by their box.
-* **Every published artifact is rebuilt** under the new signature: the
-  database, the four tier bundles and the tranches. Artifacts from before are
-  refused by matchdb with npnormalize 0.1.3 installed, and the new ones are
-  refused with older npnormalize, as the signature check intends.
+* **Every published artifact is rebuilt and uploaded** under the new
+  signature, on 2026-11-01: the database (`MATCHDB.duckdb`, 11.8 GB;
+  `MATCHDB-full.duckdb`, 24.2 GB), the four tier bundles and tranche build
+  `2026-11-01-67c0bd2f` (108 files, 4.53 GB). They replace the 2026-10-26
+  release, which pairs with matchdb 0.1.1. Artifacts from before are refused
+  by matchdb with npnormalize 0.1.3 installed, and the new ones are refused
+  with older npnormalize, as the signature check intends.
 * **Checks on the rebuild** (`dev/verify/logs/*-2026-11-01.log`):
   * the Phase 1 gate gives three zeros against the re-frozen baseline, whose
     1k benchmark counts are unchanged;
@@ -94,9 +97,10 @@ that should reproduce results from before that move.
 
 ## The published data at this release
 
-Built on 2026-10-26 from `main` at `592b078` with npmatch `26a5910`. It is all
-public at `https://nccs-efile.s3.amazonaws.com/dev/matchdb`; no AWS account is
-needed.
+Built on 2026-10-26 from `main` at `592b078` with npmatch `26a5910`. It was
+public at `https://nccs-efile.s3.amazonaws.com/dev/matchdb`, with no AWS account
+needed, until 2026-11-01, when the npnormalize 0.1.3 rebuild replaced it (see
+the development version above). Its tranche build is still there.
 
 * **`MATCHDB.duckdb`** (11.7 GB, 26 tables) is the user copy, fetched by
   `md_fetch_db()`. **`MATCHDB-full.duckdb`** (24.3 GB) adds the observation

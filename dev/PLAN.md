@@ -1570,9 +1570,35 @@ shares a number with, #25 pins the 0.1.3 signature and requires that version,
 and #26 lets a bare `#` agree with `PMB` in `geo_unit_same_kind`. They change
 reviewer output, not scores. npmatch is at `main` `7ea7447` for the manifest.
 
-Logs: `dev/verify/logs/*-2026-11-01.log`. Not yet uploaded to S3: until it is,
-the live artifacts are the 2026-10-26 ones under the old signature, which
-matchdb with npnormalize 0.1.3 refuses.
+**Released 2026-11-01** (`dev/verify/release/`, from `main` at `df7e2ce`), by
+the release protocol in `PROCESS.md`:
+
+* **Compacted** (`compact.R`): 29.95 GB to 24.23 GB, every table's rows
+  identical. The user copy (`slim.R`) is 11.81 GB, 26 tables, and
+  `verify-slim.R` finds no mismatch. Both manifests record signature
+  `v1-592912060053c4c3`, npnormalize `6d9c669` and npmatch `7ea7447`.
+* **Uploaded** (`upload.sh`, 78 min): both databases, the four bundles
+  (replacing the old ones in place), tranche build `2026-11-01-67c0bd2f` and
+  `tranches/latest.json`. The script stopped at the logs: the base build's
+  log, `D:/matchdb/logs/build-matchdb.log`, is no longer in the workspace.
+  The logs and manifests were uploaded by hand. From the user copy landing
+  (10:44) to the manifests (12:02), the live database did not match its
+  manifest, and `md_fetch_db()` refused it as altered. Uploading databases
+  before manifests makes that window last the whole upload; the stop added
+  about 20 minutes. `upload.sh` now skips a missing build log, and uploads
+  the tranches and the normalizer rebuild's logs.
+* **Fetched back over public HTTPS:** `verify-remote.R` fetched the
+  `active-observed` bundle (2,884,796 rows) and the user database (built from
+  `df7e2ce`; 26 tables, md5 checked), and compiled `active-legal` from it at
+  2,742,710 rows, the bundle's count (11.3 min). The tranches
+  (`tranche-remote.R`) give `active-observed` and `unified-observed`
+  identical to their bundles, and lookups on all 108 files identical to the
+  database (4.53 GB in 9.8 min).
+
+The 2026-10-26 database and bundles are overwritten on S3. Local copies are
+in `D:/matchdb/backup` (`MATCHDB-pre-0.1.2.duckdb`, `publish-pre-0.1.2`), and
+the old tranche build `2026-10-27-82c6f0cb` is still on S3 beside the new one.
+Logs: `dev/verify/logs/*-2026-11-01.log`.
 
 Phases 1 and 2 are the ones that matter. If they land and the benchmarks
 reproduce, the rest is mechanical.
