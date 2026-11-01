@@ -1,11 +1,20 @@
+<div id="main" class="col-md-9" role="main">
+
 # Build the derived-column tables
 
-Runs
-[`npnormalize::np_normalize()`](https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize.html)
-over `name` and `address` and stores the output as `name_derived` and
-`address_derived`, keyed on `name_id` / `address_id`.
+<div class="ref-description section level2">
+
+Runs `npnormalize::np_normalize()` over `name` and `address` and stores
+the output as `name_derived` and `address_derived`, keyed on `name_id` /
+`address_id`.
+
+</div>
+
+<div class="section level2">
 
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_build_derived(
@@ -16,30 +25,44 @@ md_build_derived(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- what:
+-   what:
 
-  Which tables to build.
+    Which tables to build.
 
-- chunk:
+-   chunk:
 
-  Rows per pass. Bounds peak memory, not correctness.
+    Rows per pass. Bounds peak memory, not correctness.
 
-- incremental:
+-   incremental:
 
-  Derive only rows that have no derived row yet, and delete derived rows
-  whose source row is gone. For adding a source to a built database;
-  refused if the stored rows were built by another normalizer.
+    Derive only rows that have no derived row yet, and delete derived
+    rows whose source row is gone. For adding a source to a built
+    database; refused if the stored rows were built by another
+    normalizer.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Row counts, invisibly.
+
+</div>
+
+<div class="section level2">
 
 ## Why separate tables rather than columns
 
@@ -49,6 +72,10 @@ tables make that a `DROP` and a rebuild rather than an `ALTER` rewriting
 18.5M rows in tables that are meant to be append-only, and they let the
 signature be checked per table: a mismatch says exactly which artifact
 to rebuild.
+
+</div>
+
+<div class="section level2">
 
 ## Why it costs what it costs
 
@@ -60,3 +87,7 @@ wasted. The waste is accepted deliberately: calling the exported
 function is what makes `np_normalize_signature()` a true statement about
 how these columns were produced. Calling internals would be faster and
 would make the stamp a lie.
+
+</div>
+
+</div>

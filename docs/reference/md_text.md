@@ -1,14 +1,22 @@
+<div id="main" class="col-md-9" role="main">
+
 # Text dictionaries and derived columns keyed on the text
+
+<div class="ref-description section level2">
 
 Phase 5 step 3 (`dev/IDENTITY.md` §4, §7). Every distinct name string
 and every distinct address, as written, is stored once under its
-content-hash id
-([`md_name_text_id()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_identity.md),
-[`md_address_text_id()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_identity.md)),
-and the normalizer's output is stored against that id and the normalizer
+content-hash id (`md_name_text_id()`, `md_address_text_id()`), and the
+normalizer's output is stored against that id and the normalizer
 signature:
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_text_schema(con)
@@ -28,35 +36,45 @@ md_check_text_derived(
 md_text_stats(con)
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A DuckDB connection, usually from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A DuckDB connection, usually from `md_db()`.
 
-- relation:
+-   relation:
 
-  A table, view or query (in parentheses) holding raw text. Names: a
-  `name_raw` column. Addresses: `street_raw`, `city_raw`, `state`,
-  `zip5`, `zip_plus4`, and optionally `unit_raw`.
+    A table, view or query (in parentheses) holding raw text. Names: a
+    `name_raw` column. Addresses: `street_raw`, `city_raw`, `state`,
+    `zip5`, `zip_plus4`, and optionally `unit_raw`.
 
-- what:
+-   what:
 
-  `"name"` or `"address"`.
+    `"name"` or `"address"`.
 
-- chunk:
+-   chunk:
 
-  Strings per normalizer pass. Bounds memory, not correctness.
+    Strings per normalizer pass. Bounds memory, not correctness.
 
-- signature:
+-   signature:
 
-  The normalizer signature to check against. Defaults to the installed
-  npmatch's.
+    The normalizer signature to check against. Defaults to the installed
+    npmatch's.
 
-- stop_on_missing:
+-   stop_on_missing:
 
-  Error, rather than return, when a string has no row for the signature.
+    Error, rather than return, when a string has no row for the
+    signature.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
@@ -76,44 +94,51 @@ with a row for the signature, and strings missing one.
 against distinct strings in the dictionaries, and the derived rows per
 signature.
 
+</div>
+
+<div class="section level2">
+
 ## Details
 
-- `release`:
+-   `release`:
 
-  One row per file or partition read. Filled by the ingest engine (step
-  4); created here so the schema is complete.
+    One row per file or partition read. Filled by the ingest engine
+    (step 4); created here so the schema is complete.
 
-- `name_text`:
+-   `name_text`:
 
-  `name_text_id`, `name_raw` (canonical form).
+    `name_text_id`, `name_raw` (canonical form).
 
-- `address_text`:
+-   `address_text`:
 
-  `address_text_id`, `street_raw`, `unit_raw`, `city_raw`, `state`,
-  `zip5`, `zip_plus4`.
+    `address_text_id`, `street_raw`, `unit_raw`, `city_raw`, `state`,
+    `zip5`, `zip_plus4`.
 
-- `name_text_derived`:
+-   `name_text_derived`:
 
-  Primary key `(name_text_id, normalize_signature)`: the same columns
-  [`md_build_derived()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_derived.md)
-  stores in `name_derived`.
+    Primary key `(name_text_id, normalize_signature)`: the same columns
+    `md_build_derived()` stores in `name_derived`.
 
-- `address_text_derived`:
+-   `address_text_derived`:
 
-  Primary key `(address_text_id, normalize_signature)`: the columns of
-  `address_derived`.
+    Primary key `(address_text_id, normalize_signature)`: the columns of
+    `address_derived`.
 
 What this changes against `name_derived`/`address_derived`, which key on
 row ids:
 
-- A text id never changes, so a re-ingest cannot orphan a derived row.
+-   A text id never changes, so a re-ingest cannot orphan a derived row.
 
-- Only strings never seen before are normalized. A string shared by
-  thousands of EINs is normalized once.
+-   Only strings never seen before are normalized. A string shared by
+    thousands of EINs is normalized once.
 
-- Two normalizer signatures can sit side by side, so adopting a new
-  npmatch never overwrites the columns a published tier was built on.
+-   Two normalizer signatures can sit side by side, so adopting a new
+    npmatch never overwrites the columns a published tier was built on.
 
 Until the ingest engine exists (step 4), `md_build_text()` fills the
 dictionaries from the current `name` and `address` tables, so the sizes
 and timings the plan asks for can be measured on a built database.
+
+</div>
+
+</div>

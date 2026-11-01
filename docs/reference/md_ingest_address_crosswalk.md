@@ -1,41 +1,67 @@
+<div id="main" class="col-md-9" role="main">
+
 # Ingest the resolved address crosswalk as historical spells
+
+<div class="ref-description section level2">
 
 `address_resolved_crosswalk` is the NCCS address history: 11,299,800
 rows over 3,687,468 EINs, each row one *spell* an organisation occupied
 an address, with `spell_rank`, the vintage range it spans, and how many
 vintages observed it.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ingest_address_crosswalk(con = NULL, path = NULL, version = "2026-08")
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- path:
+-   path:
 
-  Path to the crosswalk CSV.
+    Path to the crosswalk CSV.
 
-- version:
+-   version:
 
-  Pinned `address_crosswalk` version.
+    Pinned `address_crosswalk` version.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Row count, invisibly.
 
+</div>
+
+<div class="section level2">
+
 ## Details
 
 It supersedes parsing `metadata-addresses`, whose `ORG_ADDRESS_ALL` is a
 comma-joined string that collides with commas inside street lines
-([`?md_meta_caveats`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_meta_caveats.md)).
-This file has already done that parse.
+(`?md_meta_caveats`). This file has already done that parse.
+
+</div>
+
+<div class="section level2">
 
 ## Everything here is historical, including spell_rank 0
 
@@ -51,6 +77,10 @@ organisations to addresses they have left.
 wants "most recent spell, still current as of a recent vintage" can
 express it - but has to say so.
 
+</div>
+
+<div class="section level2">
+
 ## Two shape facts worth knowing before selecting this
 
 **Street is present on only 61.2% of rows.** The remainder carry city,
@@ -64,6 +94,10 @@ source in the database. That is the intended shape - the database holds
 everything and the spec selects (section 5) - but it makes the section 8
 row budget a live concern at compile time rather than a theoretical one.
 
+</div>
+
+<div class="section level2">
+
 ## A parsing hazard, recorded
 
 DuckDB's CSV sniffer mis-detects this file, inferring no quote
@@ -73,3 +107,7 @@ fails. The error text suggests `ignore_errors=true`, which would
 silently drop every row containing a comma in its street - precisely the
 rows most worth having. The fix is to state the quote character rather
 than let it be guessed.
+
+</div>
+
+</div>

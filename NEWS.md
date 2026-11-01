@@ -45,6 +45,33 @@
   `md_normalizer_diff()`, and with `--install` relinks the derived columns
   and rebuilds everything downstream. `dev/verify/release/publish-tiers.R`
   republishes the four tiers and the tranches.
+* **npnormalize 0.1.4 moves the signature again**, to `v1-1179714ce1e9d31f`,
+  and refuses this data. `DESCRIPTION` asks for `npnormalize (>= 0.1.3)`, so a
+  fresh install can pick up 0.1.4. Until the data is rebuilt under it,
+  install npnormalize at `6d9c669` (0.1.3; it has no tag) and install npmatch
+  and matchdb with `upgrade = "never"`. The README and
+  `vignette("matchdb")` say so.
+
+## Documentation
+
+* Two new articles on how the database works:
+  * `vignette("corroboration-ledger")`: where each filer's statement is
+    stored, how statements become `n_corroborators`, `n_mentions` and
+    `n_periods`, how names and addresses stay paired, and what the guards
+    add;
+  * `vignette("updates")`: what triggers a rebuild, pinning, folding a release
+    into the ledger, adopting a new normalizer, the checks, publishing, and
+    what a user sees.
+* The README and the getting-started, layers, sources, corroborators and
+  workspace articles are refreshed for the 2026-11-01 build. The workspace
+  article now shows a real `md_tranche_diff()` between two published builds.
+  The README lists npnormalize among the related packages, and corrects
+  npmatch's row: matchdb suggests npmatch, it does not import it.
+* `dev/CORROBORATION-FOOTPRINT.md` proposes ways to widen what corroboration
+  covers: new disclosures that carry an EIN (Schedule A supported
+  organizations, Schedule N successors, more of Schedule R), corroboration on
+  relations (both sides reporting, years, sources), and a count of
+  independent filers beside `n_corroborators`. Nothing in it is built yet.
 
 ## The normalizer comes from npnormalize
 

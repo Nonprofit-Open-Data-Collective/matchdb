@@ -1,11 +1,21 @@
+<div id="main" class="col-md-9" role="main">
+
 # Publish a compiled reference, and read one back
+
+<div class="ref-description section level2">
 
 `md_publish()` compiles a spec and writes it as a bundle;
 `md_reference()` reads a published bundle into the form npmatch matches
 against. This is `PLAN.md` section 7b's first tier: most users download
 a compiled reference, not the database.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_publish(spec, root = md_path("publish"), con = NULL, set_latest = TRUE)
@@ -21,48 +31,54 @@ md_reference(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- spec:
+-   spec:
 
-  An
-  [`md_spec()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_spec.md)
-  with a `label`.
+    An `md_spec()` with a `label`.
 
-- root:
+-   root:
 
-  The publish directory. Defaults to `md_data_root()/publish`.
+    The publish directory. Defaults to `md_data_root()/publish`.
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- set_latest:
+-   set_latest:
 
-  Point `latest.json` at this bundle.
+    Point `latest.json` at this bundle.
 
-- label:
+-   label:
 
-  A published label, e.g. `"active-observed"`.
+    A published label, e.g. `"active-observed"`.
 
-- spec_hash:
+-   spec_hash:
 
-  The bundle to point the label at.
+    The bundle to point the label at.
 
-- build_index:
+-   build_index:
 
-  Also build npmatch's blocking index
-  ([`npmatch::np_ref_index()`](https://nonprofit-open-data-collective.github.io/npmatch/reference/np_ref_index.html)),
-  so the result can go straight to the cascade. Needs npmatch, which
-  matchdb only suggests; without it the index is skipped with a message.
+    Also build npmatch's blocking index (`npmatch::np_ref_index()`), so
+    the result can go straight to the cascade. Needs npmatch, which
+    matchdb only suggests; without it the index is skipped with a
+    message.
 
-- fetch:
+-   fetch:
 
-  Download the bundle first with
-  [`md_fetch_reference()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_fetch_reference.md):
-  `TRUE` always (a bundle already here and intact is not downloaded
-  again), `"missing"` only when the label is not published locally.
+    Download the bundle first with `md_fetch_reference()`: `TRUE` always
+    (a bundle already here and intact is not downloaded again),
+    `"missing"` only when the label is not published locally.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
@@ -74,46 +90,49 @@ published), `places` (a list of the `place`, `place_layer` and
 `place_unit` rows for the bundle's places, when published), `clusters`
 (when published), `ref_index` (when built) and `stamp`.
 
+</div>
+
+<div class="section level2">
+
 ## What a bundle is
 
 `<root>/<label>/<spec_hash>/` holds
 
-- `reference.parquet`:
+-   `reference.parquet`:
 
-  the frame
-  [`md_compile()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compile.md)
-  returns
+    the frame `md_compile()` returns
 
-- `name_freq.parquet`, `token_idf.parquet`:
+-   `name_freq.parquet`, `token_idf.parquet`:
 
-  npmatch's corpus statistics for exactly that frame
+    npmatch's corpus statistics for exactly that frame
 
-- `addr_freq.parquet`:
+-   `addr_freq.parquet`:
 
-  address sharing over exactly that frame
-  ([`md_addr_freq()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_addr_freq.md)):
-  records per address and suite, suite coverage, name concentration and
-  npmatch's place class
+    address sharing over exactly that frame (`md_addr_freq()`): records
+    per address and suite, suite coverage, name concentration and
+    npmatch's place class
 
-- `place.parquet`, `place_layer.parquet`, `place_unit.parquet`:
+-   `place.parquet`, `place_layer.parquet`, `place_unit.parquet`:
 
-  when
-  [`md_build_places()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_places.md)
-  has run: the evidence and flags for the places the frame touches,
-  counted over the whole database
+    when `md_build_places()` has run: the evidence and flags for the
+    places the frame touches, counted over the whole database
 
-- `report.json`:
+-   `report.json`:
 
-  the compile report: shape and absence
+    the compile report: shape and absence
 
-- `stamp.json`:
+-   `stamp.json`:
 
-  the spec, the spec hash, the database fingerprint, the normalizer
-  signature, the npmatch and matchdb versions, and the md5 of every file
-  above
+    the spec, the spec hash, the database fingerprint, the normalizer
+    signature, the npmatch and matchdb versions, and the md5 of every
+    file above
 
 and `<root>/latest.json` maps each label to the bundle currently
 published under it.
+
+</div>
+
+<div class="section level2">
 
 ## Why the stamp is checked, and rollback is a pointer
 
@@ -123,3 +142,7 @@ whose normalizer signature is not the installed one, and one whose files
 do not match their recorded md5. Rolling back is editing `latest.json`
 back to an earlier hash - `md_publish_pointer()` - since every bundle
 stays where it was written (section 7d).
+
+</div>
+
+</div>

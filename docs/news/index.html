@@ -22,9 +22,14 @@
     <li><a class="dropdown-item" href="../articles/layers.html">Layers</a></li>
     <li><a class="dropdown-item" href="../articles/sources.html">Sources</a></li>
     <li><a class="dropdown-item" href="../articles/corroborators.html">Corroborators</a></li>
+    <li><a class="dropdown-item" href="../articles/clusters.html">Families</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Working with the data</h6></li>
     <li><a class="dropdown-item" href="../articles/workspace.html">Your matchdb folder</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>How the database works</h6></li>
+    <li><a class="dropdown-item" href="../articles/corroboration-ledger.html">Corroboration and the ledger</a></li>
+    <li><a class="dropdown-item" href="../articles/updates.html">How the database is updated</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -52,13 +57,48 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="matchdb-development-version">matchdb (development version)<a class="anchor" aria-label="anchor" href="#matchdb-development-version"></a></h2>
 <div class="section level3">
+<h3 id="npnormalize-the-signature-moves-development-version">npnormalize 0.1.3: the signature moves (<a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues/29" class="external-link">#29</a>)<a class="anchor" aria-label="anchor" href="#npnormalize-the-signature-moves-development-version"></a></h3>
+<ul><li>
+<strong>matchdb now requires npnormalize 0.1.3.</strong> Its normalizer signature is <code>v1-592912060053c4c3</code> (was <code>v1-3e7b9f9d59bbb19e</code>), so an install that would silently produce the old keys cannot happen. The database was rebuilt once, under 0.1.3; the 0.1.2 rebuild (<code>v1-6d90b52d8b781673</code>) was never published.</li>
+<li>
+<strong>What changed in npnormalize:</strong><ul><li>0.1.2 made <code>BUILDING</code> a unit designator, as <code>BLDG</code> already was, so <code>100 CAMPUS CENTER BUILDING 86E</code> keys as <code>100 CAMPUS CENTER</code> with unit <code>BLDG 86E</code>. This is the only change that moves <code>street_key</code>.</li>
+<li>0.1.3, found while measuring 0.1.2 here: a line naming several units keeps the most specific (<code>1 BETHANY RD BUILDING 1 STE 5</code> keeps <code>STE 5</code>; a mail store’s <code>STE 204 # 22915</code> keeps the box, <code># 22915</code>), and the house number is a whole token (<code>16TH ST</code> has none; it was <code>16T</code> on street <code>H</code>).</li>
+<li>No matchdb code needed changing: <code><a href="../reference/md_place_key.html">md_unit_id()</a></code> and its SQL port agree with npnormalize on every canonical <code>street_unit</code>.</li>
+</ul></li>
+<li>
+<strong>Measured on the database</strong> (<code><a href="../reference/md_normalizer_diff.html">md_normalizer_diff()</a></code>, <code>dev/verify/logs/rebuild-normalizer-2026-11-01.log</code>): no name column moved (0 of 12.8M <code>name</code> rows rekeyed). Of 12.99M address strings, 61,016 (0.47%) changed <code>street_unit</code>, 19,981 <code>street_num</code>, 26,766 <code>street_name</code> and 6,921 <code>street_key</code>. On the <code>address</code> table, 6,068 of 22.0M rows are rekeyed: 1,666 street-plus-ZIP groups merge and 11 split, touching 1,593 EINs. Shared suites (<code>place_unit</code>) fall from 36,838 to 35,439, and shared places from 2,855 to 2,824, as mail-store customers are told apart by their box.</li>
+<li>
+<strong>Every published artifact is rebuilt and uploaded</strong> under the new signature, on 2026-11-01: the database (<code>MATCHDB.duckdb</code>, 11.8 GB; <code>MATCHDB-full.duckdb</code>, 24.2 GB), the four tier bundles and tranche build <code>2026-11-01-67c0bd2f</code> (108 files, 4.53 GB). They replace the 2026-10-26 release, which pairs with matchdb 0.1.1. Artifacts from before are refused by matchdb with npnormalize 0.1.3 installed, and the new ones are refused with older npnormalize, as the signature check intends.</li>
+<li>
+<strong>Checks on the rebuild</strong> (<code>dev/verify/logs/*-2026-11-01.log</code>):<ul><li>the Phase 1 gate gives three zeros against the re-frozen baseline, whose 1k benchmark counts are unchanged;</li>
+<li>Phase 2 is unchanged, +146 YES;</li>
+<li>
+<code>check-build</code> passes 36 of 36;</li>
+<li>the four tiers keep their spec hashes, each a few hundred rows smaller from the merged address groups, and each tier compiled from the new tranches (build <code>2026-11-01-67c0bd2f</code>) is identical to its bundle.</li>
+</ul></li>
+<li>
+<code>dev/rebuild-normalizer.R</code> adopts a new signature on a built database: derives the new signature’s columns beside the old, reports <code><a href="../reference/md_normalizer_diff.html">md_normalizer_diff()</a></code>, and with <code>--install</code> relinks the derived columns and rebuilds everything downstream. <code>dev/verify/release/publish-tiers.R</code> republishes the four tiers and the tranches.</li>
+<li>
+<strong>npnormalize 0.1.4 moves the signature again</strong>, to <code>v1-1179714ce1e9d31f</code>, and refuses this data. <code>DESCRIPTION</code> asks for <code>npnormalize (&gt;= 0.1.3)</code>, so a fresh install can pick up 0.1.4. Until the data is rebuilt under it, install npnormalize at <code>6d9c669</code> (0.1.3; it has no tag) and install npmatch and matchdb with <code>upgrade = "never"</code>. The README and <code><a href="../articles/matchdb.html">vignette("matchdb")</a></code> say so.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="documentation-development-version">Documentation<a class="anchor" aria-label="anchor" href="#documentation-development-version"></a></h3>
+<ul><li>Two new articles on how the database works:<ul><li>
+<code><a href="../articles/corroboration-ledger.html">vignette("corroboration-ledger")</a></code>: where each filer’s statement is stored, how statements become <code>n_corroborators</code>, <code>n_mentions</code> and <code>n_periods</code>, how names and addresses stay paired, and what the guards add;</li>
+<li>
+<code><a href="../articles/updates.html">vignette("updates")</a></code>: what triggers a rebuild, pinning, folding a release into the ledger, adopting a new normalizer, the checks, publishing, and what a user sees.</li>
+</ul></li>
+<li>The README and the getting-started, layers, sources, corroborators and workspace articles are refreshed for the 2026-11-01 build. The workspace article now shows a real <code><a href="../reference/md_tranches.html">md_tranche_diff()</a></code> between two published builds. The README lists npnormalize among the related packages, and corrects npmatch’s row: matchdb suggests npmatch, it does not import it.</li>
+<li>
+<code>dev/CORROBORATION-FOOTPRINT.md</code> proposes ways to widen what corroboration covers: new disclosures that carry an EIN (Schedule A supported organizations, Schedule N successors, more of Schedule R), corroboration on relations (both sides reporting, years, sources), and a count of independent filers beside <code>n_corroborators</code>. Nothing in it is built yet.</li>
+</ul></div>
+<div class="section level3">
 <h3 id="the-normalizer-comes-from-npnormalize-development-version">The normalizer comes from npnormalize<a class="anchor" aria-label="anchor" href="#the-normalizer-comes-from-npnormalize-development-version"></a></h3>
 <ul><li>matchdb now imports <strong>npnormalize</strong> for the normalizer and its signature, and only <em>suggests</em> npmatch. Every call to the 9 normalizer functions (<code>np_normalize()</code>, <code>np_normalize_signature()</code>, <code>np_stopwords()</code>, <code>np_name_freq()</code>, <code>np_token_idf()</code>, <code>np_name_core()</code>, <code>np_name_rules()</code>, <code>np_name_placeholder()</code>, <code>np_addr_freq()</code>) goes to npnormalize.</li>
 <li>The signature is unchanged, <code>v1-3e7b9f9d59bbb19e</code>, so the published database, bundles and tranches are all still accepted. Nothing needs rebuilding.</li>
 <li>npmatch is needed only to match, and for <code>md_reference(build_index = TRUE)</code>, which builds npmatch’s blocking index. Without npmatch the index is skipped with a message; npmatch builds it itself when given none.</li>
 <li>
-<code><a href="../reference/md_place_key.html">md_place_key()</a></code>, <code><a href="../reference/md_place_key.html">md_unit_id()</a></code> and <code><a href="../reference/md_addr_freq.html">md_addr_freq()</a></code> call npnormalize directly: <code>np_addr_key()</code>, <code>np_unit_id()</code> and <code>np_addr_freq()</code>.
-<ul><li>
+<code><a href="../reference/md_place_key.html">md_place_key()</a></code>, <code><a href="../reference/md_place_key.html">md_unit_id()</a></code> and <code><a href="../reference/md_addr_freq.html">md_addr_freq()</a></code> call npnormalize directly: <code>np_addr_key()</code>, <code>np_unit_id()</code> and <code>np_addr_freq()</code>.<ul><li>
 <strong>Before,</strong> they looked for these functions in npmatch. With an npmatch that no longer holds the normalizer, they quietly fell back to matchdb’s own copies.</li>
 <li>
 <strong>The copies are removed.</strong> They had agreed with npnormalize on every distinct value in the database.</li>
@@ -84,7 +124,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="the-published-data-at-this-release-0-1-1">The published data at this release<a class="anchor" aria-label="anchor" href="#the-published-data-at-this-release-0-1-1"></a></h3>
-<p>Built on 2026-10-26 from <code>main</code> at <code>592b078</code> with npmatch <code>26a5910</code>. It is all public at <code>https://nccs-efile.s3.amazonaws.com/dev/matchdb</code>; no AWS account is needed.</p>
+<p>Built on 2026-10-26 from <code>main</code> at <code>592b078</code> with npmatch <code>26a5910</code>. It was public at <code>https://nccs-efile.s3.amazonaws.com/dev/matchdb</code>, with no AWS account needed, until 2026-11-01, when the npnormalize 0.1.3 rebuild replaced it (see the development version above). Its tranche build is still there.</p>
 <ul><li>
 <strong><code>MATCHDB.duckdb</code></strong> (11.7 GB, 26 tables) is the user copy, fetched by <code><a href="../reference/md_fetch_reference.html">md_fetch_db()</a></code>. <strong><code>MATCHDB-full.duckdb</code></strong> (24.3 GB) adds the observation ledger, for maintainers.</li>
 <li>
@@ -95,34 +135,29 @@
 <div class="section level3">
 <h3 id="what-is-in-this-release-0-1-1">What is in this release<a class="anchor" aria-label="anchor" href="#what-is-in-this-release-0-1-1"></a></h3>
 <ul><li>
-<strong>Building the database:</strong>
-<ul><li>the ingests for the BMF, NTEE, 1023-EZ, e-file headers, Schedule I, Schedule R, group exemptions, 527 filings, the 990-N e-Postcard, revocations, websites and officer name keys;</li>
+<strong>Building the database:</strong><ul><li>the ingests for the BMF, NTEE, 1023-EZ, e-file headers, Schedule I, Schedule R, group exemptions, 527 filings, the 990-N e-Postcard, revocations, websites and officer name keys;</li>
 <li>content-hash ids, and the append-only observation ledger with rollups (<code>dev/IDENTITY.md</code>);</li>
 <li>the stored normalizer columns, compact tables, EIN keys, typed clusters, places, and the statistics cells.</li>
 </ul></li>
 <li>
-<strong>Compiling:</strong> <code><a href="../reference/md_spec.html">md_spec()</a></code> and <code><a href="../reference/md_compile.html">md_compile()</a></code>.
-<ul><li>A spec chooses layers, name and address classes, sources and corroboration.</li>
+<strong>Compiling:</strong> <code><a href="../reference/md_spec.html">md_spec()</a></code> and <code><a href="../reference/md_compile.html">md_compile()</a></code>.<ul><li>A spec chooses layers, name and address classes, sources and corroboration.</li>
 <li>The compiled frame is checked against <code>np_normalize()</code> on every compile.</li>
 <li>Compiling reports what the spec leaves out.</li>
 </ul></li>
 <li>
-<strong>Publishing:</strong>
-<ul><li>
+<strong>Publishing:</strong><ul><li>
 <code><a href="../reference/md_publish.html">md_publish()</a></code> writes signed bundles, and <code><a href="../reference/md_publish.html">md_reference()</a></code> refuses a stale or altered one;</li>
 <li>
 <code><a href="../reference/md_publish_tranches.html">md_publish_tranches()</a></code> writes the database as parquet, split by layer and class.</li>
 </ul></li>
 <li>
-<strong>Getting data:</strong>
-<ul><li>
+<strong>Getting data:</strong><ul><li>
 <code><a href="../reference/md_fetch_reference.html">md_fetch_reference()</a></code>, <code><a href="../reference/md_fetch_reference.html">md_fetch_db()</a></code> and <code><a href="../reference/md_publish_tranches.html">md_fetch_tranches()</a></code>, over plain HTTPS, with md5 checks;</li>
 <li>
 <code><a href="../reference/md_publish_tranches.html">md_tranche_db()</a></code>, a connection over the downloaded files that <code><a href="../reference/md_compile.html">md_compile()</a></code>, <code><a href="../reference/md_publish.html">md_publish()</a></code>, <code><a href="../reference/md_lookup.html">md_lookup()</a></code> and <code><a href="../reference/md_cluster.html">md_cluster()</a></code> take unchanged.</li>
 </ul></li>
 <li>
-<strong>The workspace:</strong>
-<ul><li>one folder, <code><a href="../reference/md_data_root.html">md_data_root()</a></code>;</li>
+<strong>The workspace:</strong><ul><li>one folder, <code><a href="../reference/md_data_root.html">md_data_root()</a></code>;</li>
 <li>the log: <code><a href="../reference/md_log.html">md_log()</a></code> and <code><a href="../reference/md_log.html">md_log_run()</a></code>, with <code>logs/runs-index.csv</code> append-only;</li>
 <li>
 <code><a href="../reference/md_log.html">md_status()</a></code>, the current state, kept in <code>logs/state.json</code>;</li>

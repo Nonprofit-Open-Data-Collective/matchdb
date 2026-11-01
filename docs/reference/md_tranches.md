@@ -1,11 +1,12 @@
+<div id="main" class="col-md-9" role="main">
+
 # What tranches are published, what they cost, and what changed
+
+<div class="ref-description section level2">
 
 `md_tranches()` lists the files in a tranche build: table, layer, class,
 rows, size, and whether each is already here. Given a spec, it marks the
-files
-[`md_compile()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compile.md)
-needs for it and totals what
-[`md_fetch_tranches()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)
+files `md_compile()` needs for it and totals what `md_fetch_tranches()`
 would still have to download. `md_tranche_manifest()` returns the
 build's whole manifest: the build id, when and from which commit it was
 built, the normalizer signature, the database fingerprint and the file
@@ -15,7 +16,13 @@ each gained or lost, and whether the normalizer changed.
 `md_tranches_prune()` deletes the parquet files of builds no longer in
 use, keeping their manifests as the record of what was once here.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_tranches(
@@ -43,40 +50,48 @@ md_tranche_diff(
 md_tranches_prune(keep = 1L, root = md_path("tranches"))
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- spec:
+-   spec:
 
-  An
-  [`md_spec()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_spec.md):
-  mark and total the files it needs.
+    An `md_spec()`: mark and total the files it needs.
 
-- build:
+-   build:
 
-  A build id; by default the newest one (`latest.json`).
+    A build id; by default the newest one (`latest.json`).
 
-- remote:
+-   remote:
 
-  The base URL of a matchdb copy.
+    The base URL of a matchdb copy.
 
-- root:
+-   root:
 
-  The local tranche directory.
+    The local tranche directory.
 
-- local:
+-   local:
 
-  Read the local copy of the manifest instead of the remote one.
+    Read the local copy of the manifest instead of the remote one.
 
-- old, new:
+-   old, new:
 
-  Builds to compare: build ids (read from the local copies when here,
-  else from the remote) or manifests from `md_tranche_manifest()`. `new`
-  defaults to the newest published build.
+    Builds to compare: build ids (read from the local copies when here,
+    else from the remote) or manifests from `md_tranche_manifest()`.
+    `new` defaults to the newest published build.
 
-- keep:
+-   keep:
 
-  How many builds to keep whole, newest first. The build `latest.json`
-  names is always kept.
+    How many builds to keep whole, newest first. The build `latest.json`
+    names is always kept.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
@@ -94,19 +109,27 @@ attributes `old` and `new`.
 
 `md_tranches_prune()`: the bytes freed, invisibly.
 
+</div>
+
+<div class="section level2">
+
 ## Updating
 
 A new build is a new folder; nothing in an old one is overwritten. Rows
 are not layered in: the derived columns, statistics cells, clusters and
 compact tables are rebuilt over the whole database for every build, so a
 new release changes files whose source rows did not change. What can be
-saved is the download:
-[`md_fetch_tranches()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)
-copies any file whose md5 matches one already in an older local build
-instead of downloading it again, and `md_tranche_diff()` says how much
-that will be beforehand.
+saved is the download: `md_fetch_tranches()` copies any file whose md5
+matches one already in an older local build instead of downloading it
+again, and `md_tranche_diff()` says how much that will be beforehand.
+
+</div>
+
+<div class="section level2">
 
 ## Examples
+
+<div class="sourceCode">
 
 ``` r
 if (FALSE) { # \dontrun{
@@ -116,3 +139,9 @@ md_tranche_manifest()$normalize_signature
 md_tranche_diff("2026-10-27-82c6f0cb")          # that build against the newest
 } # }
 ```
+
+</div>
+
+</div>
+
+</div>

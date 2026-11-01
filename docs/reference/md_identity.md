@@ -1,14 +1,23 @@
+<div id="main" class="col-md-9" role="main">
+
 # Canonical text and content-hash ids
+
+<div class="ref-description section level2">
 
 Phase 5 (`dev/IDENTITY.md` §3) identifies every name, address,
 observation and release by an md5 of what the source wrote, so anyone
 can recompute an id from the raw file and get the same value on any
 machine. These functions are the R side of that recipe. Ingest computes
-the same ids in SQL with the macros
-[`md_identity_macros()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_identity_macros.md)
-installs; a test holds the two to identical output.
+the same ids in SQL with the macros `md_identity_macros()` installs; a
+test holds the two to identical output.
+
+</div>
+
+<div class="section level2">
 
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_canon(x)
@@ -22,39 +31,51 @@ md_address_text_id(street, unit, city, state, zip5, zip4)
 md_release_id(source, version, partition = NA)
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- x:
+-   x:
 
-  A character vector (other types are coerced with
-  [`as.character()`](https://rdrr.io/r/base/character.html)).
+    A character vector (other types are coerced with `as.character()`).
 
-- tag:
+-   tag:
 
-  A recipe tag from
-  [`md_id_recipes()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_id_recipes.md).
+    A recipe tag from `md_id_recipes()`.
 
-- ...:
+-   ...:
 
-  Fields, each a vector of the same length (or length 1).
+    Fields, each a vector of the same length (or length 1).
 
-- name_raw:
+-   name_raw:
 
-  A name as the source wrote it.
+    A name as the source wrote it.
 
-- street, unit, city, state, zip5, zip4:
+-   street, unit, city, state, zip5, zip4:
 
-  Address fields as the source wrote them. A source without a separate
-  unit line passes `NA`.
+    Address fields as the source wrote them. A source without a separate
+    unit line passes `NA`.
 
-- source, version, partition:
+-   source, version, partition:
 
-  A pinned release. `partition` is the tax year for a year-partitioned
-  source and `NA` otherwise.
+    A pinned release. `partition` is the tax year for a year-partitioned
+    source and `NA` otherwise.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 A character vector.
+
+</div>
+
+<div class="section level2">
 
 ## `md_canon()`
 
@@ -77,14 +98,21 @@ There is **no** case folding and no punctuation stripping: the canonical
 string is what the source wrote, apart from whitespace. Matching on
 case-insensitive keys is the normalizer's job, in the derived columns.
 
+</div>
+
+<div class="section level2">
+
 ## The recipe
 
 `id = md5(tag \\x1f canon(field_1) \\x1f canon(field_2) ...)`, as 32
 lowercase hex characters. The tag names the recipe and its version
-([`md_id_recipes()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_id_recipes.md)).
-Changing what goes into an id means a new tag, never an edit to an old
-one.
+(`md_id_recipes()`). Changing what goes into an id means a new tag,
+never an edit to an old one.
 
 Ids are kept as hex strings, not integers: DuckDB's R client converts
 `HUGEINT` to `double` by default, which would silently destroy a 128-bit
 id.
+
+</div>
+
+</div>

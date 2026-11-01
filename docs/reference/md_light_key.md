@@ -1,28 +1,51 @@
+<div id="main" class="col-md-9" role="main">
+
 # The light key ingests group spellings on
+
+<div class="ref-description section level2">
 
 When an ingest collapses a source's rows to one name per EIN, it groups
 them on this key and keeps the most frequent raw spelling in each group
-([`md_modal_sql()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_modal_sql.md)).
-The key is deliberately light: it merges spellings that differ only in
-how they are typed, and leaves everything else - misspellings,
-abbreviations, word order - for the normalizer's derived columns. So
-FOUNDATION and FOUNDAITON stay apart here.
+(`md_modal_sql()`). The key is deliberately light: it merges spellings
+that differ only in how they are typed, and leaves everything else -
+misspellings, abbreviations, word order - for the normalizer's derived
+columns. So FOUNDATION and FOUNDAITON stay apart here.
+
+</div>
+
+<div class="section level2">
 
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_light_key(x)
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- x:
+-   x:
 
-  A character vector.
+    A character vector.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 A character vector of keys; `NA` becomes `""`.
+
+</div>
+
+<div class="section level2">
 
 ## Details
 
@@ -66,3 +89,7 @@ rare in organisation names.
 Ingests compute the key in SQL through the macro `md_light_key(x)`
 (installed by `.md_light_key_macro()`); this R function is the same
 rule, and a test holds the two to identical output.
+
+</div>
+
+</div>

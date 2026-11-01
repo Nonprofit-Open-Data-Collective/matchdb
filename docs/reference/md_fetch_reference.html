@@ -3,14 +3,14 @@
 hundred megabytes - and match against it. md_fetch_reference() copies a
 published bundle from the remote into the local publish directory, where
 md_reference() reads it; md_reference(fetch = TRUE) does both.
-md_fetch_db() downloads the full database (about 10 GB) for those who
+md_fetch_db() downloads the full database (11.8 GB) for those who
 want to compile their own slices with md_spec() and md_compile(), or
 browse it with md_lookup() and md_cluster(). Between the two,
 md_fetch_tranches() downloads only the parquet files one spec needs."><meta property="og:description" content="Most users never build matchdb. They download a compiled reference - a few
 hundred megabytes - and match against it. md_fetch_reference() copies a
 published bundle from the remote into the local publish directory, where
 md_reference() reads it; md_reference(fetch = TRUE) does both.
-md_fetch_db() downloads the full database (about 10 GB) for those who
+md_fetch_db() downloads the full database (11.8 GB) for those who
 want to compile their own slices with md_spec() and md_compile(), or
 browse it with md_lookup() and md_cluster(). Between the two,
 md_fetch_tranches() downloads only the parquet files one spec needs."></head><body>
@@ -36,9 +36,14 @@ md_fetch_tranches() downloads only the parquet files one spec needs."></head><bo
     <li><a class="dropdown-item" href="../articles/layers.html">Layers</a></li>
     <li><a class="dropdown-item" href="../articles/sources.html">Sources</a></li>
     <li><a class="dropdown-item" href="../articles/corroborators.html">Corroborators</a></li>
+    <li><a class="dropdown-item" href="../articles/clusters.html">Families</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Working with the data</h6></li>
     <li><a class="dropdown-item" href="../articles/workspace.html">Your matchdb folder</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>How the database works</h6></li>
+    <li><a class="dropdown-item" href="../articles/corroboration-ledger.html">Corroboration and the ledger</a></li>
+    <li><a class="dropdown-item" href="../articles/updates.html">How the database is updated</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -69,7 +74,7 @@ md_fetch_tranches() downloads only the parquet files one spec needs."></head><bo
 hundred megabytes - and match against it. <code>md_fetch_reference()</code> copies a
 published bundle from the remote into the local publish directory, where
 <code><a href="md_publish.html">md_reference()</a></code> reads it; <code>md_reference(fetch = TRUE)</code> does both.
-<code>md_fetch_db()</code> downloads the full database (about 10 GB) for those who
+<code>md_fetch_db()</code> downloads the full database (11.8 GB) for those who
 want to compile their own slices with <code><a href="md_spec.html">md_spec()</a></code> and <code><a href="md_compile.html">md_compile()</a></code>, or
 browse it with <code><a href="md_lookup.html">md_lookup()</a></code> and <code><a href="md_cluster.html">md_cluster()</a></code>. Between the two,
 <code><a href="md_publish_tranches.html">md_fetch_tranches()</a></code> downloads only the parquet files one spec needs.</p>

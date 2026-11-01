@@ -4,7 +4,7 @@
 #' hundred megabytes - and match against it. `md_fetch_reference()` copies a
 #' published bundle from the remote into the local publish directory, where
 #' [md_reference()] reads it; `md_reference(fetch = TRUE)` does both.
-#' `md_fetch_db()` downloads the full database (about 10 GB) for those who
+#' `md_fetch_db()` downloads the full database (11.8 GB) for those who
 #' want to compile their own slices with [md_spec()] and [md_compile()], or
 #' browse it with [md_lookup()] and [md_cluster()]. Between the two,
 #' [md_fetch_tranches()] downloads only the parquet files one spec needs.

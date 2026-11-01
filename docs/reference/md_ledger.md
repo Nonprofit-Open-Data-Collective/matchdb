@@ -1,4 +1,8 @@
+<div id="main" class="col-md-9" role="main">
+
 # The observation ledger
+
+<div class="ref-description section level2">
 
 Phase 5 step 4 (`dev/IDENTITY.md` §4, §5). Every observation of a name
 or address, from every release of every source, is one row of `obs`.
@@ -6,24 +10,45 @@ Rows are never deleted: a row a later release no longer carries is
 marked `retracted_in`, and a snapshot value that stops appearing simply
 stops being extended.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ledger_schema(con)
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A DuckDB connection.
+    A DuckDB connection.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 `md_ledger_schema()`: `con`, invisibly.
 
+</div>
+
+<div class="section level2">
+
 ## Details
 
+<div class="sourceCode">
 
     obs_id           content-hash id (below)
     source, kind     as in md_sources()
@@ -42,19 +67,29 @@ md_ledger_schema(con)
     first_release, last_release  release_ids
     retracted_in     release_id that dropped this row, else NULL
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Ids
 
-- Snapshot:
+-   Snapshot:
 
-  `md5('obs.v1', source, ein, role, name_text_id, address_text_id, first_seen)`:
-  one id per spell, so a value that comes back after a change opens a
-  new spell.
+    `md5('obs.v1', source, ein, role, name_text_id, address_text_id, first_seen)`:
+    one id per spell, so a value that comes back after a change opens a
+    new spell.
 
-- Every other kind:
+-   Every other kind:
 
-  `md5('obs.v1', source, record_key, row_hash, occurrence)`, where
-  `row_hash = md5('row.v1', ein, role, name_text_id, address_text_id, asserted_by, period)`
-  and `occurrence` numbers rows identical in all of those within one
-  record. A corrected value in a re-released filing is therefore a new
-  row, and the old one is retracted, rather than an update the diff
-  cannot see.
+    `md5('obs.v1', source, record_key, row_hash, occurrence)`, where
+    `row_hash = md5('row.v1', ein, role, name_text_id, address_text_id, asserted_by, period)`
+    and `occurrence` numbers rows identical in all of those within one
+    record. A corrected value in a re-released filing is therefore a new
+    row, and the old one is retracted, rather than an update the diff
+    cannot see.
+
+</div>
+
+</div>

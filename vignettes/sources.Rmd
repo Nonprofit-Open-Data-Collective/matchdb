@@ -46,25 +46,28 @@ md_sources()[, c("source", "feeds", "url")]
 
 ## How much each source contributes
 
-Rows in `name` by class and source, build of 2026-10-23:
+Rows in `name` by class and source, build of 2026-11-01:
 
 | class | source | rows |
 |---|---|---:|
 | legal | bmf | 3,698,197 |
 | legal | e_postcard | 1,534,620 |
-| legal | revocations | 1,188,534 |
-| legal | efile990 | 809,932 |
-| legal | f1023ez | 512,507 |
+| legal | revocations | 1,188,531 |
+| legal | efile990 | 809,925 |
+| legal | f1023ez | 512,470 |
 | dba | bmf | 923,305 |
-| dba | revocations | 238,752 |
+| dba | revocations | 238,758 |
 | dba | e_postcard | 67,058 |
-| dba | efile990 | 59,992 |
-| former | efile990 | 207,795 |
-| in_care_of | bmf | 1,430,850 |
-| in_care_of | efile990 | 169,333 |
-| observed | schedi | 1,785,148 |
-| observed | schedr | 190,011 |
-| observed | efile990 | 10,311 |
+| dba | efile990 | 59,879 |
+| former | efile990 | 204,926 |
+| in_care_of | bmf | 1,429,600 |
+| in_care_of | efile990 | 169,288 |
+| observed | schedi | 1,767,331 |
+| observed | schedr | 187,999 |
+| observed | efile990 | 9,479 |
+
+The `observed` rows under `efile990` are the group-return rosters: a central
+organization listing its subordinates, each by its own name.
 
 A name reported by several sources is several rows. When a reference is
 compiled, rows that normalize to the same `name_key` for the same EIN collapse
@@ -142,7 +145,7 @@ The published database on S3 ships a `MANIFEST.json` with every pin, so a
 downloaded copy states exactly what it was built from:
 
 ```{r}
-md_fetch_db()                                   # about 10 GB
+md_fetch_db()                                   # 11.8 GB
 jsonlite::read_json(md_path("db", "MANIFEST.json"))$sources
 ```
 

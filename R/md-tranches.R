@@ -1,6 +1,6 @@
 #' Publish the database as parquet tranches, fetch only what a spec needs
 #'
-#' The database is one 11.7 GB file, but a custom spec reads a small part of
+#' The database is one 11.8 GB file, but a custom spec reads a small part of
 #' it. `md_publish_tranches()` writes the database as parquet files, split so
 #' that a spec can name the files it needs (`PLAN.md` section 7b, tier 2).
 #' `md_fetch_tranches()` downloads those files and no others. `md_tranche_db()`

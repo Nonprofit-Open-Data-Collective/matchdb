@@ -24,6 +24,12 @@ navbar:
       - text: Working with the data
       - text: Your matchdb folder
         href: articles/workspace.html
+      - text: -------
+      - text: How the database works
+      - text: Corroboration and the ledger
+        href: articles/corroboration-ledger.html
+      - text: How the database is updated
+        href: articles/updates.html
 
 articles:
 - title: Choosing a reference
@@ -37,6 +43,11 @@ articles:
   navbar: ~
   contents:
   - workspace
+- title: How the database works
+  navbar: ~
+  contents:
+  - corroboration-ledger
+  - updates
 
 reference:
 - title: Get a reference and match
