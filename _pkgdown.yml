@@ -18,6 +18,8 @@ navbar:
         href: articles/sources.html
       - text: Corroborators
         href: articles/corroborators.html
+      - text: Families
+        href: articles/clusters.html
       - text: -------
       - text: Working with the data
       - text: Your matchdb folder
@@ -30,6 +32,7 @@ articles:
   - layers
   - sources
   - corroborators
+  - clusters
 - title: Working with the data
   navbar: ~
   contents:

@@ -172,6 +172,8 @@ organization even though the name is not the legal one.
 ## 6. Match one level up
 
 Two npmatch functions read those families alongside the scored candidates.
+`vignette("clusters")` describes how the families are built, and which of the
+six types each link comes from.
 
 `np_pair_links()` reports whether each query's top two candidates are one
 family:
