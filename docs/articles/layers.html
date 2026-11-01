@@ -40,9 +40,14 @@
     <li><a class="dropdown-item" href="../articles/layers.html">Layers</a></li>
     <li><a class="dropdown-item" href="../articles/sources.html">Sources</a></li>
     <li><a class="dropdown-item" href="../articles/corroborators.html">Corroborators</a></li>
+    <li><a class="dropdown-item" href="../articles/clusters.html">Families</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Working with the data</h6></li>
     <li><a class="dropdown-item" href="../articles/workspace.html">Your matchdb folder</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>How the database works</h6></li>
+    <li><a class="dropdown-item" href="../articles/corroboration-ledger.html">Corroboration and the ledger</a></li>
+    <li><a class="dropdown-item" href="../articles/updates.html">How the database is updated</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
@@ -83,20 +88,12 @@
 
     
     
-<p>A compiled reference answers two questions: <strong>which
-organizations</strong> can a record be matched to, and <strong>which
-names and addresses</strong> does each one carry. Layers answer the
-first. Name and address classes answer the second; see
-<code><a href="../articles/corroborators.html">vignette("corroborators")</a></code> and
-<code><a href="../articles/sources.html">vignette("sources")</a></code>.</p>
-<p>Every EIN in matchdb has exactly one layer, so choosing layers is
-choosing a clean set of EINs. Two layers never overlap, and their union
-is just more EINs.</p>
+<p>A compiled reference answers two questions: <strong>which organizations</strong> can a record be matched to, and <strong>which names and addresses</strong> does each one carry. Layers answer the first. Name and address classes answer the second; see <code><a href="../articles/corroborators.html">vignette("corroborators")</a></code> and <code><a href="../articles/sources.html">vignette("sources")</a></code>.</p>
+<p>Every EIN in matchdb has exactly one layer, so choosing layers is choosing a clean set of EINs. Two layers never overlap, and their union is just more EINs.</p>
 <div class="section level2">
 <h2 id="the-layers">The layers<a class="anchor" aria-label="anchor" href="#the-layers"></a>
 </h2>
-<p>The counts are from the build of 2026-10-23
-(<code>matchdb@bb68531</code>).</p>
+<p>The counts are from the build of 2026-11-01 (<code>matchdb@df7e2ce</code>, normalizer <code>v1-592912060053c4c3</code>). They are the same as in the 2026-10-23 build: a new normalizer changes keys, not which EINs exist.</p>
 <table class="table">
 <colgroup>
 <col width="30%">
@@ -116,20 +113,17 @@ is just more EINs.</p>
 </tr>
 <tr class="even">
 <td><code>bmf_inactive</code></td>
-<td>in an earlier BMF release, but not the newest: dissolved, merged,
-revoked or lapsed</td>
+<td>in an earlier BMF release, but not the newest: dissolved, merged, revoked or lapsed</td>
 <td align="right">1,723,367</td>
 </tr>
 <tr class="odd">
 <td><code>approved_only</code></td>
-<td>approved on Form 1023-EZ but never in a BMF release the database
-loaded</td>
+<td>approved on Form 1023-EZ but never in a BMF release the database loaded</td>
 <td align="right">12,581</td>
 </tr>
 <tr class="even">
 <td><code>filer_only</code></td>
-<td>never in the BMF, but seen in the e-file data: as a 990 filer, or as
-an EIN another filer reported on Schedule I or Schedule R</td>
+<td>never in the BMF, but seen in the e-file data: as a 990 filer, or as an EIN another filer reported on Schedule I or Schedule R</td>
 <td align="right">318,389</td>
 </tr>
 <tr class="odd">
@@ -144,28 +138,17 @@ an EIN another filer reported on Schedule I or Schedule R</td>
 </tr>
 <tr class="odd">
 <td><code>irs527</code></td>
-<td>political organizations from Form 8871 (defined; not loaded in this
-build)</td>
+<td>political organizations from Form 8871 (defined; not loaded in this build)</td>
 <td align="right">0</td>
 </tr>
 </tbody>
 </table>
-<p>An EIN gets the layer of the <strong>first</strong> source, in build
-order, that introduced it: the BMF, then 1023-EZ approvals, then the
-e-file data, then the e-Postcard, then revocations. An organization that
-is in the BMF and also files a 990-N is <code>bmf_active</code>, not
-<code>postcard_only</code>. Its e-Postcard names are still in the
-database, as names on a <code>bmf_active</code> EIN.</p>
+<p>An EIN gets the layer of the <strong>first</strong> source, in build order, that introduced it: the BMF, then 1023-EZ approvals, then the e-file data, then the e-Postcard, then revocations. An organization that is in the BMF and also files a 990-N is <code>bmf_active</code>, not <code>postcard_only</code>. Its e-Postcard names are still in the database, as names on a <code>bmf_active</code> EIN.</p>
 </div>
 <div class="section level2">
-<h2 id="layer-is-where-an-ein-came-from-active-is-its-status">Layer is where an EIN came from; <code>active</code> is its
-status<a class="anchor" aria-label="anchor" href="#layer-is-where-an-ein-came-from-active-is-its-status"></a>
+<h2 id="layer-is-where-an-ein-came-from-active-is-its-status">Layer is where an EIN came from; <code>active</code> is its status<a class="anchor" aria-label="anchor" href="#layer-is-where-an-ein-came-from-active-is-its-status"></a>
 </h2>
-<p><code>layer</code> records provenance and does not change once
-assigned. <code>entity.active</code> records status, and only
-<code>bmf_active</code> EINs are active. Keeping the two apart lets a
-new BMF release flip an organization’s status without rewriting where it
-came from.</p>
+<p><code>layer</code> records provenance and does not change once assigned. <code>entity.active</code> records status, and only <code>bmf_active</code> EINs are active. Keeping the two apart lets a new BMF release flip an organization’s status without rewriting where it came from.</p>
 </div>
 <div class="section level2">
 <h2 id="choosing-layers">Choosing layers<a class="anchor" aria-label="anchor" href="#choosing-layers"></a>
@@ -182,37 +165,20 @@ came from.</p>
 <p>Which to use depends on the records being matched.</p>
 <ul>
 <li>
-<strong>Current records</strong> (this year’s grants, a current
-directory): <code>bmf_active</code>. The inactive tranche is nearly as
-large and adds little. In the 0c measurement it added 1.76M rows for
-<strong>−5 YES</strong> on the 1k grant benchmark, because a dissolved
-organization rarely receives this year’s grant and its name competes
-with the live one.</li>
+<strong>Current records</strong> (this year’s grants, a current directory): <code>bmf_active</code>. The inactive tranche is nearly as large and adds little. In the 0c measurement it added 1.76M rows for <strong>−5 YES</strong> on the 1k grant benchmark, because a dissolved organization rarely receives this year’s grant and its name competes with the live one.</li>
 <li>
-<strong>Historical records</strong> (grants from 2012, an old survey
-frame): add <code>bmf_inactive</code>, since the organization may have
-closed since.</li>
+<strong>Historical records</strong> (grants from 2012, an old survey frame): add <code>bmf_inactive</code>, since the organization may have closed since.</li>
 <li>
-<strong>Small organizations</strong> that never filed a full 990:
-consider <code>postcard_only</code> and <code>revoked_only</code>. Most
-organizations that lose exemption are revoked for failing to file for
-three years, so many are small.</li>
+<strong>Small organizations</strong> that never filed a full 990: consider <code>postcard_only</code> and <code>revoked_only</code>. Most organizations that lose exemption are revoked for failing to file for three years, so many are small.</li>
 <li>
-<strong>Recipients that are not in the BMF at all</strong>, such as
-some government units, churches that never applied, and EINs reported by
-other filers: <code>filer_only</code>.</li>
+<strong>Recipients that are not in the BMF at all</strong>, such as some government units, churches that never applied, and EINs reported by other filers: <code>filer_only</code>.</li>
 </ul>
-<p>The published tiers use the two common choices: <code>active-*</code>
-is <code>bmf_active</code>, and <code>unified-*</code> is
-<code>bmf_active</code> plus <code>bmf_inactive</code>.</p>
+<p>The published tiers use the two common choices: <code>active-*</code> is <code>bmf_active</code>, and <code>unified-*</code> is <code>bmf_active</code> plus <code>bmf_inactive</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="what-a-layer-choice-leaves-out">What a layer choice leaves out<a class="anchor" aria-label="anchor" href="#what-a-layer-choice-leaves-out"></a>
 </h2>
-<p>A narrow layer choice can split a family. A chapter may be
-<code>bmf_inactive</code> while its parent is <code>bmf_active</code>.
-<code><a href="../reference/md_compile.html">md_compile()</a></code> reports this in its absence report: for each
-cluster type, how many family members the chosen layers left out.</p>
+<p>A narrow layer choice can split a family. A chapter may be <code>bmf_inactive</code> while its parent is <code>bmf_active</code>. <code><a href="../reference/md_compile.html">md_compile()</a></code> reports this in its absence report: for each cluster type, how many family members the chosen layers left out. <code><a href="../articles/clusters.html">vignette("clusters")</a></code> describes the families and their types.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_compile.html">md_compile</a></span><span class="op">(</span><span class="fu"><a href="../reference/md_spec.html">md_spec</a></span><span class="op">(</span>layers <span class="op">=</span> <span class="st">"bmf_active"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">r</span><span class="op">$</span><span class="va">report</span><span class="op">$</span><span class="va">absence</span></span></code></pre></div>
@@ -220,17 +186,14 @@ cluster type, how many family members the chosen layers left out.</p>
 <div class="section level2">
 <h2 id="looking-at-one-ein">Looking at one EIN<a class="anchor" aria-label="anchor" href="#looking-at-one-ein"></a>
 </h2>
-<p><code><a href="../reference/md_lookup.html">md_lookup()</a></code> shows an EIN’s layer and everything else
-known about it:</p>
+<p><code><a href="../reference/md_lookup.html">md_lookup()</a></code> shows an EIN’s layer and everything else known about it:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/md_lookup.html">md_lookup</a></span><span class="op">(</span><span class="st">"53-0196605"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;md_lookup&gt; EIN-53-0196605  AMERICAN NATIONAL RED CROSS</span></span>
 <span><span class="co">#&gt;   layer bmf_active, active TRUE, NTEE P210, subsection 3</span></span>
 <span><span class="co">#&gt;   names      1800 rows (dba 1, in_care_of 1, legal 2, observed 1796)</span></span>
 <span><span class="co">#&gt;   ...</span></span></code></pre></div>
-<p><code><a href="../reference/md_layers.html">md_layers()</a></code> returns the vocabulary. It is append-only:
-values are added, never renamed, so a stored layer never changes
-meaning.</p>
+<p><code><a href="../reference/md_layers.html">md_layers()</a></code> returns the vocabulary. It is append-only: values are added, never renamed, so a stored layer never changes meaning.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

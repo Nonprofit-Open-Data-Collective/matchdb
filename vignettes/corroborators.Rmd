@@ -38,17 +38,20 @@ is evidence.
 
 ## How corroboration is distributed
 
-Observed names by corroborator count, build of 2026-10-23:
+Observed names by corroborator count, build of 2026-11-01:
 
 | distinct filers | names | mean times written |
 |---|---:|---:|
-| 1 | 1,520,042 | 2.3 |
-| 2 | 196,658 | 5.7 |
-| 3 | 82,615 | 9.0 |
-| 4 | 45,861 | 12.5 |
-| 5 or more | 140,294 | 66.0 |
+| 1 | 1,501,308 | 2.2 |
+| 2 | 195,062 | 5.6 |
+| 3 | 82,088 | 8.9 |
+| 4 | 45,581 | 12.3 |
+| 5 or more | 140,770 | 65.0 |
 
-Most observed names, 77%, were written by a single filer.
+Most observed names, 76%, were written by a single filer.
+
+How these counts are made, and where each filer's statement is kept, is in
+`vignette("corroboration-ledger")`.
 
 ## Bands, and choosing a threshold
 
@@ -67,16 +70,17 @@ s <- md_spec(layers = "bmf_active",
 ```
 
 The threshold changes match results. On pfmatch's 1k grant benchmark
-(`dev/verify/phase2-measure.R`), matched against active organizations:
+(`dev/verify/phase2-measure.R`), matched against active organizations, build
+of 2026-11-01:
 
 | reference | YES | MAYBE | NO |
 |---|---:|---:|---:|
-| legal and DBA names only | 2,946 | 943 | 854 |
-| plus observed names, 2+ filers | **3,092** | 940 | 717 |
-| plus observed names, 1+ filer | 2,419 | 1,702 | 648 |
+| legal and DBA names only | 2,945 | 945 | 853 |
+| plus observed names, 2+ filers | **3,091** | 942 | 716 |
+| plus observed names, 1+ filer | 2,422 | 1,699 | 648 |
 
-With two or more filers, aliases add **146 YES** (295 gained, 149 lost).
-Letting in single-filer aliases instead **loses 527 YES**: 391 gained, 918 lost.
+With two or more filers, aliases add **146 YES** (294 gained, 148 lost).
+Letting in single-filer aliases instead **loses 523 YES**: 389 gained, 912 lost.
 The likely cause is the name-frequency effect `dev/PROCESS.md` section 0c identified. Adding 1.5 million
 names, many of them noisy, makes common words look less distinctive and creates
 near-ties between candidates, so confident matches become MAYBEs.

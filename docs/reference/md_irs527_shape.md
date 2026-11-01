@@ -1,6 +1,14 @@
+<div id="main" class="col-md-9" role="main">
+
 # What the 527 files can and cannot support
 
+<div class="ref-description section level2">
+
 Measured on the 2024-11 vintage, before writing any ingest against them.
+
+</div>
+
+<div class="section level2">
 
 ## Form 8871 (`irs527`)
 
@@ -22,6 +30,10 @@ organisation genuinely written as "c/o " is a spelling the matcher
 should know. `E_MAIL_ADDRESS` should not be ingested: it carries no
 matching signal and is personal contact data with no purpose in a
 disambiguation reference.
+
+</div>
+
+<div class="section level2">
 
 ## Schedule R (`irs527_related`)
 
@@ -50,6 +62,10 @@ shape how it can be used, and two of them are restrictive:
 Referential integrity to the 8871 file is close but not exact: 15,095 of
 15,285 `FORM_ID_NUMBER` values resolve, leaving **190 orphans (1.2%)**.
 
+</div>
+
+<div class="section level2">
+
 ## What must not happen
 
 The related entity's name must never be registered as a `name` variant
@@ -59,11 +75,17 @@ SAFETY GROUPS" is a different body from "ASGM PAC", and aliasing them
 would manufacture exactly the false matches the disambiguation database
 exists to prevent.
 
+</div>
+
+<div class="section level2">
+
 ## An ingest hazard
 
-[`data.table::fread()`](https://rdrr.io/pkg/data.table/man/fread.html)
-segfaults on the 8871 file;
-[`utils::read.csv()`](https://rdrr.io/r/utils/read.table.html) reads it
-cleanly. The data is not malformed - line count and row count agree, so
-there are no embedded newlines. Ingest should not assume `fread` on
-these.
+`data.table::fread()` segfaults on the 8871 file; `utils::read.csv()`
+reads it cleanly. The data is not malformed - line count and row count
+agree, so there are no embedded newlines. Ingest should not assume
+`fread` on these.
+
+</div>
+
+</div>

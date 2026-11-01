@@ -1,8 +1,16 @@
+<div id="main" class="col-md-9" role="main">
+
 # Authors and Citation
+
+<div class="section level2">
 
 ## Authors
 
-- **Jesse Lecy**. Author, maintainer.
+-   **Jesse Lecy**. Author, maintainer.
+
+</div>
+
+<div class="section level2">
 
 ## Citation
 
@@ -20,3 +28,7 @@ Nonprofit Record Linkage*. R package version 0.1.1.9000,
       note = {R package version 0.1.1.9000},
       url = {https://github.com/Nonprofit-Open-Data-Collective/matchdb},
     }
+
+</div>
+
+</div>

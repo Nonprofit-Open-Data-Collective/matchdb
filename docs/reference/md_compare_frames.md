@@ -1,10 +1,20 @@
+<div id="main" class="col-md-9" role="main">
+
 # Compare two frames against the gate criterion
+
+<div class="ref-description section level2">
 
 Reports the three counts a phase gate turns on: rows only in the
 baseline, rows only in the candidate, and cells that differ on keys
 present in both. **The gate passes when all three are zero.**
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_compare_frames(
@@ -16,26 +26,39 @@ md_compare_frames(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- baseline, candidate:
+-   baseline, candidate:
 
-  Data frames (raw; normal form is applied here).
+    Data frames (raw; normal form is applied here).
 
-- columns:
+-   columns:
 
-  Pinned comparison columns (see
-  [`md_normal_form()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_normal_form.md)).
+    Pinned comparison columns (see `md_normal_form()`).
 
-- key:
+-   key:
 
-  Row-identifying columns.
+    Row-identifying columns.
 
-- n_sample:
+-   n_sample:
 
-  Rows/cells to retain per sample table. Default 10.
+    Rows/cells to retain per sample table. Default 10.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 An `md_diff` object: the three counts, three sample tables, and a
 per-column tally of differing cells.
+
+</div>
+
+</div>

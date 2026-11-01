@@ -1,34 +1,56 @@
+<div id="main" class="col-md-9" role="main">
+
 # Add related entities disclosed on 527 Schedule R
+
+<div class="ref-description section level2">
 
 Form 8871 Schedule R is the political-organisation analogue of Form 990
 Schedule R: a 527 names the organisations it is connected to.
-[`?md_irs527_shape`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_irs527_shape.md)
-profiles the file; this loads it.
+`?md_irs527_shape` profiles the file; this loads it.
+
+</div>
+
+<div class="section level2">
 
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ingest_irs527_related(con = NULL, path = NULL, version = "v2024-11-15")
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- path:
+-   path:
 
-  Path to `2024-11-POL-ORGS-SCHED-R.csv`.
+    Path to `2024-11-POL-ORGS-SCHED-R.csv`.
 
-- version:
+-   version:
 
-  Pinned `irs527_related` version.
+    Pinned `irs527_related` version.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Row counts, invisibly.
+
+</div>
+
+<div class="section level2">
 
 ## Every row lands with `ein_b` NULL, and that is the source's shape
 
@@ -44,6 +66,10 @@ BMF legal name**. The rest are sponsoring corporations, unions and trade
 associations that are largely outside the exempt universe altogether. A
 consumer treating `related_name` as resolvable should expect roughly one
 in seven to resolve.
+
+</div>
+
+<div class="section level2">
 
 ## The whole tail maps to `related_entity`, deliberately
 
@@ -75,6 +101,10 @@ edge. §4a.
 entity on Schedule R and merely declined to characterise the tie. The
 disclosure is the fact; the label is commentary.
 
+</div>
+
+<div class="section level2">
+
 ## What is dropped
 
 171 rows name the filer itself as its own related entity. Those are
@@ -85,6 +115,10 @@ Rows are then deduplicated to one per
 filings asserted it - each amendment is a fresh row in the source, so
 the raw count overstates distinct relations.
 
+</div>
+
+<div class="section level2">
+
 ## What must not happen
 
 The counterparty name must never become a `name` variant on the 527's
@@ -93,3 +127,7 @@ invites the error: "ASSOCIATION OF SAFETY GROUPS" is a different body
 from "ASGM PAC", and aliasing them manufactures precisely the false
 match the database exists to prevent. This function writes to
 `ein_relation` and nothing else.
+
+</div>
+
+</div>

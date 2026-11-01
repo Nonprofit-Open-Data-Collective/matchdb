@@ -40,9 +40,14 @@
     <li><a class="dropdown-item" href="../articles/layers.html">Layers</a></li>
     <li><a class="dropdown-item" href="../articles/sources.html">Sources</a></li>
     <li><a class="dropdown-item" href="../articles/corroborators.html">Corroborators</a></li>
+    <li><a class="dropdown-item" href="../articles/clusters.html">Families</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Working with the data</h6></li>
     <li><a class="dropdown-item" href="../articles/workspace.html">Your matchdb folder</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>How the database works</h6></li>
+    <li><a class="dropdown-item" href="../articles/corroboration-ledger.html">Corroboration and the ledger</a></li>
+    <li><a class="dropdown-item" href="../articles/updates.html">How the database is updated</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
@@ -83,44 +88,28 @@
 
     
     
-<p>An <code>observed</code> name is one written by a third party: a
-grantmaker on Schedule I, or a related organization on Schedule R,
-writing a name next to an EIN. These aliases are the reason matchdb
-outperforms the BMF alone. Grant records use the names people actually
-write, and a reference that has seen those spellings matches them
-directly.</p>
-<p>But one filer’s typo and a name fifty foundations wrote independently
-are both “observed names”. <strong><code>n_corroborators</code>
-separates them</strong>: it counts the <strong>distinct filers</strong>
-who wrote that name for that EIN.</p>
+<p>An <code>observed</code> name is one written by a third party: a grantmaker on Schedule I, or a related organization on Schedule R, writing a name next to an EIN. These aliases are the reason matchdb outperforms the BMF alone. Grant records use the names people actually write, and a reference that has seen those spellings matches them directly.</p>
+<p>But one filer’s typo and a name fifty foundations wrote independently are both “observed names”. <strong><code>n_corroborators</code> separates them</strong>: it counts the <strong>distinct filers</strong> who wrote that name for that EIN.</p>
 <div class="section level2">
 <h2 id="what-a-corroborator-is">What a corroborator is<a class="anchor" aria-label="anchor" href="#what-a-corroborator-is"></a>
 </h2>
-<p>Schedule I rows are grouped by EIN and a light name key (uppercased,
-punctuation stripped, spaces collapsed). For each group matchdb
-stores:</p>
+<p>Schedule I rows are grouped by EIN and a light name key (uppercased, punctuation stripped, spaces collapsed). For each group matchdb stores:</p>
 <ul>
 <li>
-<code>n_corroborators</code>: distinct filing EINs that wrote
-it;</li>
+<code>n_corroborators</code>: distinct filing EINs that wrote it;</li>
 <li>
-<code>n_obs</code>: total times it was written, across all filings
-and years;</li>
+<code>n_obs</code>: total times it was written, across all filings and years;</li>
 <li>
-<code>first_year</code>, <code>last_year</code>: when it was
-seen;</li>
+<code>first_year</code>, <code>last_year</code>: when it was seen;</li>
 <li>
 <code>name_raw</code>: the most frequently written spelling.</li>
 </ul>
-<p>A foundation that writes the same name in ten annual returns is one
-corroborator with ten observations. Ten foundations each writing it once
-are ten corroborators. Repetition by one filer is habit; agreement
-across filers is evidence.</p>
+<p>A foundation that writes the same name in ten annual returns is one corroborator with ten observations. Ten foundations each writing it once are ten corroborators. Repetition by one filer is habit; agreement across filers is evidence.</p>
 </div>
 <div class="section level2">
 <h2 id="how-corroboration-is-distributed">How corroboration is distributed<a class="anchor" aria-label="anchor" href="#how-corroboration-is-distributed"></a>
 </h2>
-<p>Observed names by corroborator count, build of 2026-10-23:</p>
+<p>Observed names by corroborator count, build of 2026-11-01:</p>
 <table class="table">
 <thead><tr class="header">
 <th>distinct filers</th>
@@ -130,52 +119,45 @@ across filers is evidence.</p>
 <tbody>
 <tr class="odd">
 <td>1</td>
-<td align="right">1,520,042</td>
-<td align="right">2.3</td>
+<td align="right">1,501,308</td>
+<td align="right">2.2</td>
 </tr>
 <tr class="even">
 <td>2</td>
-<td align="right">196,658</td>
-<td align="right">5.7</td>
+<td align="right">195,062</td>
+<td align="right">5.6</td>
 </tr>
 <tr class="odd">
 <td>3</td>
-<td align="right">82,615</td>
-<td align="right">9.0</td>
+<td align="right">82,088</td>
+<td align="right">8.9</td>
 </tr>
 <tr class="even">
 <td>4</td>
-<td align="right">45,861</td>
-<td align="right">12.5</td>
+<td align="right">45,581</td>
+<td align="right">12.3</td>
 </tr>
 <tr class="odd">
 <td>5 or more</td>
-<td align="right">140,294</td>
-<td align="right">66.0</td>
+<td align="right">140,770</td>
+<td align="right">65.0</td>
 </tr>
 </tbody>
 </table>
-<p>Most observed names, 77%, were written by a single filer.</p>
+<p>Most observed names, 76%, were written by a single filer.</p>
+<p>How these counts are made, and where each filer’s statement is kept, is in <code><a href="../articles/corroboration-ledger.html">vignette("corroboration-ledger")</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="bands-and-choosing-a-threshold">Bands, and choosing a threshold<a class="anchor" aria-label="anchor" href="#bands-and-choosing-a-threshold"></a>
 </h2>
-<p><code>md_spec(min_corroborators = ...)</code> keeps observed names
-written by at least that many filers. It applies to
-<code>observed</code> names only; first-party names (BMF, the
-organization’s own filings) are always kept. The value must be a band
-edge, <strong>1, 2, 5 or 20</strong>, because corpus statistics are
-precomputed per band and summed. A threshold between edges would cut
-across bands.</p>
+<p><code>md_spec(min_corroborators = ...)</code> keeps observed names written by at least that many filers. It applies to <code>observed</code> names only; first-party names (BMF, the organization’s own filings) are always kept. The value must be a band edge, <strong>1, 2, 5 or 20</strong>, because corpus statistics are precomputed per band and summed. A threshold between edges would cut across bands.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb" class="external-link">matchdb</a></span><span class="op">)</span></span>
 <span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_spec.html">md_spec</a></span><span class="op">(</span>layers <span class="op">=</span> <span class="st">"bmf_active"</span>,</span>
 <span>             names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"legal"</span>, <span class="st">"dba"</span>, <span class="st">"observed"</span><span class="op">)</span>,</span>
 <span>             addresses <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mailing"</span>, <span class="st">"observed"</span><span class="op">)</span>,</span>
 <span>             min_corroborators <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
-<p>The threshold changes match results. On pfmatch’s 1k grant benchmark
-(<code>dev/verify/phase2-measure.R</code>), matched against active
-organizations:</p>
+<p>The threshold changes match results. On pfmatch’s 1k grant benchmark (<code>dev/verify/phase2-measure.R</code>), matched against active organizations, build of 2026-11-01:</p>
 <table class="table">
 <thead><tr class="header">
 <th>reference</th>
@@ -186,59 +168,39 @@ organizations:</p>
 <tbody>
 <tr class="odd">
 <td>legal and DBA names only</td>
-<td align="right">2,946</td>
-<td align="right">943</td>
-<td align="right">854</td>
+<td align="right">2,945</td>
+<td align="right">945</td>
+<td align="right">853</td>
 </tr>
 <tr class="even">
 <td>plus observed names, 2+ filers</td>
-<td align="right"><strong>3,092</strong></td>
-<td align="right">940</td>
-<td align="right">717</td>
+<td align="right"><strong>3,091</strong></td>
+<td align="right">942</td>
+<td align="right">716</td>
 </tr>
 <tr class="odd">
 <td>plus observed names, 1+ filer</td>
-<td align="right">2,419</td>
-<td align="right">1,702</td>
+<td align="right">2,422</td>
+<td align="right">1,699</td>
 <td align="right">648</td>
 </tr>
 </tbody>
 </table>
-<p>With two or more filers, aliases add <strong>146 YES</strong> (295
-gained, 149 lost). Letting in single-filer aliases instead <strong>loses
-527 YES</strong>: 391 gained, 918 lost. The likely cause is the
-name-frequency effect <code>dev/PROCESS.md</code> section 0c identified.
-Adding 1.5 million names, many of them noisy, makes common words look
-less distinctive and creates near-ties between candidates, so confident
-matches become MAYBEs.</p>
-<p><strong>Use <code>min_corroborators = 2</code></strong> unless you
-have measured otherwise on your own records. The published
-<code>*-observed</code> tiers use it.</p>
+<p>With two or more filers, aliases add <strong>146 YES</strong> (294 gained, 148 lost). Letting in single-filer aliases instead <strong>loses 523 YES</strong>: 389 gained, 912 lost. The likely cause is the name-frequency effect <code>dev/PROCESS.md</code> section 0c identified. Adding 1.5 million names, many of them noisy, makes common words look less distinctive and creates near-ties between candidates, so confident matches become MAYBEs.</p>
+<p><strong>Use <code>min_corroborators = 2</code></strong> unless you have measured otherwise on your own records. The published <code>*-observed</code> tiers use it.</p>
 </div>
 <div class="section level2">
 <h2 id="what-corroboration-does-not-catch">What corroboration does not catch<a class="anchor" aria-label="anchor" href="#what-corroboration-does-not-catch"></a>
 </h2>
 <p>Some errors repeat across filers because the same habit repeats:</p>
 <ul>
-<li>writing a <strong>placeholder EIN</strong> (<code>00-0000000</code>,
-<code>123456789</code>);</li>
+<li>writing a <strong>placeholder EIN</strong> (<code>00-0000000</code>, <code>123456789</code>);</li>
 <li>writing the <strong>filer’s own EIN</strong> for a grantee;</li>
-<li>writing a <strong>group-ruling central’s EIN</strong> for one of its
-congregations;</li>
-<li>writing a <strong>fiscal sponsor’s EIN</strong> for each project it
-sponsors.</li>
+<li>writing a <strong>group-ruling central’s EIN</strong> for one of its congregations;</li>
+<li>writing a <strong>fiscal sponsor’s EIN</strong> for each project it sponsors.</li>
 </ul>
-<p>Each of these can be corroborated many times and still be wrong.
-matchdb flags them rather than deleting them
-(<code><a href="../reference/md_guard_observed.html">md_guard_observed()</a></code>). Each observed name carries
-<code>flag_placeholder_ein</code>, <code>flag_placeholder_name</code>,
-<code>flag_own_ein</code>, <code>flag_group_central</code>,
-<code>flag_multi_name</code>, and <code>guard_any</code> for any of the
-five. <code><a href="../reference/md_compile.html">md_compile()</a></code> always leaves guarded names out of a
-reference.</p>
-<p>Corroboration and the guards answer different questions.
-Corroboration asks how many independent writers agree. The guards ask
-whether the EIN they wrote could be this organization at all.</p>
+<p>Each of these can be corroborated many times and still be wrong. matchdb flags them rather than deleting them (<code><a href="../reference/md_guard_observed.html">md_guard_observed()</a></code>). Each observed name carries <code>flag_placeholder_ein</code>, <code>flag_placeholder_name</code>, <code>flag_own_ein</code>, <code>flag_group_central</code>, <code>flag_multi_name</code>, and <code>guard_any</code> for any of the five. <code><a href="../reference/md_compile.html">md_compile()</a></code> always leaves guarded names out of a reference.</p>
+<p>Corroboration and the guards answer different questions. Corroboration asks how many independent writers agree. The guards ask whether the EIN they wrote could be this organization at all.</p>
 </div>
 <div class="section level2">
 <h2 id="looking-at-the-evidence-for-one-organization">Looking at the evidence for one organization<a class="anchor" aria-label="anchor" href="#looking-at-the-evidence-for-one-organization"></a>
@@ -248,10 +210,7 @@ whether the EIN they wrote could be this organization at all.</p>
 <span><span class="va">obs</span> <span class="op">&lt;-</span> <span class="va">x</span><span class="op">$</span><span class="va">names</span><span class="op">[</span><span class="va">x</span><span class="op">$</span><span class="va">names</span><span class="op">$</span><span class="va">variant_class</span> <span class="op">==</span> <span class="st">"observed"</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">obs</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">obs</span><span class="op">$</span><span class="va">n_corroborators</span><span class="op">)</span>,</span>
 <span>         <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name_raw"</span>, <span class="st">"source"</span>, <span class="st">"n_corroborators"</span>, <span class="st">"n_obs"</span>, <span class="st">"first_year"</span>, <span class="st">"last_year"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
-<p>Observed addresses keep the name they were written with
-(<code>observed_as</code> in <code><a href="../reference/md_lookup.html">md_lookup()</a></code>). A compiled
-reference therefore pairs each alias with its own address, rather than
-every alias with every address.</p>
+<p>Observed addresses keep the name they were written with (<code>observed_as</code> in <code><a href="../reference/md_lookup.html">md_lookup()</a></code>). A compiled reference therefore pairs each alias with its own address, rather than every alias with every address.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

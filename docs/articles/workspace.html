@@ -40,9 +40,14 @@
     <li><a class="dropdown-item" href="../articles/layers.html">Layers</a></li>
     <li><a class="dropdown-item" href="../articles/sources.html">Sources</a></li>
     <li><a class="dropdown-item" href="../articles/corroborators.html">Corroborators</a></li>
+    <li><a class="dropdown-item" href="../articles/clusters.html">Families</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Working with the data</h6></li>
     <li><a class="dropdown-item" href="../articles/workspace.html">Your matchdb folder</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>How the database works</h6></li>
+    <li><a class="dropdown-item" href="../articles/corroboration-ledger.html">Corroboration and the ledger</a></li>
+    <li><a class="dropdown-item" href="../articles/updates.html">How the database is updated</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
@@ -83,22 +88,17 @@
 
     
     
-<p>Everything matchdb downloads or writes goes in one folder. This
-article covers:</p>
+<p>Everything matchdb downloads or writes goes in one folder. This article covers:</p>
 <ul>
 <li>what goes in that folder;</li>
 <li>the three ways to get data, and what each costs;</li>
 <li>the log of everything fetched, compiled and published;</li>
-<li>updating to a new release, and finding out why match results
-moved.</li>
+<li>updating to a new release, and finding out why match results moved.</li>
 </ul>
 <div class="section level2">
 <h2 id="one-folder">One folder<a class="anchor" aria-label="anchor" href="#one-folder"></a>
 </h2>
-<p>The folder is <code><a href="../reference/md_data_root.html">md_data_root()</a></code>. It is the
-<code>MATCHDB_DATA</code> environment variable if you set one, and
-<code>~/Documents/matchdb</code> otherwise. Set it in
-<code>.Renviron</code> to keep the data on a larger drive:</p>
+<p>The folder is <code><a href="../reference/md_data_root.html">md_data_root()</a></code>. It is the <code>MATCHDB_DATA</code> environment variable if you set one, and <code>~/Documents/matchdb</code> otherwise. Set it in <code>.Renviron</code> to keep the data on a larger drive:</p>
 <pre><code>MATCHDB_DATA=D:/matchdb</code></pre>
 <p>Its layout is fixed:</p>
 <pre><code>matchdb/
@@ -128,7 +128,7 @@ moved.</li>
 <tr class="odd">
 <td>one of the four published tiers</td>
 <td><code>md_reference("active-observed", fetch = "missing")</code></td>
-<td align="right">230–400 MB</td>
+<td align="right">280–470 MB</td>
 </tr>
 <tr class="even">
 <td>your own spec</td>
@@ -138,140 +138,142 @@ moved.</li>
 <tr class="odd">
 <td>everything, to browse</td>
 <td><code><a href="../reference/md_fetch_reference.html">md_fetch_db()</a></code></td>
-<td align="right">11.7 GB</td>
+<td align="right">11.8 GB</td>
 </tr>
 </tbody>
 </table>
-<p>For your own spec, see what it will cost first.
-<code><a href="../reference/md_tranches.html">md_tranches()</a></code> reads the published build’s manifest and
-marks the files the spec needs:</p>
+<p>The output below is from the build of 2026-11-01, fetched into an empty folder with npnormalize 0.1.3 installed.</p>
+<p>For your own spec, see what it will cost first. <code><a href="../reference/md_tranches.html">md_tranches()</a></code> reads the published build’s manifest and marks the files the spec needs:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_spec.html">md_spec</a></span><span class="op">(</span>layers <span class="op">=</span> <span class="st">"bmf_active"</span>, names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"legal"</span>, <span class="st">"dba"</span><span class="op">)</span>, addresses <span class="op">=</span> <span class="st">"mailing"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/md_tranches.html">md_tranches</a></span><span class="op">(</span><span class="va">s</span><span class="op">)</span></span>
-<span><span class="co">#&gt; &lt;md_tranches 2026-10-27-82c6f0cb&gt; built 2026-10-27 from matchdb@592b078, normalizer v1-3e7b9f9d59bbb19e</span></span>
-<span><span class="co">#&gt;   108 files, 4.64 GB; here: 0 files, 0.00 GB</span></span>
-<span><span class="co">#&gt;   this spec needs 17 files, 1.03 GB; still to download: 17 files, 1.03 GB</span></span>
+<span><span class="co">#&gt; &lt;md_tranches 2026-11-01-67c0bd2f&gt; built 2026-11-01 from matchdb@a79e519, normalizer v1-592912060053c4c3</span></span>
+<span><span class="co">#&gt;   108 files, 4.53 GB; here: 0 files, 0.00 GB</span></span>
+<span><span class="co">#&gt;   this spec needs 17 files, 1.01 GB; still to download: 17 files, 1.01 GB</span></span>
 <span><span class="co">#&gt;              table         layer files     rows    mb here</span></span>
 <span><span class="co">#&gt;            address    bmf_active     3 13568639 856.1    0</span></span>
 <span><span class="co">#&gt;   ...</span></span></code></pre></div>
 <p>Then fetch those files, open them, and compile:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/md_publish_tranches.html">md_fetch_tranches</a></span><span class="op">(</span><span class="va">s</span><span class="op">)</span></span>
+<span><span class="co">#&gt; tranches 2026-11-01-67c0bd2f: 17 files here (0 already were, 0 copied from an older build), 1.01 GB downloaded</span></span>
 <span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_publish_tranches.html">md_tranche_db</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_compile.html">md_compile</a></span><span class="op">(</span><span class="va">s</span>, <span class="va">con</span><span class="op">)</span>          <span class="co"># 2,742,924 rows, about a minute</span></span>
+<span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_compile.html">md_compile</a></span><span class="op">(</span><span class="va">s</span>, <span class="va">con</span><span class="op">)</span>          <span class="co"># 2,742,710 rows, about a minute</span></span>
 <span><span class="fu"><a href="../reference/md_db.html">md_db_close</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/md_tranches.html">md_tranche_manifest()</a></code> returns the build’s whole
-manifest: * the build id; * when it was built, and from which matchdb
-commit; * the normalizer it was built with, and the npnormalize and
-npmatch versions; * every file’s rows, bytes and md5.</p>
-<p>A copy of the manifest is kept in the build’s folder. It records what
-you downloaded, even after the files themselves are deleted.</p>
+<p><code><a href="../reference/md_tranches.html">md_tranche_manifest()</a></code> returns the build’s whole manifest:</p>
+<ul>
+<li>the build id;</li>
+<li>when it was built, and from which matchdb commit;</li>
+<li>the normalizer it was built with, and the npnormalize and npmatch versions;</li>
+<li>every file’s rows, bytes and md5.</li>
+</ul>
+<p>A copy of the manifest is kept in the build’s folder. It records what you downloaded, even after the files themselves are deleted.</p>
 <div class="section level3">
 <h3 id="why-parquet-files-and-not-a-local-database">Why parquet files, and not a local database<a class="anchor" aria-label="anchor" href="#why-parquet-files-and-not-a-local-database"></a>
 </h3>
-<p>The downloaded parquet files are the local copy.
-<code><a href="../reference/md_publish_tranches.html">md_tranche_db()</a></code> opens them in an in-memory DuckDB, as one
-view per table, and copies nothing. matchdb does not build a second
-database from them, for three reasons:</p>
+<p>The downloaded parquet files are the local copy. <code><a href="../reference/md_publish_tranches.html">md_tranche_db()</a></code> opens them in an in-memory DuckDB, as one view per table, and copies nothing. matchdb does not build a second database from them, for three reasons:</p>
 <ul>
-<li>Each file can be checked against its md5, alone. A database built
-from them could only be checked as a whole.</li>
-<li>A second spec adds only the files it is missing, and a new release
-reuses every file that did not change. A database would have to be
-rebuilt.</li>
-<li>Compiling from the files takes about a minute, so a database would
-save little time and double the disk used.</li>
+<li>Each file can be checked against its md5, alone. A database built from them could only be checked as a whole.</li>
+<li>A second spec adds only the files it is missing, and a new release reuses every file that did not change. A database would have to be rebuilt.</li>
+<li>Compiling from the files takes about a minute, so a database would save little time and double the disk used.</li>
 </ul>
-<p>What is worth saving is the compiled reference.
-<code><a href="../reference/md_publish.html">md_publish()</a></code> writes it as a bundle under
-<code>publish/</code>, and <code><a href="../reference/md_publish.html">md_reference()</a></code> reads it back in
-seconds.</p>
+<p>What is worth saving is the compiled reference. <code><a href="../reference/md_publish.html">md_publish()</a></code> writes it as a bundle under <code>publish/</code>, and <code><a href="../reference/md_publish.html">md_reference()</a></code> reads it back in seconds.</p>
 </div>
 </div>
 <div class="section level2">
 <h2 id="the-log">The log<a class="anchor" aria-label="anchor" href="#the-log"></a>
 </h2>
-<p>Every fetch, compile and publish adds one row to
-<code>logs/runs-index.csv</code>. Rows are never changed or removed.
-Each row records: * what was done, and when; * the tranche build and
-spec; * how many files were downloaded, copied from an older build,
-reused or failed, and the bytes moved; * the installed matchdb,
-npnormalize, npmatch and normalizer signature.</p>
+<p>Every fetch, compile and publish adds one row to <code>logs/runs-index.csv</code>. Rows are never changed or removed. Each row records:</p>
+<ul>
+<li>what was done, and when;</li>
+<li>the tranche build and spec;</li>
+<li>how many files were downloaded, copied from an older build, reused or failed, and the bytes moved;</li>
+<li>the installed matchdb, npnormalize, npmatch and normalizer signature.</li>
+</ul>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_log</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  run_id           kind               build        spec_hash files downloaded      bytes</span></span>
-<span><span class="co">#&gt;  20261027T184905-5f4419 fetch_tranches 2026-10-27-82c6f0cb 2402137493f88c8e    17         17 1028259600</span></span>
-<span><span class="co">#&gt;  20261027T185000-5f4479        compile 2026-10-27-82c6f0cb 2402137493f88c8e    NA         NA         NA</span></span></code></pre></div>
-<p><code><a href="../reference/md_log.html">md_log_run()</a></code> returns one action’s detail. For a fetch,
-that is every file with its source URL, status, rows, bytes and md5,
-plus the manifest it came from. For a compile, it is the spec, the stamp
-and the shape of the result:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_log</a></span><span class="op">(</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"run_id"</span>, <span class="st">"kind"</span>, <span class="st">"build"</span>, <span class="st">"spec_hash"</span>, <span class="st">"files"</span>, <span class="st">"downloaded"</span>, <span class="st">"bytes"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;                   run_id           kind               build        spec_hash files downloaded      bytes</span></span>
+<span><span class="co">#&gt; 1 20261101T130816-243823 fetch_tranches 2026-11-01-67c0bd2f 2402137493f88c8e    17         17 1005899238</span></span>
+<span><span class="co">#&gt; 2 20261101T130925-243875        compile 2026-11-01-67c0bd2f 2402137493f88c8e    NA         NA         NA</span></span></code></pre></div>
+<p><code><a href="../reference/md_log.html">md_log_run()</a></code> returns one action’s detail. For a fetch, that is every file with its source URL, status, rows, bytes and md5, plus the manifest it came from. For a compile, it is the spec, the stamp and the shape of the result:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_log_run</a></span><span class="op">(</span><span class="st">"20261027T184905-5f4419"</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/md_log.html">md_status()</a></code> describes what is here now. It covers the
-installed versions, the current build and how much of it is downloaded,
-the database, the bundles, and the last compile. The same record is
-written to <code>logs/state.json</code> after every action:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_log_run</a></span><span class="op">(</span><span class="st">"20261101T130816-243823"</span><span class="op">)</span></span></code></pre></div>
+<p><code><a href="../reference/md_log.html">md_status()</a></code> describes what is here now. It covers the installed versions, the current build and how much of it is downloaded, the database, the bundles, and the last compile. The same record is written to <code>logs/state.json</code> after every action:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_status</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="co">#&gt; &lt;md_status&gt; D:/matchdb</span></span>
-<span><span class="co">#&gt;   installed  matchdb 0.1.1.9000, npnormalize 0.1.0, npmatch 0.1.1.9000, normalizer v1-3e7b9f9d59bbb19e</span></span>
-<span><span class="co">#&gt;   tranches   2026-10-27-82c6f0cb (built 2026-10-27, normalizer v1-3e7b9f9d59bbb19e): 17 of 108 files here, 1.03 GB</span></span>
+<span><span class="co">#&gt;   installed  matchdb 0.1.1.9000, npnormalize 0.1.3, npmatch 0.1.1.9000 @7ea7447, normalizer v1-592912060053c4c3</span></span>
+<span><span class="co">#&gt;   tranches   2026-11-01-67c0bd2f (built 2026-11-01, normalizer v1-592912060053c4c3): 17 of 108 files here, 1.01 GB</span></span>
 <span><span class="co">#&gt;   database   none</span></span>
-<span><span class="co">#&gt;   last compile 2026-10-27T18:50:00: spec 2402137493f88c8e, 2,742,924 rows, from tranches 2026-10-27-82c6f0cb</span></span></code></pre></div>
+<span><span class="co">#&gt;   last compile 2026-11-01T13:09:25: spec 2402137493f88c8e, 2,742,710 rows, from tranches 2026-11-01-67c0bd2f</span></span>
+<span><span class="co">#&gt;   last action  2026-11-01T13:09:25 compile (run 20261101T130925-243875)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="updating-to-a-new-release">Updating to a new release<a class="anchor" aria-label="anchor" href="#updating-to-a-new-release"></a>
 </h2>
-<p>A new release is a new build, in a new folder. Nothing in the old one
-is overwritten. To see what changed before downloading anything:</p>
+<p>A new release is a new build, in a new folder. Nothing in the old one is overwritten. To see what changed before downloading anything, compare the build you have with the newest. Here is the update of 2026-11-01, from the 2026-10-27 build:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_tranches.html">md_tranche_diff</a></span><span class="op">(</span><span class="st">"2026-10-27-82c6f0cb"</span><span class="op">)</span>      <span class="co"># your build against the newest</span></span></code></pre></div>
-<p>The diff lists: * every file as same, changed, added or removed, with
-its change in rows; * whether the normalizer, the npnormalize or npmatch
-version, or the matchdb commit changed; * how much a full update would
-download.</p>
-<p>Then fetch as before. Files whose md5 matches one in your older build
-are copied from it rather than downloaded:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_tranches.html">md_tranche_diff</a></span><span class="op">(</span><span class="st">"2026-10-27-82c6f0cb"</span><span class="op">)</span>      <span class="co"># your build against the newest</span></span>
+<span><span class="co">#&gt; &lt;md_tranche_diff&gt; 2026-10-27-82c6f0cb -&gt; 2026-11-01-67c0bd2f</span></span>
+<span><span class="co">#&gt;   normalize_signature  v1-3e7b9f9d59bbb19e -&gt; v1-592912060053c4c3</span></span>
+<span><span class="co">#&gt;   npnormalize_version  ? -&gt; 0.1.3</span></span>
+<span><span class="co">#&gt;   npmatch_version      0.1.0.9000 -&gt; 0.1.1.9000</span></span>
+<span><span class="co">#&gt;   matchdb_commit       592b078 -&gt; a79e519</span></span>
+<span><span class="co">#&gt;   db_fingerprint       a0774546e057f983  (same)</span></span>
+<span><span class="co">#&gt;   The normalizer changed: every derived column may differ, and match results with it.</span></span>
+<span><span class="co">#&gt;   files: same 47, changed 61, added 0, removed 0</span></span>
+<span><span class="co">#&gt;   to download for the whole build: 2.36 GB of 4.53 GB</span></span>
+<span><span class="co">#&gt;              table         layer  status files rows_change</span></span>
+<span><span class="co">#&gt;    address_compact       (whole) changed     1       -1629</span></span>
+<span><span class="co">#&gt;    address_derived    bmf_active changed     3           0</span></span>
+<span><span class="co">#&gt;   ...</span></span>
+<span><span class="co">#&gt;         place_unit       (whole) changed     1       -1399</span></span>
+<span><span class="co">#&gt;   ...</span></span></code></pre></div>
+<p>The diff lists:</p>
+<ul>
+<li>every file as same, changed, added or removed, with its change in rows;</li>
+<li>whether the normalizer, the npnormalize or npmatch version, or the matchdb commit changed;</li>
+<li>how much a full update would download.</li>
+</ul>
+<p>The <code>?</code> is the older build’s npnormalize version: builds made before matchdb took the normalizer from npnormalize did not record it.</p>
+<p>This update is a new normalizer over the same data (the <code>db_fingerprint</code> did not change). So every <code>*_derived</code> file changed, along with everything built from the keys: the compact tables, the place tables and the clusters. The raw <code>name</code>, <code>address</code> and <code>entity</code> files did not.</p>
+<p>Then fetch as before. Files whose md5 matches one in your older build are copied from it rather than downloaded. For the spec above, 7 of its 17 files are the same in both builds (0.66 GB). An update from the 2026-10-27 build copies those and downloads the other 10 (0.35 GB).</p>
+<p>Copying is how you see a release’s effect on disk, not only on the matches. A data update with the same normalizer leaves more files the same.</p>
+<p>Rows are not added to old files. Every build recomputes, over the whole database:</p>
+<ul>
+<li>the normalized columns;</li>
+<li>the statistics cells;</li>
+<li>the clusters and the compact tables.</li>
+</ul>
+<p>So a release can change a file whose own rows did not change. Copying unchanged files saves the downloads that can be saved, and the whole build always stays consistent.</p>
+<p>When the new build works, <code><a href="../reference/md_tranches.html">md_tranches_prune()</a></code> deletes the old build’s parquet files and keeps its manifest:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_publish_tranches.html">md_fetch_tranches</a></span><span class="op">(</span><span class="va">s</span><span class="op">)</span></span>
-<span><span class="co">#&gt; (an illustration: the first later build will be the first real case)</span></span>
-<span><span class="co">#&gt; tranches 2026-11-30-...: 17 files here (0 already were, 14 copied from an older build), 0.21 GB downloaded</span></span></code></pre></div>
-<p>Rows are not added to old files. Every build recomputes, over the
-whole database: * the normalized columns; * the statistics cells; * the
-clusters and the compact tables.</p>
-<p>So a release can change a file whose own rows did not change. Copying
-unchanged files saves the downloads that can be saved, and the whole
-build always stays consistent.</p>
-<p>When the new build works, <code><a href="../reference/md_tranches.html">md_tranches_prune()</a></code> deletes
-the old build’s parquet files and keeps its manifest:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/md_tranches.html">md_tranches_prune</a></span><span class="op">(</span>keep <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="when-match-results-change">When match results change<a class="anchor" aria-label="anchor" href="#when-match-results-change"></a>
 </h2>
-<p>A match can move for two reasons: * the data changed: a new build; *
-the matching changed: a new npnormalize or npmatch, above all a new
-normalizer.</p>
-<p>The log records both. Before each action it compares the installed
-npnormalize, npmatch and normalizer with what the last action used. If
-they differ, it adds a <code>version_change</code> row first. Fetching a
-different build or database adds one too:</p>
+<p>A match can move for two reasons:</p>
+<ul>
+<li>the data changed: a new build;</li>
+<li>the matching changed: a new npnormalize or npmatch, above all a new normalizer.</li>
+</ul>
+<p>The log records both. Before each action it compares the installed npnormalize, npmatch and normalizer with what the last action used. If they differ, it adds a <code>version_change</code> row first. Fetching a different build or database adds one too:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_log</a></span><span class="op">(</span><span class="st">"version_change"</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"recorded_at"</span>, <span class="st">"note"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt; (an illustration: the two rows an update from 2026-10-27 to 2026-11-01 writes)</span></span>
+<span><span class="co">#&gt;   recorded_at  note</span></span>
+<span><span class="co">#&gt;   ...          normalize_signature v1-3e7b9f9d59bbb19e -&gt; v1-592912060053c4c3; npnormalize_version 0.1.1 -&gt; 0.1.3</span></span>
+<span><span class="co">#&gt;   ...          tranches 2026-10-27-82c6f0cb -&gt; 2026-11-01-67c0bd2f: files same 47 changed 61 added 0 removed 0;</span></span>
+<span><span class="co">#&gt;                  name+address+entity rows +0; normalizer v1-3e7b9f9d59bbb19e -&gt; v1-592912060053c4c3</span></span></code></pre></div>
+<p>Read these rows next to the compiles around them. They show which build and which normalizer produced each set of results.</p>
+<p>A build made by another normalizer is refused rather than used: <code><a href="../reference/md_publish_tranches.html">md_tranche_db()</a></code> and <code><a href="../reference/md_publish.html">md_reference()</a></code> stop with an error naming both signatures. Install the matching npnormalize, or fetch a build made with yours:</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_log.html">md_log</a></span><span class="op">(</span><span class="st">"version_change"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; (an illustration of the two kinds of row)</span></span>
-<span><span class="co">#&gt;   kind           recorded_at              note</span></span>
-<span><span class="co">#&gt;   version_change 2026-11-30T09:12:41-0700 tranches 2026-10-27-82c6f0cb -&gt; 2026-11-30-...: files same 94 changed 14 ...</span></span>
-<span><span class="co">#&gt;   version_change 2026-12-02T15:03:10-0700 normalize_signature v1-3e7b9f9d59bbb19e -&gt; v1-...</span></span></code></pre></div>
-<p>Read these rows next to the compiles around them. They show which
-build and which normalizer produced each set of results.</p>
-<p>A build made by another normalizer is refused rather than used:
-<code><a href="../reference/md_publish_tranches.html">md_tranche_db()</a></code> and <code><a href="../reference/md_publish.html">md_reference()</a></code> stop with
-an error naming both signatures. Install the matching npnormalize, or
-fetch a build made with yours.</p>
-<p>To turn logging off, set
-<code>options(matchdb.log = FALSE)</code>.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/md_publish.html">md_reference</a></span><span class="op">(</span><span class="st">"active-observed"</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Error: bundle active-observed/9cc7b76e3e144a87 was built by normalizer</span></span>
+<span><span class="co">#&gt;   v1-592912060053c4c3; the installed one is v1-1179714ce1e9d31f. ...</span></span></code></pre></div>
+<p>That is what npnormalize 0.1.4 gives against the data published on 2026-11-01. To get the right normalizer, install npnormalize at the commit the data was built with (<code>6d9c669</code> for 0.1.3), or wait for a build made with the newer one. <code><a href="../articles/updates.html">vignette("updates")</a></code> explains when and why a rebuild happens.</p>
+<p>To turn logging off, set <code>options(matchdb.log = FALSE)</code>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

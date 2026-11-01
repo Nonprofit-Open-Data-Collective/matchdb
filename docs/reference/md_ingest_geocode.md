@@ -1,32 +1,55 @@
+<div id="main" class="col-md-9" role="main">
+
 # Attach census geography to the addresses it actually describes
+
+<div class="ref-description section level2">
 
 `metadata-address-geocoded` carries census geography - county, CBSA,
 tract, block, urban area - plus coordinates, for 3,436,984 EINs.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ingest_geocode(con = NULL, path = NULL, version = "2026-08")
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- path:
+-   path:
 
-  Path to the geocoded CSV.
+    Path to the geocoded CSV.
 
-- version:
+-   version:
 
-  Pinned `address_geocoded` version.
+    Pinned `address_geocoded` version.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Row counts, invisibly.
+
+</div>
+
+<div class="section level2">
 
 ## It is one geocode per EIN, not one per address spell
 
@@ -42,6 +65,10 @@ matching on `(ein, street, city, state, zip5)`. Rows that match get the
 geography; rows that do not are reported and dropped. An unattached
 geocode is better than one attached to the wrong address.
 
+</div>
+
+<div class="section level2">
+
 ## Parsing from the right
 
 `ORG_ADDR_FULL` is comma-joined `street,city,state,zip`, and street
@@ -50,6 +77,10 @@ example from the sibling crosswalk. Splitting left-to-right therefore
 mis-assigns the fields whenever a street has a comma in it. The last
 three fields are always city, state and ZIP, so this splits from the
 right and rejoins whatever remains as the street.
+
+</div>
+
+<div class="section level2">
 
 ## Not all coordinates mean the same thing
 
@@ -64,3 +95,7 @@ comparison confidently wrong.
 So `geocode_type` is stored beside the coordinates rather than
 discarded, and any consumer computing distance should filter on it. The
 column exists to make that possible; nothing here enforces it.
+
+</div>
+
+</div>

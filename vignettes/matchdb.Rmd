@@ -19,15 +19,30 @@ does the matching.
 
 This walk-through matches four grant recipients, reads the results, and looks
 more closely at the ones that are not clear-cut. The output shown is from the
-published references of 2026-10-23.
+references published on 2026-11-01, with npnormalize 0.1.3 and the development
+npmatch.
 
 ## 1. Install
 
 ```{r}
-remotes::install_github("Nonprofit-Open-Data-Collective/npmatch")
-remotes::install_github("Nonprofit-Open-Data-Collective/matchdb")
+remotes::install_github("Nonprofit-Open-Data-Collective/npnormalize@6d9c669")  # 0.1.3
+remotes::install_github("Nonprofit-Open-Data-Collective/npmatch", upgrade = "never")
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb", upgrade = "never")
 library(matchdb)
 ```
+
+Three packages work together:
+
+* **npnormalize** turns names and addresses into the keys both sides of a
+  match are compared on;
+* **matchdb** supplies the reference;
+* **npmatch** does the matching.
+
+The reference and your query must be keyed by the same normalizer. The
+published references were built with npnormalize 0.1.3, so install that
+version, and use `upgrade = "never"` so the other two installs don't replace
+it. `npnormalize::np_normalize_signature()` should report
+`v1-592912060053c4c3`.
 
 ## 2. Get a reference
 
@@ -35,10 +50,10 @@ A reference is the frame npmatch matches against. Four are published:
 
 | label | which organizations | which names | rows |
 |---|---|---|---:|
-| `active-legal` | in the current BMF | legal name and DBA | 2.75M |
-| `active-observed` | in the current BMF | legal, DBA, and names 2+ grantmakers wrote | 2.89M |
+| `active-legal` | in the current BMF | legal name and DBA | 2.74M |
+| `active-observed` | in the current BMF | legal, DBA, and names 2+ grantmakers wrote | 2.88M |
 | `unified-legal` | in any BMF release | legal name and DBA | 4.98M |
-| `unified-observed` | in any BMF release | legal, DBA, and names 2+ grantmakers wrote | 5.14M |
+| `unified-observed` | in any BMF release | legal, DBA, and names 2+ grantmakers wrote | 5.13M |
 
 For current records, start with `active-observed`. The names grantmakers write
 ("American Red Cross") are often not the legal name ("American National Red
@@ -49,7 +64,7 @@ when to use the `unified-*` tiers.
 b <- md_reference("active-observed", fetch = "missing")
 ```
 
-The first call downloads about 260 MB from the public NCCS copy; no AWS
+The first call downloads about 290 MB from the public NCCS copy; no AWS
 account is needed. Later calls read the local copy. Every file is checked
 against the md5 it was published with, and the bundle is refused if it was
 built by a different normalizer (npnormalize) than the one installed. `b` holds:
@@ -57,7 +72,10 @@ built by a different normalizer (npnormalize) than the one installed. `b` holds:
 - `reference`: the frame;
 - `name_freq` and `token_idf`: corpus statistics, which tell npmatch how
   common a name or word is;
-- `ref_index`: the blocking index;
+- `ref_index`: the blocking index, built on load (it needs npmatch);
+- `addr_freq`: how many organizations share each address, counted over
+  exactly the bundle's rows;
+- `places`: what kind of place each shared address is;
 - `clusters`: the families its organizations belong to.
 
 ## 3. Describe your records and match
@@ -95,14 +113,14 @@ as.data.frame(m)[, c(".id", "tier", "overall_ein", "overall_name_y", "overall_sc
 #> 1  g1 MAYBE EIN-53-0196605                      AMERICAN RED CROSS         0.680
 #> 2  g4 MAYBE EIN-01-0498465 FRIENDS OF THE ELLSWORTH PUBLIC LIBRARY         0.980
 #> 3  g3 MAYBE EIN-39-1925617  BOYS AND GIRLS CLUB OF DANE COUNTY INC         0.980
-#> 4  g2   YES EIN-04-2994233 HABITAT FOR HUMANITY GREATER BOSTON INC         0.927
+#> 4  g2   YES EIN-04-2994233 HABITAT FOR HUMANITY GREATER BOSTON INC         0.935
 ```
 
 All four found the right organization. Only one is a YES, and each MAYBE is a
 MAYBE for a different reason.
 
-- **g2, Habitat for Humanity: YES.** Name and address agree, and nothing else
-  comes close.
+- **g2, Habitat for Humanity: YES.** The best candidate scores 0.935 and the
+  runner-up 0.63, so nothing else comes close.
 - **g1, American Red Cross: MAYBE.** The name matched exactly, on an
   observed name: grantmakers write `AMERICAN RED CROSS`, and
   `active-observed` carries that spelling. But each observed name comes paired
@@ -122,7 +140,7 @@ The full result has the reasons in columns: `pass`, `runner_up_score`, `tie`,
 ## 5. Look closer
 
 With the database downloaded, `md_lookup()` shows everything known about an
-EIN, and `md_cluster()` shows its families. The database is about 10 GB, and
+EIN, and `md_cluster()` shows its families. The database is 11.8 GB, and
 `md_fetch_db()` downloads it once.
 
 ```{r}
@@ -152,8 +170,8 @@ x <- md_lookup("53-0196605")
 x
 #> <md_lookup> EIN-53-0196605  AMERICAN NATIONAL RED CROSS
 #>   layer bmf_active, active TRUE, NTEE P210, subsection 3
-#>   names      1800 rows (dba 1, in_care_of 1, legal 2, observed 1796)
-#>   addresses  2863 rows
+#>   names      1760 rows (dba 1, in_care_of 1, legal 2, observed 1756)
+#>   addresses  2835 rows
 #>   ...
 head(x$names[x$names$variant_class == "observed", c("name_raw", "n_corroborators")])
 #>                                   name_raw n_corroborators
@@ -162,7 +180,7 @@ head(x$names[x$names$variant_class == "observed", c("name_raw", "n_corroborators
 #> 6                                RED CROSS              40
 #> 7 AMERICAN RED CROSS NATIONAL HEADQUARTERS              35
 #> 8                   THE AMERICAN RED CROSS              24
-#> 9            AMERICAN RED CROSS - NATIONAL              19
+#> 9            AMERICAN RED CROSS - NATIONAL              20
 ```
 
 1,292 different grantmakers wrote `AMERICAN RED CROSS` for this EIN. That is
@@ -213,7 +231,7 @@ s <- md_spec(layers = c("bmf_active", "bmf_inactive", "postcard_only"),
              min_corroborators = 2,
              label = "everything-small-orgs-too")
 r <- md_compile(s)
-#> spec 5f3050225dde786f: 5,211,807 rows over 3,771,700 EINs
+#> spec 5f3050225dde786f: 5,204,856 rows over 3,771,700 EINs
 r$report          # rows by class, rows per EIN, family members left out
 
 m2 <- npmatch::np_cascade(q, r$reference, name_freq = r$name_freq,
@@ -231,3 +249,9 @@ machine. To keep a slice, `md_publish(s)` writes it as a stamped bundle, and
 - `vignette("sources")`: where every name and address comes from.
 - `vignette("corroborators")`: how much to trust a name a grantmaker wrote,
   and why `min_corroborators = 2` is the default.
+- `vignette("clusters")`: the families, and how matching one level up uses
+  them.
+- `vignette("workspace")`: your matchdb folder, its log, and updating to a new
+  release.
+- `vignette("corroboration-ledger")` and `vignette("updates")`: how the
+  database counts corroboration and how it is rebuilt.

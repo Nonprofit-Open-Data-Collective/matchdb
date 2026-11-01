@@ -1,10 +1,20 @@
+<div id="main" class="col-md-9" role="main">
+
 # Fill the resolved NTEE triple on entity
+
+<div class="ref-description section level2">
 
 Populates `ntee_code`, `ntee_rule`, `ntee_agreement`, `ntee_n_distinct`,
 `ntee_source` and `nteev2` (§4) by combining the BMF snapshot with the
 canonical NTEE crosswalk.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ingest_ntee(
@@ -15,28 +25,41 @@ md_ingest_ntee(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- version:
+-   version:
 
-  The pinned `bmf_unified` version (for the active-vintage test).
+    The pinned `bmf_unified` version (for the active-vintage test).
 
-- crosswalk:
+-   crosswalk:
 
-  Path to `ntee_resolved_crosswalk.csv`.
+    Path to `ntee_resolved_crosswalk.csv`.
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- crosswalk_version:
+-   crosswalk_version:
 
-  Pinned `ntee_crosswalk` version, used when `crosswalk` is `NULL`.
+    Pinned `ntee_crosswalk` version, used when `crosswalk` is `NULL`.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 A table of rule counts, invisibly.
+
+</div>
+
+<div class="section level2">
 
 ## The resolution rule
 
@@ -53,6 +76,10 @@ A table of rule counts, invisibly.
     BMF code, whatever its vintage.
 
 5.  `NULL` with `ntee_rule = 'none'` when no source has a code.
+
+</div>
+
+<div class="section level2">
 
 ## What the measurements say about this rule
 
@@ -77,12 +104,15 @@ not.
 consequential choice rather than a formality. For inactive organisations
 modal and most-recent differ only 4.1%, so rule 3 is nearly free.
 
+</div>
+
+<div class="section level2">
+
 ## nteev2 is recomputed, and how well depends on the rule
 
-[`fiscal::get_nteev2()`](https://rdrr.io/pkg/fiscal/man/get_nteev2.html)
-is applied to the chosen code rather than any stored rendering, because
-both the BMF and the crosswalk ship the specialty double-encoding defect
-([`?md_ntee_canonical`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ntee_canonical.md)).
+`fiscal::get_nteev2()` is applied to the chosen code rather than any
+stored rendering, because both the BMF and the crosswalk ship the
+specialty double-encoding defect (`?md_ntee_canonical`).
 
 One honest limitation. Rule 1 recomputes from `ntee_code_raw`, which
 preserves the legacy five-character form and so gets the `B8443 -> B43`
@@ -90,3 +120,7 @@ rule right. Rules 2 and 3 only have the crosswalk's three-character
 code, where that information is already gone. `ntee_source` records
 which, so rows whose NTEEv2 rests on a truncated input are identifiable
 rather than merely suspected.
+
+</div>
+
+</div>

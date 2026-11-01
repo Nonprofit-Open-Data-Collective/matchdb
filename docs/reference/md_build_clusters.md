@@ -1,4 +1,8 @@
+<div id="main" class="col-md-9" role="main">
+
 # Build the cluster layer: typed, many-to-many families of EINs
+
+<div class="ref-description section level2">
 
 Writes `cluster` (one row per cluster), `cluster_member` (one row per
 cluster and EIN) and `cluster_footprint` (members per cluster, layer and
@@ -7,7 +11,13 @@ chapter that is hard to match on its own can then be matched one level
 up: a query whose name matches one member and whose address matches
 another is still a strong match to the cluster.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_build_clusters(
@@ -22,88 +32,104 @@ md_build_clusters(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- types:
+-   types:
 
-  Which cluster types to build.
+    Which cluster types to build.
 
-- max_cotenants:
+-   max_cotenants:
 
-  Largest shared place that still counts as co-tenancy.
+    Largest shared place that still counts as co-tenancy.
 
-- max_website:
+-   max_website:
 
-  Largest website key that still forms a cluster.
+    Largest website key that still forms a cluster.
 
-- brand_min_share, brand_min_eins:
+-   brand_min_share, brand_min_eins:
 
-  The brand-word thresholds above.
+    The brand-word thresholds above.
 
-- brand_alone_share:
+-   brand_alone_share:
 
-  An anchor this concentrated needs no second word of the brand name to
-  make an EIN a member.
+    An anchor this concentrated needs no second word of the brand name
+    to make an EIN a member.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Clusters and memberships per type, invisibly.
 
+</div>
+
+<div class="section level2">
+
 ## Cluster types
 
-- `group_exemption` (`GRP-`):
+-   `group_exemption` (`GRP-`):
 
-  the components of `entity_group` - see
-  [`md_build_groups()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_build_groups.md).
-  Central is `group_central_ein`.
+    the components of `entity_group` - see `md_build_groups()`. Central
+    is `group_central_ein`.
 
-- `related_system` (`SYS-`):
+-   `related_system` (`SYS-`):
 
-  one cluster per Schedule R discloser: the filer and every related or
-  disregarded entity it lists that is in `entity`. A star, never a
-  connected component: chained together these edges form one component
-  of 117,869 EINs across the health and university sectors. Overlapping
-  stars are kept as they are.
+    one cluster per Schedule R discloser: the filer and every related or
+    disregarded entity it lists that is in `entity`. A star, never a
+    connected component: chained together these edges form one component
+    of 117,869 EINs across the health and university sectors.
+    Overlapping stars are kept as they are.
 
-- `care_of_network` (`ICO-`):
+-   `care_of_network` (`ICO-`):
 
-  one cluster per organisation named in other EINs' in-care-of field.
-  Only values that read as an organisation are used: not a person
-  (census first name and surname), not a role (`TREASURER`), not an
-  agent (bank, trust company, CPA, law firm); naming exactly one EIN's
-  legal or dba name, of two or more words, in the same state. Needs the
-  `peopleparser` census name table.
+    one cluster per organisation named in other EINs' in-care-of field.
+    Only values that read as an organisation are used: not a person
+    (census first name and surname), not a role (`TREASURER`), not an
+    agent (bank, trust company, CPA, law firm); naming exactly one EIN's
+    legal or dba name, of two or more words, in the same state. Needs
+    the `peopleparser` census name table.
 
-- `shared_website` (`WEB-`):
+-   `shared_website` (`WEB-`):
 
-  one cluster per website key held by two or more EINs (at most
-  `max_website`). A national body's site written by its chapters.
+    one cluster per website key held by two or more EINs (at most
+    `max_website`). A national body's site written by its chapters.
 
-- `brand` (`BRD-`):
+-   `brand` (`BRD-`):
 
-  one cluster per brand word: a name word that is concentrated in one
-  name, the way `TOASTMASTERS` is, rather than spread across many, the
-  way `BAPTIST` is. A word is a brand when one full name holds at least
-  `brand_min_share` of the EINs carrying the word, and that name is held
-  by at least `brand_min_eins` EINs. Each dominant name gives one brand,
-  anchored on its most concentrated word: `LIONS`, not `CLUBS`;
-  `AMATEUR`, not `STATES`. A first pass let every word of a dominant
-  name be its own brand, and `STATES` gathered 42,951 EINs. Members are
-  every EIN whose legal or dba name contains the anchor word. This is
-  what reaches the 63% of Toastmasters clubs that are in no group
-  exemption.
+    one cluster per brand word: a name word that is concentrated in one
+    name, the way `TOASTMASTERS` is, rather than spread across many, the
+    way `BAPTIST` is. A word is a brand when one full name holds at
+    least `brand_min_share` of the EINs carrying the word, and that name
+    is held by at least `brand_min_eins` EINs. Each dominant name gives
+    one brand, anchored on its most concentrated word: `LIONS`, not
+    `CLUBS`; `AMATEUR`, not `STATES`. A first pass let every word of a
+    dominant name be its own brand, and `STATES` gathered 42,951 EINs.
+    Members are every EIN whose legal or dba name contains the anchor
+    word. This is what reaches the 63% of Toastmasters clubs that are in
+    no group exemption.
 
-- `co_tenant` (`CTN-`):
+-   `co_tenant` (`CTN-`):
 
-  one cluster per street address shared by 2 to `max_cotenants` EINs: a
-  school and its PTO, a hospital and its foundation. Larger shared
-  places are registered agents and processing centres, which say nothing
-  about affiliation.
+    one cluster per street address shared by 2 to `max_cotenants` EINs:
+    a school and its PTO, a hospital and its foundation. Larger shared
+    places are registered agents and processing centres, which say
+    nothing about affiliation.
+
+</div>
+
+<div class="section level2">
 
 ## Columns
 
@@ -119,8 +145,16 @@ members, for clusters of three or more).
 partition EINs, so the footprint of any selection of layers is the exact
 sum of its rows - the same rule as `ein_key_layer`.
 
+</div>
+
+<div class="section level2">
+
 ## What this does not do
 
 It does not nest clusters into levels (chapter, state body, national),
 and it does not merge overlapping clusters. Both are left to the
 consumer, which can see every membership.
+
+</div>
+
+</div>

@@ -40,9 +40,14 @@
     <li><a class="dropdown-item" href="../articles/layers.html">Layers</a></li>
     <li><a class="dropdown-item" href="../articles/sources.html">Sources</a></li>
     <li><a class="dropdown-item" href="../articles/corroborators.html">Corroborators</a></li>
+    <li><a class="dropdown-item" href="../articles/clusters.html">Families</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Working with the data</h6></li>
     <li><a class="dropdown-item" href="../articles/workspace.html">Your matchdb folder</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><h6 class="dropdown-header" data-toc-skip>How the database works</h6></li>
+    <li><a class="dropdown-item" href="../articles/corroboration-ledger.html">Corroboration and the ledger</a></li>
+    <li><a class="dropdown-item" href="../articles/updates.html">How the database is updated</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
@@ -83,27 +88,31 @@
 
     
     
-<p>You have a list of organizations: grant recipients, survey
-respondents, a contractor list. Each has a name and an address but no
-EIN. matchdb supplies the other side of the match: every name and
-address the IRS and 990 filers have recorded for each EIN. <a href="https://github.com/Nonprofit-Open-Data-Collective/npmatch" class="external-link">npmatch</a>
-does the matching.</p>
-<p>This walk-through matches four grant recipients, reads the results,
-and looks more closely at the ones that are not clear-cut. The output
-shown is from the published references of 2026-10-23.</p>
+<p>You have a list of organizations: grant recipients, survey respondents, a contractor list. Each has a name and an address but no EIN. matchdb supplies the other side of the match: every name and address the IRS and 990 filers have recorded for each EIN. <a href="https://github.com/Nonprofit-Open-Data-Collective/npmatch" class="external-link">npmatch</a> does the matching.</p>
+<p>This walk-through matches four grant recipients, reads the results, and looks more closely at the ones that are not clear-cut. The output shown is from the references published on 2026-11-01, with npnormalize 0.1.3 and the development npmatch.</p>
 <div class="section level2">
 <h2 id="install">1. Install<a class="anchor" aria-label="anchor" href="#install"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/npmatch"</span><span class="op">)</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/matchdb"</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/npnormalize@6d9c669"</span><span class="op">)</span>  <span class="co"># 0.1.3</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/npmatch"</span>, upgrade <span class="op">=</span> <span class="st">"never"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/matchdb"</span>, upgrade <span class="op">=</span> <span class="st">"never"</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb" class="external-link">matchdb</a></span><span class="op">)</span></span></code></pre></div>
+<p>Three packages work together:</p>
+<ul>
+<li>
+<strong>npnormalize</strong> turns names and addresses into the keys both sides of a match are compared on;</li>
+<li>
+<strong>matchdb</strong> supplies the reference;</li>
+<li>
+<strong>npmatch</strong> does the matching.</li>
+</ul>
+<p>The reference and your query must be keyed by the same normalizer. The published references were built with npnormalize 0.1.3, so install that version, and use <code>upgrade = "never"</code> so the other two installs don’t replace it. <code><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize_signature.html" class="external-link">npnormalize::np_normalize_signature()</a></code> should report <code>v1-592912060053c4c3</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="get-a-reference">2. Get a reference<a class="anchor" aria-label="anchor" href="#get-a-reference"></a>
 </h2>
-<p>A reference is the frame npmatch matches against. Four are
-published:</p>
+<p>A reference is the frame npmatch matches against. Four are published:</p>
 <table class="table">
 <colgroup>
 <col width="23%">
@@ -122,13 +131,13 @@ published:</p>
 <td><code>active-legal</code></td>
 <td>in the current BMF</td>
 <td>legal name and DBA</td>
-<td align="right">2.75M</td>
+<td align="right">2.74M</td>
 </tr>
 <tr class="even">
 <td><code>active-observed</code></td>
 <td>in the current BMF</td>
 <td>legal, DBA, and names 2+ grantmakers wrote</td>
-<td align="right">2.89M</td>
+<td align="right">2.88M</td>
 </tr>
 <tr class="odd">
 <td><code>unified-legal</code></td>
@@ -140,33 +149,27 @@ published:</p>
 <td><code>unified-observed</code></td>
 <td>in any BMF release</td>
 <td>legal, DBA, and names 2+ grantmakers wrote</td>
-<td align="right">5.14M</td>
+<td align="right">5.13M</td>
 </tr>
 </tbody>
 </table>
-<p>For current records, start with <code>active-observed</code>. The
-names grantmakers write (“American Red Cross”) are often not the legal
-name (“American National Red Cross”), and the observed names cover that
-gap. <code><a href="../articles/layers.html">vignette("layers")</a></code> explains when to use the
-<code>unified-*</code> tiers.</p>
+<p>For current records, start with <code>active-observed</code>. The names grantmakers write (“American Red Cross”) are often not the legal name (“American National Red Cross”), and the observed names cover that gap. <code><a href="../articles/layers.html">vignette("layers")</a></code> explains when to use the <code>unified-*</code> tiers.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_publish.html">md_reference</a></span><span class="op">(</span><span class="st">"active-observed"</span>, fetch <span class="op">=</span> <span class="st">"missing"</span><span class="op">)</span></span></code></pre></div>
-<p>The first call downloads about 260 MB from the public NCCS copy; no
-AWS account is needed. Later calls read the local copy. Every file is
-checked against the md5 it was published with, and the bundle is refused
-if it was built by a different normalizer (npnormalize) than the one
-installed. <code>b</code> holds:</p>
+<p>The first call downloads about 290 MB from the public NCCS copy; no AWS account is needed. Later calls read the local copy. Every file is checked against the md5 it was published with, and the bundle is refused if it was built by a different normalizer (npnormalize) than the one installed. <code>b</code> holds:</p>
 <ul>
 <li>
 <code>reference</code>: the frame;</li>
 <li>
-<code>name_freq</code> and <code>token_idf</code>: corpus
-statistics, which tell npmatch how common a name or word is;</li>
+<code>name_freq</code> and <code>token_idf</code>: corpus statistics, which tell npmatch how common a name or word is;</li>
 <li>
-<code>ref_index</code>: the blocking index;</li>
+<code>ref_index</code>: the blocking index, built on load (it needs npmatch);</li>
 <li>
-<code>clusters</code>: the families its organizations belong
-to.</li>
+<code>addr_freq</code>: how many organizations share each address, counted over exactly the bundle’s rows;</li>
+<li>
+<code>places</code>: what kind of place each shared address is;</li>
+<li>
+<code>clusters</code>: the families its organizations belong to.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -194,54 +197,31 @@ to.</li>
 <div class="section level2">
 <h2 id="read-the-results">4. Read the results<a class="anchor" aria-label="anchor" href="#read-the-results"></a>
 </h2>
-<p>Each query gets a tier: <code>YES</code> (accept), <code>MAYBE</code>
-(a good candidate that needs a look) or <code>NO</code>. It also gets
-the best EIN found and the reference name that won.</p>
+<p>Each query gets a tier: <code>YES</code> (accept), <code>MAYBE</code> (a good candidate that needs a look) or <code>NO</code>. It also gets the best EIN found and the reference name that won.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".id"</span>, <span class="st">"tier"</span>, <span class="st">"overall_ein"</span>, <span class="st">"overall_name_y"</span>, <span class="st">"overall_score"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;   .id  tier    overall_ein                          overall_name_y overall_score</span></span>
 <span><span class="co">#&gt; 1  g1 MAYBE EIN-53-0196605                      AMERICAN RED CROSS         0.680</span></span>
 <span><span class="co">#&gt; 2  g4 MAYBE EIN-01-0498465 FRIENDS OF THE ELLSWORTH PUBLIC LIBRARY         0.980</span></span>
 <span><span class="co">#&gt; 3  g3 MAYBE EIN-39-1925617  BOYS AND GIRLS CLUB OF DANE COUNTY INC         0.980</span></span>
-<span><span class="co">#&gt; 4  g2   YES EIN-04-2994233 HABITAT FOR HUMANITY GREATER BOSTON INC         0.927</span></span></code></pre></div>
-<p>All four found the right organization. Only one is a YES, and each
-MAYBE is a MAYBE for a different reason.</p>
+<span><span class="co">#&gt; 4  g2   YES EIN-04-2994233 HABITAT FOR HUMANITY GREATER BOSTON INC         0.935</span></span></code></pre></div>
+<p>All four found the right organization. Only one is a YES, and each MAYBE is a MAYBE for a different reason.</p>
 <ul>
 <li>
-<strong>g2, Habitat for Humanity: YES.</strong> Name and address
-agree, and nothing else comes close.</li>
+<strong>g2, Habitat for Humanity: YES.</strong> The best candidate scores 0.935 and the runner-up 0.63, so nothing else comes close.</li>
 <li>
-<strong>g1, American Red Cross: MAYBE.</strong> The name matched
-exactly, on an observed name: grantmakers write
-<code>AMERICAN RED CROSS</code>, and <code>active-observed</code>
-carries that spelling. But each observed name comes paired with the
-address grantmakers wrote next to it, usually a local chapter, not
-headquarters. Name and address therefore point at different rows
-(<code>views_agree</code> is <code>FALSE</code>), and npmatch holds it
-at MAYBE.</li>
+<strong>g1, American Red Cross: MAYBE.</strong> The name matched exactly, on an observed name: grantmakers write <code>AMERICAN RED CROSS</code>, and <code>active-observed</code> carries that spelling. But each observed name comes paired with the address grantmakers wrote next to it, usually a local chapter, not headquarters. Name and address therefore point at different rows (<code>views_agree</code> is <code>FALSE</code>), and npmatch holds it at MAYBE.</li>
 <li>
-<strong>g4, Friends of the Ellsworth Public Library: MAYBE.</strong>
-Exact name and address, but <code>LIBRARY</code> triggers npmatch’s soft
-<code>government_entity</code> veto, since many libraries are government
-units without an EIN of their own. Here the friends group is a
-nonprofit, and a reviewer would accept it.</li>
+<strong>g4, Friends of the Ellsworth Public Library: MAYBE.</strong> Exact name and address, but <code>LIBRARY</code> triggers npmatch’s soft <code>government_entity</code> veto, since many libraries are government units without an EIN of their own. Here the friends group is a nonprofit, and a reviewer would accept it.</li>
 <li>
-<strong>g3, Boys &amp; Girls Club of Dane County: MAYBE,
-tie.</strong> Three EINs scored 0.98. That is a family, not a mistake,
-as the next section shows.</li>
+<strong>g3, Boys &amp; Girls Club of Dane County: MAYBE, tie.</strong> Three EINs scored 0.98. That is a family, not a mistake, as the next section shows.</li>
 </ul>
-<p>The full result has the reasons in columns: <code>pass</code>,
-<code>runner_up_score</code>, <code>tie</code>, <code>n_close</code>,
-<code>overall_veto_reason</code>, <code>views_agree</code>,
-<code>name_ein</code> and <code>addr_ein</code>.</p>
+<p>The full result has the reasons in columns: <code>pass</code>, <code>runner_up_score</code>, <code>tie</code>, <code>n_close</code>, <code>overall_veto_reason</code>, <code>views_agree</code>, <code>name_ein</code> and <code>addr_ein</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="look-closer">5. Look closer<a class="anchor" aria-label="anchor" href="#look-closer"></a>
 </h2>
-<p>With the database downloaded, <code><a href="../reference/md_lookup.html">md_lookup()</a></code> shows
-everything known about an EIN, and <code><a href="../reference/md_cluster.html">md_cluster()</a></code> shows its
-families. The database is about 10 GB, and <code><a href="../reference/md_fetch_reference.html">md_fetch_db()</a></code>
-downloads it once.</p>
+<p>With the database downloaded, <code><a href="../reference/md_lookup.html">md_lookup()</a></code> shows everything known about an EIN, and <code><a href="../reference/md_cluster.html">md_cluster()</a></code> shows its families. The database is 11.8 GB, and <code><a href="../reference/md_fetch_reference.html">md_fetch_db()</a></code> downloads it once.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/md_fetch_reference.html">md_fetch_db</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/md_cluster.html">md_cluster</a></span><span class="op">(</span><span class="st">"39-1925617"</span>, types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"related_system"</span>, <span class="st">"shared_website"</span><span class="op">)</span><span class="op">)</span></span>
@@ -256,18 +236,14 @@ downloads it once.</p>
 <span><span class="co">#&gt;       EIN-87-4618323  BOYS &amp; GIRLS CLUB OF DANE COUNTY LEGACY  WI</span></span>
 <span><span class="co">#&gt;       EIN-87-4664285  BOYS &amp; GIRLS CLUB OF DANE COUNTY FOUNDAT WI</span></span>
 <span><span class="co">#&gt;   ...</span></span></code></pre></div>
-<p>The club, its foundation and its legacy fund share a website, two
-addresses and a Schedule R relationship. The tie in g3 is between them.
-Whether a grant “to the Boys &amp; Girls Club” belongs to the club or
-its foundation is a judgement the data can only flag. The club, the
-operating entity, is the usual answer.</p>
+<p>The club, its foundation and its legacy fund share a website, two addresses and a Schedule R relationship. The tie in g3 is between them. Whether a grant “to the Boys &amp; Girls Club” belongs to the club or its foundation is a judgement the data can only flag. The club, the operating entity, is the usual answer.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_lookup.html">md_lookup</a></span><span class="op">(</span><span class="st">"53-0196605"</span><span class="op">)</span></span>
 <span><span class="va">x</span></span>
 <span><span class="co">#&gt; &lt;md_lookup&gt; EIN-53-0196605  AMERICAN NATIONAL RED CROSS</span></span>
 <span><span class="co">#&gt;   layer bmf_active, active TRUE, NTEE P210, subsection 3</span></span>
-<span><span class="co">#&gt;   names      1800 rows (dba 1, in_care_of 1, legal 2, observed 1796)</span></span>
-<span><span class="co">#&gt;   addresses  2863 rows</span></span>
+<span><span class="co">#&gt;   names      1760 rows (dba 1, in_care_of 1, legal 2, observed 1756)</span></span>
+<span><span class="co">#&gt;   addresses  2835 rows</span></span>
 <span><span class="co">#&gt;   ...</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">x</span><span class="op">$</span><span class="va">names</span><span class="op">[</span><span class="va">x</span><span class="op">$</span><span class="va">names</span><span class="op">$</span><span class="va">variant_class</span> <span class="op">==</span> <span class="st">"observed"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"name_raw"</span>, <span class="st">"n_corroborators"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                                   name_raw n_corroborators</span></span>
@@ -276,19 +252,14 @@ operating entity, is the usual answer.</p>
 <span><span class="co">#&gt; 6                                RED CROSS              40</span></span>
 <span><span class="co">#&gt; 7 AMERICAN RED CROSS NATIONAL HEADQUARTERS              35</span></span>
 <span><span class="co">#&gt; 8                   THE AMERICAN RED CROSS              24</span></span>
-<span><span class="co">#&gt; 9            AMERICAN RED CROSS - NATIONAL              19</span></span></code></pre></div>
-<p>1,292 different grantmakers wrote <code>AMERICAN RED CROSS</code> for
-this EIN. That is why <code>active-observed</code> carries the spelling,
-and why g1 found the right organization even though the name is not the
-legal one.</p>
+<span><span class="co">#&gt; 9            AMERICAN RED CROSS - NATIONAL              20</span></span></code></pre></div>
+<p>1,292 different grantmakers wrote <code>AMERICAN RED CROSS</code> for this EIN. That is why <code>active-observed</code> carries the spelling, and why g1 found the right organization even though the name is not the legal one.</p>
 </div>
 <div class="section level2">
 <h2 id="match-one-level-up">6. Match one level up<a class="anchor" aria-label="anchor" href="#match-one-level-up"></a>
 </h2>
-<p>Two npmatch functions read those families alongside the scored
-candidates.</p>
-<p><code>np_pair_links()</code> reports whether each query’s top two
-candidates are one family:</p>
+<p>Two npmatch functions read those families alongside the scored candidates. <code><a href="../articles/clusters.html">vignette("clusters")</a></code> describes how the families are built, and which of the six types each link comes from.</p>
+<p><code>np_pair_links()</code> reports whether each query’s top two candidates are one family:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npmatch/reference/np_pair_links.html" class="external-link">np_pair_links</a></span><span class="op">(</span><span class="va">m</span>, <span class="va">b</span><span class="op">$</span><span class="va">clusters</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">".id"</span>, <span class="st">"top_ein"</span>, <span class="st">"runner_up_ein"</span>, <span class="st">"linked"</span>, <span class="st">"link_types"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;   .id        top_ein  runner_up_ein linked                              link_types</span></span>
@@ -296,23 +267,15 @@ candidates are one family:</p>
 <span><span class="co">#&gt; 2  g2 EIN-04-2994233 EIN-04-3348433   TRUE                   brand;group_exemption</span></span>
 <span><span class="co">#&gt; 3  g3 EIN-39-1925617 EIN-87-4664285   TRUE co_tenant;related_system;shared_website</span></span>
 <span><span class="co">#&gt; 4  g4 EIN-01-0498465 EIN-47-5330473  FALSE</span></span></code></pre></div>
-<p>A tie between linked EINs (g3) is a family to settle. A tie between
-strangers is a real ambiguity.</p>
-<p><code>np_cluster_rollup()</code> handles split evidence: the name
-matches one member of a family and the address another, so no single EIN
-scores well but the family does. It returns nothing for these four,
-because each found its organization directly. On 1,984 Schedule I
-records with a known EIN, it placed 60 of 739 non-YES records in a
-family, and the true EIN was in that family 90% of the time.</p>
+<p>A tie between linked EINs (g3) is a family to settle. A tie between strangers is a real ambiguity.</p>
+<p><code>np_cluster_rollup()</code> handles split evidence: the name matches one member of a family and the address another, so no single EIN scores well but the family does. It returns nothing for these four, because each found its organization directly. On 1,984 Schedule I records with a known EIN, it placed 60 of 739 non-YES records in a family, and the true EIN was in that family 90% of the time.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npmatch/reference/np_cluster_rollup.html" class="external-link">np_cluster_rollup</a></span><span class="op">(</span><span class="va">m</span>, <span class="va">b</span><span class="op">$</span><span class="va">clusters</span>, query <span class="op">=</span> <span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npmatch/reference/np_normalize.html" class="external-link">np_normalize</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npmatch/reference/np_cluster_rollup.html" class="external-link">np_cluster_rollup</a></span><span class="op">(</span><span class="va">m</span>, <span class="va">b</span><span class="op">$</span><span class="va">clusters</span>, query <span class="op">=</span> <span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize.html" class="external-link">np_normalize</a></span><span class="op">(</span><span class="va">q</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="build-your-own-reference">7. Build your own reference<a class="anchor" aria-label="anchor" href="#build-your-own-reference"></a>
 </h2>
-<p>The published tiers cover the common cases. For anything else,
-describe the slice with <code><a href="../reference/md_spec.html">md_spec()</a></code> and compile it from the
-database:</p>
+<p>The published tiers cover the common cases. For anything else, describe the slice with <code><a href="../reference/md_spec.html">md_spec()</a></code> and compile it from the database:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_spec.html">md_spec</a></span><span class="op">(</span>layers <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"bmf_active"</span>, <span class="st">"bmf_inactive"</span>, <span class="st">"postcard_only"</span><span class="op">)</span>,</span>
 <span>             names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"legal"</span>, <span class="st">"dba"</span>, <span class="st">"observed"</span><span class="op">)</span>,</span>
@@ -320,32 +283,30 @@ database:</p>
 <span>             min_corroborators <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>             label <span class="op">=</span> <span class="st">"everything-small-orgs-too"</span><span class="op">)</span></span>
 <span><span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/md_compile.html">md_compile</a></span><span class="op">(</span><span class="va">s</span><span class="op">)</span></span>
-<span><span class="co">#&gt; spec 5f3050225dde786f: 5,211,807 rows over 3,771,700 EINs</span></span>
+<span><span class="co">#&gt; spec 5f3050225dde786f: 5,204,856 rows over 3,771,700 EINs</span></span>
 <span><span class="va">r</span><span class="op">$</span><span class="va">report</span>          <span class="co"># rows by class, rows per EIN, family members left out</span></span>
 <span></span>
 <span><span class="va">m2</span> <span class="op">&lt;-</span> <span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npmatch/reference/np_cascade.html" class="external-link">np_cascade</a></span><span class="op">(</span><span class="va">q</span>, <span class="va">r</span><span class="op">$</span><span class="va">reference</span>, name_freq <span class="op">=</span> <span class="va">r</span><span class="op">$</span><span class="va">name_freq</span>,</span>
 <span>                          token_idf <span class="op">=</span> <span class="va">r</span><span class="op">$</span><span class="va">token_idf</span>,</span>
 <span>                          ref_index <span class="op">=</span> <span class="fu">npmatch</span><span class="fu">::</span><span class="fu"><a href="https://nonprofit-open-data-collective.github.io/npmatch/reference/np_ref_index.html" class="external-link">np_ref_index</a></span><span class="op">(</span><span class="va">r</span><span class="op">$</span><span class="va">reference</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>A spec has a hash, so the same spec always gives the same reference
-on any machine. To keep a slice, <code>md_publish(s)</code> writes it as
-a stamped bundle, and
-<code>md_reference("everything-small-orgs-too")</code> reads it
-back.</p>
+<p>A spec has a hash, so the same spec always gives the same reference on any machine. To keep a slice, <code>md_publish(s)</code> writes it as a stamped bundle, and <code>md_reference("everything-small-orgs-too")</code> reads it back.</p>
 </div>
 <div class="section level2">
 <h2 id="next">Next<a class="anchor" aria-label="anchor" href="#next"></a>
 </h2>
 <ul>
 <li>
-<code><a href="../articles/layers.html">vignette("layers")</a></code>: which organizations to
-include.</li>
+<code><a href="../articles/layers.html">vignette("layers")</a></code>: which organizations to include.</li>
 <li>
-<code><a href="../articles/sources.html">vignette("sources")</a></code>: where every name and address comes
-from.</li>
+<code><a href="../articles/sources.html">vignette("sources")</a></code>: where every name and address comes from.</li>
 <li>
-<code><a href="../articles/corroborators.html">vignette("corroborators")</a></code>: how much to trust a name a
-grantmaker wrote, and why <code>min_corroborators = 2</code> is the
-default.</li>
+<code><a href="../articles/corroborators.html">vignette("corroborators")</a></code>: how much to trust a name a grantmaker wrote, and why <code>min_corroborators = 2</code> is the default.</li>
+<li>
+<code><a href="../articles/clusters.html">vignette("clusters")</a></code>: the families, and how matching one level up uses them.</li>
+<li>
+<code><a href="../articles/workspace.html">vignette("workspace")</a></code>: your matchdb folder, its log, and updating to a new release.</li>
+<li>
+<code><a href="../articles/corroboration-ledger.html">vignette("corroboration-ledger")</a></code> and <code><a href="../articles/updates.html">vignette("updates")</a></code>: how the database counts corroboration and how it is rebuilt.</li>
 </ul>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

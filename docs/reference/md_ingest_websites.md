@@ -1,4 +1,8 @@
+<div id="main" class="col-md-9" role="main">
+
 # Ingest organisation websites
+
+<div class="ref-description section level2">
 
 Builds the `website` table from every source that carries a website
 field: the 990 filing header (`F9_00_ORG_WEBSITE`), the 1023-EZ
@@ -7,7 +11,13 @@ approvals (`Orgurl`) and the 990-N e-Postcard (`website`). One row per
 tables, because three sources feed it and `n_eins_sharing` spans all
 three.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ingest_websites(
@@ -18,36 +28,52 @@ md_ingest_websites(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- efile_version:
+-   efile_version:
 
-  Pinned `efile_header` version, or `NULL` to skip.
+    Pinned `efile_header` version, or `NULL` to skip.
 
-- f1023ez_version:
+-   f1023ez_version:
 
-  Pinned `f1023ez` version, or `NULL` to skip. Reads the CSVs
-  [`md_ingest_f1023ez()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_ingest_f1023ez.md)
-  converted, so run that first.
+    Pinned `f1023ez` version, or `NULL` to skip. Reads the CSVs
+    `md_ingest_f1023ez()` converted, so run that first.
 
-- e_postcard_version:
+-   e_postcard_version:
 
-  Pinned `e_postcard` version, or `NULL` to skip.
+    Pinned `e_postcard` version, or `NULL` to skip.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Row counts per source, invisibly.
+
+</div>
+
+<div class="section level2">
 
 ## Details
 
 A website is strong evidence when it is specific to one organisation and
 worthless when it is not, so the table records which is which rather
 than leaving it to every consumer.
+
+</div>
+
+<div class="section level2">
 
 ## What counts as a website
 
@@ -65,6 +91,10 @@ An email address (`info@example.org`) is kept by its domain, as
 web domain. Mail from a personal provider (gmail.com, yahoo.com, ...) is
 dropped: it says nothing about which organisation sent it.
 
+</div>
+
+<div class="section level2">
+
 ## `site_key`
 
 what a match would compare: For most sites `site_key` is the host
@@ -79,9 +109,17 @@ sources. A national body's site written by thousands of chapters
 (`elks.org`) is family evidence, not identity evidence - the same
 distinction `name_compact` draws with its own `n_eins_sharing`.
 
+</div>
+
+<div class="section level2">
+
 ## Only known entities
 
 A website needs an entity to belong to. Rows for EINs absent from
 `entity` are held back and counted, not admitted: the e-Postcard has
 73,503 such EINs, and whether to admit them is a decision for an
 e-Postcard entity ingest, not for this one.
+
+</div>
+
+</div>

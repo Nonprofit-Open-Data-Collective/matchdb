@@ -1,25 +1,26 @@
+<div id="main" class="col-md-9" role="main">
+
 # Download published references, or the whole database
+
+<div class="ref-description section level2">
 
 Most users never build matchdb. They download a compiled reference - a
 few hundred megabytes - and match against it. `md_fetch_reference()`
 copies a published bundle from the remote into the local publish
-directory, where
-[`md_reference()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish.md)
-reads it; `md_reference(fetch = TRUE)` does both. `md_fetch_db()`
-downloads the full database (about 10 GB) for those who want to compile
-their own slices with
-[`md_spec()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_spec.md)
-and
-[`md_compile()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compile.md),
-or browse it with
-[`md_lookup()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_lookup.md)
-and
-[`md_cluster()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_cluster.md).
-Between the two,
-[`md_fetch_tranches()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_publish_tranches.md)
-downloads only the parquet files one spec needs.
+directory, where `md_reference()` reads it; `md_reference(fetch = TRUE)`
+does both. `md_fetch_db()` downloads the full database (11.8 GB) for
+those who want to compile their own slices with `md_spec()` and
+`md_compile()`, or browse it with `md_lookup()` and `md_cluster()`.
+Between the two, `md_fetch_tranches()` downloads only the parquet files
+one spec needs.
+
+</div>
+
+<div class="section level2">
 
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_fetch_reference(
@@ -39,36 +40,44 @@ md_fetch_db(
 md_remote()
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- label:
+-   label:
 
-  A published label: `active-legal`, `active-observed`, `unified-legal`
-  or `unified-observed`.
+    A published label: `active-legal`, `active-observed`,
+    `unified-legal` or `unified-observed`.
 
-- spec_hash:
+-   spec_hash:
 
-  A specific bundle; by default the one the remote's `latest.json`
-  points at.
+    A specific bundle; by default the one the remote's `latest.json`
+    points at.
 
-- remote:
+-   remote:
 
-  The base URL of a matchdb copy (holding `MATCHDB.duckdb` and
-  `publish/`).
+    The base URL of a matchdb copy (holding `MATCHDB.duckdb` and
+    `publish/`).
 
-- root:
+-   root:
 
-  The local publish directory.
+    The local publish directory.
 
-- overwrite:
+-   overwrite:
 
-  Download again even if the bundle is already here and intact.
+    Download again even if the bundle is already here and intact.
 
-- dest:
+-   dest:
 
-  Where to put the database. The default is where
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md)
-  looks.
+    Where to put the database. The default is where `md_db()` looks.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
@@ -76,20 +85,29 @@ md_remote()
 
 `md_fetch_db()`: the local database path, invisibly.
 
+</div>
+
+<div class="section level2">
+
 ## The remote
 
 The default is the public NCCS copy,
 `https://nccs-efile.s3.amazonaws.com/dev/matchdb`, read over plain
 HTTPS: no AWS account or credentials are needed. Set
 `options(matchdb.remote = ...)` to use another copy; any URL
-[`utils::download.file()`](https://rdrr.io/r/utils/download.file.html)
-can read works, including `file://` paths.
+`utils::download.file()` can read works, including `file://` paths.
 
 Every file is checked against the md5 recorded when it was published
 (the bundle's `stamp.json`, the database's `MANIFEST.json`), and a file
 that does not match is deleted rather than kept.
 
+</div>
+
+<div class="section level2">
+
 ## Examples
+
+<div class="sourceCode">
 
 ``` r
 if (FALSE) { # \dontrun{
@@ -100,3 +118,9 @@ b <- md_reference("active-observed")
 b <- md_reference("active-observed", fetch = TRUE)
 } # }
 ```
+
+</div>
+
+</div>
+
+</div>

@@ -1,0 +1,281 @@
+<div id="main" class="col-md-9" role="main">
+
+# How the database is updated
+
+matchdb is rebuilt when something it depends on changes, and each
+rebuild is published as a new, separate release. This vignette covers:
+
+-   what triggers a rebuild;
+-   the steps from a new source file to a published reference;
+-   the checks a build must pass;
+-   what a user sees when a release lands.
+
+If you only use the published references, read the last section.
+`vignette("workspace")` covers updating your own downloaded copy.
+
+<div class="section level2">
+
+## What triggers a rebuild
+
+Three things change a build. They change different parts of it:
+
+| what changed       | example                                          | what moves                                                             |
+|--------------------|--------------------------------------------------|------------------------------------------------------------------------|
+| **a source**       | a new monthly BMF, a new tax year of e-file data | new observations; every count and table built from them                |
+| **the normalizer** | npnormalize 0.1.3                                | the keys: every `*_derived` column, and everything built from the keys |
+| **matchdb itself** | a fix to an ingest or a cluster rule             | whatever that code builds                                              |
+
+A release is identified by what it was built from: the pinned source
+versions, the matchdb commit, and the normalizer signature. All three
+are stamped on everything published.
+
+</div>
+
+<div class="section level2">
+
+## 1. Pin the sources
+
+Some upstream URLs are moving pointers (`latest/`). So no build reads
+them directly. `dev/build-versions.R` names the version of every source
+a build uses, in one place:
+
+<div id="cb1" class="sourceCode">
+
+``` r
+V <- list(
+  bmf_unified = "v2026-09-21",   # nccsdata unified BMF
+  efile       = "v3_1",          # NCCS e-file, tax years 2009-2025
+  e_postcard  = "v2026-07",
+  ...)
+```
+
+</div>
+
+`md_source_pin()` downloads each one into `sources/<source>/<version>/`
+and writes a `PIN.dcf` beside it: the URL, the upstream modification
+time, the size and the md5. Ingests read only the pinned copy, and the
+`source_vintage` table records which pinned version each table was
+loaded from. `md_source_moved()` reports when an upstream pointer has
+moved past its pin. **A new source release is a new pin and a one-line
+change to `dev/build-versions.R`.**
+
+</div>
+
+<div class="section level2">
+
+## 2. Fold the release into the ledger
+
+Every name and address comes from the observation ledger: an append-only
+table of every statement every source has made
+(`vignette("corroboration-ledger")`). `md_build_ledger()` parses each
+pinned file and applies it with `md_apply_release()`, one release per
+file. A year-partitioned source is one release per tax year.
+
+-   **A file already applied is skipped,** by its md5. A new e-file
+    version that re-releases only the latest two years touches only
+    those two partitions.
+
+-   **What a release does depends on the kind of source**
+    (`md_source_kinds()`):
+
+    | kind                 | examples                            | a new release                                                                                                                                   |
+    |----------------------|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+    | `series`, `mentions` | 990 headers, Schedule I, Schedule R | statements not yet in the ledger are added; those still there are marked seen again; those the publisher dropped are marked `retracted_in`      |
+    | `snapshot`           | the monthly BMF, the e-Postcard     | compared with the values currently in force: a changed value closes one spell and opens another, and an EIN that drops off has its spell closed |
+    | `cache`              | the address crosswalk               | diffed as a whole file; a new release is a correction                                                                                           |
+
+    Snapshots must be applied in order; an older release than the newest
+    one applied is refused.
+
+-   **Nothing is deleted.** A dissolved organization’s names stay, with
+    the dates they were in force. A snapshot source overwrites its own
+    history upstream, so the ledger is the only place that history
+    survives.
+
+Two properties are tested for every source. **Applying the same release
+twice changes nothing,** and **applying releases one at a time gives
+exactly the ledger a rebuild from all the pins gives.** An incremental
+update cannot drift from a clean build.
+
+</div>
+
+<div class="section level2">
+
+## 3. Rebuild everything downstream
+
+Nothing downstream of the ledger is patched. It is rebuilt,
+deterministically, in this order:
+
+1.  **Rollups:** `name` and `address`, with their counts
+    (`n_corroborators`, `n_periods`, …), from the whole ledger
+    (`md_rollup()`). `former` names and which address is current are
+    decided here too.
+2.  **Derived columns**, from `np_normalize()`: stored per distinct
+    string and per normalizer signature (`name_text_derived`,
+    `address_text_derived`), then linked to the rows
+    (`md_link_derived()`). Only strings not seen before are normalized.
+    A new monthly BMF adds a few thousand.
+3.  **Guards** on observed names (`md_guard_observed()`).
+4.  **Compact tables**, one row per `(ein, name_key)` and per address
+    (`md_build_compact()`).
+5.  **Families and keys:** groups (`md_build_groups()`), places
+    (`md_build_places()`), `ein_key` (`md_build_ein_key()`) and clusters
+    (`md_build_clusters()`).
+6.  **Statistics cells** (`md_build_stats()`), which `md_compile()`
+    sums.
+
+Ids are content hashes, so a rebuild gives the same ids and nothing is
+orphaned. `md_check_derived_fresh()` checks that every string has
+derived columns for the installed signature.
+
+**From scratch,** `dev/build-matchdb.R` pins every source, runs every
+ingest, and builds all of the above in about 70 minutes, most of it
+deriving columns. `dev/build-ledger.R --install` then builds the ledger
+and swaps the rollups in. Every release so far was built this way, from
+scratch. The ledger is what makes a release reproducible and diffable:
+it does not make a release incremental yet.
+
+</div>
+
+<div class="section level2">
+
+## 4. A new normalizer
+
+A new npnormalize signature changes keys, not observations. It is
+adopted on a built database without rebuilding the ledger:
+
+<div id="cb2" class="sourceCode">
+
+``` bash
+Rscript dev/rebuild-normalizer.R v1-3e7b9f9d59bbb19e             # derive beside the old, and report
+Rscript dev/rebuild-normalizer.R v1-3e7b9f9d59bbb19e --install   # adopt it, rebuild downstream
+Rscript dev/rebuild-normalizer.R v1-3e7b9f9d59bbb19e --drop-old  # once nothing published uses the old one
+```
+
+</div>
+
+The first step stores the new signature’s columns **beside** the old
+ones, so nothing compile reads has changed yet. `md_normalizer_diff()`
+then reports what would move: how many strings get a different value in
+each column, how many compact groups merge or split, and how many EINs
+that touches.
+
+For npnormalize 0.1.3 (2026-11-01), that report was:
+
+-   no name column moved, 0 of 12.8M `name` rows;
+-   of 12.99M address strings, 61,016 changed `street_unit`, 19,981
+    `street_num`, 26,766 `street_name` and 6,921 `street_key`;
+-   on the `address` table, 6,068 of 22.0M rows rekeyed: 1,666
+    street-and-ZIP groups merged and 11 split, touching 1,593 EINs.
+
+`--install` relinks the derived columns to the new signature and
+rebuilds steps 3–6 above. `--drop-old` removes the old signature’s
+columns only once no published tier names it.
+
+</div>
+
+<div class="section level2">
+
+## 5. Check the build
+
+A build can finish every step and still be wrong: a source that loaded
+one year instead of ten, or a table built against stale ids. Before
+anything is published, three checks run on the full database:
+
+| check            | script                        | passes when                                                                                                                                                           |
+|------------------|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Phase 1 gate** | `dev/verify/run-gate.R`       | the BMF-only reference matches a frozen baseline row for row and cell for cell, its statistics are identical, and a 1k benchmark gives identical results: three zeros |
+| **Phase 2**      | `dev/verify/phase2-measure.R` | adding observed names still gains what it gained before on the 1k benchmark (+146 YES at 2+ filers)                                                                   |
+| **build checks** | `dev/check-build.R`           | every table exists and is non-empty, derived tables match the current ids, every EIN is known: 36 of 36                                                               |
+
+A new normalizer is *meant* to change the Phase 1 frame, so the baseline
+is re-frozen under it (`dev/verify/build-baseline-2026-10.R`). Its
+benchmark counts must not change. A gate that moves for a reason no one
+can explain stops the release.
+
+The 2026-11-01 release passed all three: three zeros against the
+re-frozen baseline, Phase 2 +146 YES, and 36 of 36.
+
+</div>
+
+<div class="section level2">
+
+## 6. Publish
+
+Publishing writes new files under new names. Nothing published is ever
+overwritten.
+
+1.  **The four tiers** (`dev/verify/release/publish-tiers.R`):
+    `md_publish()` compiles each spec and writes a bundle under
+    `publish/<label>/<spec_hash>/`. The bundle holds the reference, its
+    statistics, `addr_freq`, places and clusters, plus a `stamp.json`
+    with md5s, the normalizer signature, and the matchdb and npnormalize
+    versions.
+2.  **The tranches**: `md_publish_tranches()` writes the database as 108
+    parquet files, split by table, layer and class, and a manifest. The
+    build id is the date plus a hash of every file’s md5
+    (`2026-11-01-67c0bd2f`). Rows are written in a fixed order, so the
+    same database gives the same files and the same id. A later build
+    can then reuse every file that did not change.
+3.  **The tranche check** (`dev/verify/tranche-check.R`): each tier
+    compiled from the tranches must be identical to its bundle.
+4.  **The databases** (`dev/verify/release/`): `compact.R` reclaims
+    space, `slim.R` writes the user copy without the ledger, and
+    `manifest.R` writes a `MANIFEST.json` for each, listing every pin.
+5.  **Upload** (`upload.sh`): files first, then manifests, and the
+    `latest.json` pointers last. A reader never finds a pointer to a
+    half-uploaded release.
+6.  **Fetch it back** (`verify-remote.R`,
+    `dev/verify/tranche-remote.R`): over public HTTPS, with no
+    credentials, as a user would. Every md5 must match, and what
+    compiles must be identical to the bundles.
+
+Old releases stay on S3 beside new ones. **Rolling back is editing a
+pointer.**
+
+</div>
+
+<div class="section level2">
+
+## What a user sees
+
+| you use                                              | when a release lands                                                                                                   |
+|------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| `md_reference("active-observed", fetch = "missing")` | nothing, until you fetch again: your local bundle is still the one you had. `md_fetch_reference()` gets the new one    |
+| `md_fetch_tranches(spec)`                            | `md_tranche_diff()` shows what changed, file by file; the next fetch copies the unchanged files and downloads the rest |
+| `md_fetch_db()`                                      | a new `MATCHDB.duckdb` and `MANIFEST.json`                                                                             |
+
+Two things protect results from a silent change:
+
+-   **The signature check.** Bundles and tranches built under one
+    normalizer are refused under another. Query keys and reference keys
+    must come from the same normalizer, or they disagree without any
+    error. When npnormalize moves ahead of the published data, as 0.1.4
+    did on 2026-11-01, install the version the data was built with until
+    it is rebuilt. `md_reference()`’s error names both signatures.
+-   **The workspace log.** Every fetch and compile records the build,
+    the normalizer and the package versions. A `version_change` row
+    marks every change (`md_log("version_change")`), so a match result
+    can always be traced to the build and normalizer that produced it.
+
+To reproduce an old result, pin all three packages and fetch the build
+you used. Builds stay published, and their manifests name everything
+they were made from.
+
+</div>
+
+<div class="section level2">
+
+## Releases so far
+
+| date       | normalizer            | npnormalize          | tranche build         | what changed                                                                                               |
+|------------|-----------------------|----------------------|-----------------------|------------------------------------------------------------------------------------------------------------|
+| 2026-10-26 | `v1-3e7b9f9d59bbb19e` | none (npmatch 0.1.1) | `2026-10-27-82c6f0cb` | first release from the ledger; the 0.1.1 tag                                                               |
+| 2026-11-01 | `v1-592912060053c4c3` | 0.1.3                | `2026-11-01-67c0bd2f` | the new normalizer: unit precedence, whole-token house numbers, `BUILDING` as a unit; the same source data |
+
+`NEWS.md` has the detail of each, and `dev/verify/logs/` keeps every log
+the checks wrote.
+
+</div>
+
+</div>

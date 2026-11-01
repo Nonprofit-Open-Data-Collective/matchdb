@@ -1,4 +1,8 @@
+<div id="main" class="col-md-9" role="main">
+
 # Add group-return rosters: the subordinate names the BMF throws away
+
+<div class="ref-description section level2">
 
 When a central organisation files a group return it attaches a roster
 naming every subordinate covered -
@@ -6,7 +10,13 @@ naming every subordinate covered -
 address for each. It is the only source that states a group's membership
 as a list rather than leaving it to be inferred from a shared GEN.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_ingest_affiliate_listing(
@@ -17,31 +27,42 @@ md_ingest_affiliate_listing(
 )
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- con:
+-   con:
 
-  A connection from
-  [`md_db()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_db.md).
+    A connection from `md_db()`.
 
-- path:
+-   path:
 
-  Path to a derived `affiliate-listing-*.csv`. `NULL` looks in the
-  `version` source directory, preferring the published tables.
+    Path to a derived `affiliate-listing-*.csv`. `NULL` looks in the
+    `version` source directory, preferring the published tables.
 
-- guard:
+-   guard:
 
-  Run
-  [`md_guard_observed()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_guard_observed.md)
-  on the observed rows of source `efile990`.
+    Run `md_guard_observed()` on the observed rows of source `efile990`.
 
-- version:
+-   version:
 
-  Pinned `efile_affiliate_listing` version, e.g. `"v3_1"`.
+    Pinned `efile_affiliate_listing` version, e.g. `"v3_1"`.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 Row counts, invisibly.
+
+</div>
+
+<div class="section level2">
 
 ## This is the source that recovers subordinate names
 
@@ -65,6 +86,10 @@ roster states the subordinate's own name, not the parent's, so
 registering it aliases nothing. The parent's name is never copied onto a
 member.
 
+</div>
+
+<div class="section level2">
+
 ## Two inputs
 
 the published table, or the old extract: From e-file v2_3 on, the roster
@@ -75,6 +100,10 @@ read. Otherwise the function falls back to the earlier derived extract,
 `affiliate-listing-2009-2013.csv`, produced from raw XML before the
 table existed. Both are pinned like any other source.
 
+</div>
+
+<div class="section level2">
+
 ## The element was renamed in 2013
 
 Returns through TY2012 use `AffiliateListing/Affiliate` with `Name/`,
@@ -84,6 +113,7 @@ Returns through TY2012 use `AffiliateListing/Affiliate` with `Name/`,
 by matching on the field suffix. A run that returns rows for 2013 only
 has silently hit the rename.
 
+<div class="sourceCode">
 
       2009    260 rows /  21 filings
       2010  1,630 rows /  66 filings
@@ -93,8 +123,14 @@ has silently hit the rename.
       ----------------------------------
              5,440 rows / 353 filings / 2,515 distinct subordinate EINs
 
+</div>
+
 Coverage is thin by construction: only 99 of 483 TY2013 group filers
 itemise members at all. This source is precise, not comprehensive.
+
+</div>
+
+<div class="section level2">
 
 ## Direction and self-references
 
@@ -102,3 +138,7 @@ The filer of a group return is the central organisation, so the edge is
 (filer, member, `group_member`) - the same direction as every other
 group source. Rows where a filer lists its own EIN are self-loops and
 are dropped.
+
+</div>
+
+</div>

@@ -45,9 +45,12 @@ matchdb/
 
 | you want | call | download |
 |---|---|---:|
-| one of the four published tiers | `md_reference("active-observed", fetch = "missing")` | 230–400 MB |
+| one of the four published tiers | `md_reference("active-observed", fetch = "missing")` | 280–470 MB |
 | your own spec | `md_fetch_tranches(spec)` | about 1 GB for an active-layer spec |
-| everything, to browse | `md_fetch_db()` | 11.7 GB |
+| everything, to browse | `md_fetch_db()` | 11.8 GB |
+
+The output below is from the build of 2026-11-01, fetched into an empty folder
+with npnormalize 0.1.3 installed.
 
 For your own spec, see what it will cost first. `md_tranches()` reads the
 published build's manifest and marks the files the spec needs:
@@ -55,9 +58,9 @@ published build's manifest and marks the files the spec needs:
 ```{r}
 s <- md_spec(layers = "bmf_active", names = c("legal", "dba"), addresses = "mailing")
 md_tranches(s)
-#> <md_tranches 2026-10-27-82c6f0cb> built 2026-10-27 from matchdb@592b078, normalizer v1-3e7b9f9d59bbb19e
-#>   108 files, 4.64 GB; here: 0 files, 0.00 GB
-#>   this spec needs 17 files, 1.03 GB; still to download: 17 files, 1.03 GB
+#> <md_tranches 2026-11-01-67c0bd2f> built 2026-11-01 from matchdb@a79e519, normalizer v1-592912060053c4c3
+#>   108 files, 4.53 GB; here: 0 files, 0.00 GB
+#>   this spec needs 17 files, 1.01 GB; still to download: 17 files, 1.01 GB
 #>              table         layer files     rows    mb here
 #>            address    bmf_active     3 13568639 856.1    0
 #>   ...
@@ -67,12 +70,14 @@ Then fetch those files, open them, and compile:
 
 ```{r}
 md_fetch_tranches(s)
+#> tranches 2026-11-01-67c0bd2f: 17 files here (0 already were, 0 copied from an older build), 1.01 GB downloaded
 con <- md_tranche_db()
-r <- md_compile(s, con)          # 2,742,924 rows, about a minute
+r <- md_compile(s, con)          # 2,742,710 rows, about a minute
 md_db_close(con)
 ```
 
 `md_tranche_manifest()` returns the build's whole manifest:
+
 * the build id;
 * when it was built, and from which matchdb commit;
 * the normalizer it was built with, and the npnormalize and npmatch versions;
@@ -101,6 +106,7 @@ bundle under `publish/`, and `md_reference()` reads it back in seconds.
 
 Every fetch, compile and publish adds one row to `logs/runs-index.csv`. Rows
 are never changed or removed. Each row records:
+
 * what was done, and when;
 * the tranche build and spec;
 * how many files were downloaded, copied from an older build, reused or
@@ -108,10 +114,10 @@ are never changed or removed. Each row records:
 * the installed matchdb, npnormalize, npmatch and normalizer signature.
 
 ```{r}
-md_log()
-#>                  run_id           kind               build        spec_hash files downloaded      bytes
-#>  20261027T184905-5f4419 fetch_tranches 2026-10-27-82c6f0cb 2402137493f88c8e    17         17 1028259600
-#>  20261027T185000-5f4479        compile 2026-10-27-82c6f0cb 2402137493f88c8e    NA         NA         NA
+md_log()[, c("run_id", "kind", "build", "spec_hash", "files", "downloaded", "bytes")]
+#>                   run_id           kind               build        spec_hash files downloaded      bytes
+#> 1 20261101T130816-243823 fetch_tranches 2026-11-01-67c0bd2f 2402137493f88c8e    17         17 1005899238
+#> 2 20261101T130925-243875        compile 2026-11-01-67c0bd2f 2402137493f88c8e    NA         NA         NA
 ```
 
 `md_log_run()` returns one action's detail. For a fetch, that is every file
@@ -119,7 +125,7 @@ with its source URL, status, rows, bytes and md5, plus the manifest it came
 from. For a compile, it is the spec, the stamp and the shape of the result:
 
 ```{r}
-md_log_run("20261027T184905-5f4419")
+md_log_run("20261101T130816-243823")
 ```
 
 `md_status()` describes what is here now. It covers the installed versions,
@@ -130,38 +136,65 @@ bundles, and the last compile. The same record is written to
 ```{r}
 md_status()
 #> <md_status> D:/matchdb
-#>   installed  matchdb 0.1.1.9000, npnormalize 0.1.0, npmatch 0.1.1.9000, normalizer v1-3e7b9f9d59bbb19e
-#>   tranches   2026-10-27-82c6f0cb (built 2026-10-27, normalizer v1-3e7b9f9d59bbb19e): 17 of 108 files here, 1.03 GB
+#>   installed  matchdb 0.1.1.9000, npnormalize 0.1.3, npmatch 0.1.1.9000 @7ea7447, normalizer v1-592912060053c4c3
+#>   tranches   2026-11-01-67c0bd2f (built 2026-11-01, normalizer v1-592912060053c4c3): 17 of 108 files here, 1.01 GB
 #>   database   none
-#>   last compile 2026-10-27T18:50:00: spec 2402137493f88c8e, 2,742,924 rows, from tranches 2026-10-27-82c6f0cb
+#>   last compile 2026-11-01T13:09:25: spec 2402137493f88c8e, 2,742,710 rows, from tranches 2026-11-01-67c0bd2f
+#>   last action  2026-11-01T13:09:25 compile (run 20261101T130925-243875)
 ```
 
 ## Updating to a new release
 
 A new release is a new build, in a new folder. Nothing in the old one is
-overwritten. To see what changed before downloading anything:
+overwritten. To see what changed before downloading anything, compare the
+build you have with the newest. Here is the update of 2026-11-01, from the
+2026-10-27 build:
 
 ```{r}
 md_tranche_diff("2026-10-27-82c6f0cb")      # your build against the newest
+#> <md_tranche_diff> 2026-10-27-82c6f0cb -> 2026-11-01-67c0bd2f
+#>   normalize_signature  v1-3e7b9f9d59bbb19e -> v1-592912060053c4c3
+#>   npnormalize_version  ? -> 0.1.3
+#>   npmatch_version      0.1.0.9000 -> 0.1.1.9000
+#>   matchdb_commit       592b078 -> a79e519
+#>   db_fingerprint       a0774546e057f983  (same)
+#>   The normalizer changed: every derived column may differ, and match results with it.
+#>   files: same 47, changed 61, added 0, removed 0
+#>   to download for the whole build: 2.36 GB of 4.53 GB
+#>              table         layer  status files rows_change
+#>    address_compact       (whole) changed     1       -1629
+#>    address_derived    bmf_active changed     3           0
+#>   ...
+#>         place_unit       (whole) changed     1       -1399
+#>   ...
 ```
 
 The diff lists:
+
 * every file as same, changed, added or removed, with its change in rows;
 * whether the normalizer, the npnormalize or npmatch version, or the matchdb
   commit changed;
 * how much a full update would download.
 
-Then fetch as before. Files whose md5 matches one in your older build are
-copied from it rather than downloaded:
+The `?` is the older build's npnormalize version: builds made before matchdb
+took the normalizer from npnormalize did not record it.
 
-```{r}
-md_fetch_tranches(s)
-#> (an illustration: the first later build will be the first real case)
-#> tranches 2026-11-30-...: 17 files here (0 already were, 14 copied from an older build), 0.21 GB downloaded
-```
+This update is a new normalizer over the same data (the `db_fingerprint` did
+not change). So every `*_derived` file changed, along with everything built
+from the keys: the compact tables, the place tables and the clusters. The raw
+`name`, `address` and `entity` files did not.
+
+Then fetch as before. Files whose md5 matches one in your older build are
+copied from it rather than downloaded. For the spec above, 7 of its 17 files
+are the same in both builds (0.66 GB). An update from the 2026-10-27 build
+copies those and downloads the other 10 (0.35 GB).
+
+Copying is how you see a release's effect on disk, not only on the matches.
+A data update with the same normalizer leaves more files the same.
 
 Rows are not added to old files. Every build recomputes, over the whole
 database:
+
 * the normalized columns;
 * the statistics cells;
 * the clusters and the compact tables.
@@ -180,6 +213,7 @@ md_tranches_prune(keep = 1)
 ## When match results change
 
 A match can move for two reasons:
+
 * the data changed: a new build;
 * the matching changed: a new npnormalize or npmatch, above all a new
   normalizer.
@@ -190,11 +224,12 @@ npmatch and normalizer with what the last action used. If they differ, it adds a
 too:
 
 ```{r}
-md_log("version_change")
-#> (an illustration of the two kinds of row)
-#>   kind           recorded_at              note
-#>   version_change 2026-11-30T09:12:41-0700 tranches 2026-10-27-82c6f0cb -> 2026-11-30-...: files same 94 changed 14 ...
-#>   version_change 2026-12-02T15:03:10-0700 normalize_signature v1-3e7b9f9d59bbb19e -> v1-...
+md_log("version_change")[, c("recorded_at", "note")]
+#> (an illustration: the two rows an update from 2026-10-27 to 2026-11-01 writes)
+#>   recorded_at  note
+#>   ...          normalize_signature v1-3e7b9f9d59bbb19e -> v1-592912060053c4c3; npnormalize_version 0.1.1 -> 0.1.3
+#>   ...          tranches 2026-10-27-82c6f0cb -> 2026-11-01-67c0bd2f: files same 47 changed 61 added 0 removed 0;
+#>                  name+address+entity rows +0; normalizer v1-3e7b9f9d59bbb19e -> v1-592912060053c4c3
 ```
 
 Read these rows next to the compiles around them. They show which build and
@@ -202,6 +237,17 @@ which normalizer produced each set of results.
 
 A build made by another normalizer is refused rather than used:
 `md_tranche_db()` and `md_reference()` stop with an error naming both
-signatures. Install the matching npnormalize, or fetch a build made with yours.
+signatures. Install the matching npnormalize, or fetch a build made with yours:
+
+```{r}
+md_reference("active-observed")
+#> Error: bundle active-observed/9cc7b76e3e144a87 was built by normalizer
+#>   v1-592912060053c4c3; the installed one is v1-1179714ce1e9d31f. ...
+```
+
+That is what npnormalize 0.1.4 gives against the data published on 2026-11-01.
+To get the right normalizer, install npnormalize at the commit the data was
+built with (`6d9c669` for 0.1.3), or wait for a build made with the newer one.
+`vignette("updates")` explains when and why a rebuild happens.
 
 To turn logging off, set `options(matchdb.log = FALSE)`.

@@ -1,9 +1,17 @@
+<div id="main" class="col-md-9" role="main">
+
 # Why 527 Schedule B is not a matchdb source
+
+<div class="ref-description section level2">
 
 `2024-11-POL-ORGS-SCHED-B.csv` (1.33 GB, 6,936,571 rows) records what a
 527 *paid out*: filer `EIN` and `ORG_NAME` on one side,
 `RECIEPIENT_NAME` plus an address on the other, with
 `EXPENDITURE_AMOUNT`, `EXPENDITURE_PURPOSE` and `EXPENDITURE_DATE`.
+
+</div>
+
+<div class="section level2">
 
 ## Details
 
@@ -31,3 +39,7 @@ rows describe people, who have no place in an organisational reference.
 
 The file is kept under `sources/query-side/` as a future matching
 workload.
+
+</div>
+
+</div>

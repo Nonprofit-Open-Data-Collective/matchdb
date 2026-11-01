@@ -1,30 +1,33 @@
+<div id="main" class="col-md-9" role="main">
+
 # Layers: which EINs a reference can match
 
 A compiled reference answers two questions: **which organizations** can
 a record be matched to, and **which names and addresses** does each one
 carry. Layers answer the first. Name and address classes answer the
-second; see
-[`vignette("corroborators")`](https://nonprofit-open-data-collective.github.io/matchdb/articles/corroborators.md)
-and
-[`vignette("sources")`](https://nonprofit-open-data-collective.github.io/matchdb/articles/sources.md).
+second; see `vignette("corroborators")` and `vignette("sources")`.
 
 Every EIN in matchdb has exactly one layer, so choosing layers is
 choosing a clean set of EINs. Two layers never overlap, and their union
 is just more EINs.
 
+<div class="section level2">
+
 ## The layers
 
-The counts are from the build of 2026-10-23 (`matchdb@bb68531`).
+The counts are from the build of 2026-11-01 (`matchdb@df7e2ce`,
+normalizer `v1-592912060053c4c3`). They are the same as in the
+2026-10-23 build: a new normalizer changes keys, not which EINs exist.
 
-| layer | what it holds | EINs |
-|----|----|---:|
-| `bmf_active` | in the newest IRS Business Master File release | 1,974,830 |
-| `bmf_inactive` | in an earlier BMF release, but not the newest: dissolved, merged, revoked or lapsed | 1,723,367 |
-| `approved_only` | approved on Form 1023-EZ but never in a BMF release the database loaded | 12,581 |
-| `filer_only` | never in the BMF, but seen in the e-file data: as a 990 filer, or as an EIN another filer reported on Schedule I or Schedule R | 318,389 |
-| `postcard_only` | known only from the 990-N e-Postcard (small organizations) | 73,503 |
-| `revoked_only` | known only from the IRS automatic-revocation list | 133,572 |
-| `irs527` | political organizations from Form 8871 (defined; not loaded in this build) | 0 |
+| layer           | what it holds                                                                                                                  |      EINs |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------------|----------:|
+| `bmf_active`    | in the newest IRS Business Master File release                                                                                 | 1,974,830 |
+| `bmf_inactive`  | in an earlier BMF release, but not the newest: dissolved, merged, revoked or lapsed                                            | 1,723,367 |
+| `approved_only` | approved on Form 1023-EZ but never in a BMF release the database loaded                                                        |    12,581 |
+| `filer_only`    | never in the BMF, but seen in the e-file data: as a 990 filer, or as an EIN another filer reported on Schedule I or Schedule R |   318,389 |
+| `postcard_only` | known only from the 990-N e-Postcard (small organizations)                                                                     |    73,503 |
+| `revoked_only`  | known only from the IRS automatic-revocation list                                                                              |   133,572 |
+| `irs527`        | political organizations from Form 8871 (defined; not loaded in this build)                                                     |         0 |
 
 An EIN gets the layer of the **first** source, in build order, that
 introduced it: the BMF, then 1023-EZ approvals, then the e-file data,
@@ -33,6 +36,10 @@ BMF and also files a 990-N is `bmf_active`, not `postcard_only`. Its
 e-Postcard names are still in the database, as names on a `bmf_active`
 EIN.
 
+</div>
+
+<div class="section level2">
+
 ## Layer is where an EIN came from; `active` is its status
 
 `layer` records provenance and does not change once assigned.
@@ -40,13 +47,17 @@ EIN.
 Keeping the two apart lets a new BMF release flip an organization’s
 status without rewriting where it came from.
 
+</div>
+
+<div class="section level2">
+
 ## Choosing layers
 
-[`md_spec()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_spec.md)
-takes the layers to include:
+`md_spec()` takes the layers to include:
+
+<div id="cb1" class="sourceCode">
 
 ``` r
-
 library(matchdb)
 
 # the default: organizations in the current BMF
@@ -56,47 +67,60 @@ active <- md_spec(layers = "bmf_active")
 unified <- md_spec(layers = c("bmf_active", "bmf_inactive"))
 ```
 
+</div>
+
 Which to use depends on the records being matched.
 
-- **Current records** (this year’s grants, a current directory):
-  `bmf_active`. The inactive tranche is nearly as large and adds little.
-  In the 0c measurement it added 1.76M rows for **−5 YES** on the 1k
-  grant benchmark, because a dissolved organization rarely receives this
-  year’s grant and its name competes with the live one.
-- **Historical records** (grants from 2012, an old survey frame): add
-  `bmf_inactive`, since the organization may have closed since.
-- **Small organizations** that never filed a full 990: consider
-  `postcard_only` and `revoked_only`. Most organizations that lose
-  exemption are revoked for failing to file for three years, so many are
-  small.
-- **Recipients that are not in the BMF at all**, such as some government
-  units, churches that never applied, and EINs reported by other filers:
-  `filer_only`.
+-   **Current records** (this year’s grants, a current directory):
+    `bmf_active`. The inactive tranche is nearly as large and adds
+    little. In the 0c measurement it added 1.76M rows for **−5 YES** on
+    the 1k grant benchmark, because a dissolved organization rarely
+    receives this year’s grant and its name competes with the live one.
+-   **Historical records** (grants from 2012, an old survey frame): add
+    `bmf_inactive`, since the organization may have closed since.
+-   **Small organizations** that never filed a full 990: consider
+    `postcard_only` and `revoked_only`. Most organizations that lose
+    exemption are revoked for failing to file for three years, so many
+    are small.
+-   **Recipients that are not in the BMF at all**, such as some
+    government units, churches that never applied, and EINs reported by
+    other filers: `filer_only`.
 
 The published tiers use the two common choices: `active-*` is
 `bmf_active`, and `unified-*` is `bmf_active` plus `bmf_inactive`.
 
+</div>
+
+<div class="section level2">
+
 ## What a layer choice leaves out
 
 A narrow layer choice can split a family. A chapter may be
-`bmf_inactive` while its parent is `bmf_active`.
-[`md_compile()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_compile.md)
-reports this in its absence report: for each cluster type, how many
-family members the chosen layers left out.
+`bmf_inactive` while its parent is `bmf_active`. `md_compile()` reports
+this in its absence report: for each cluster type, how many family
+members the chosen layers left out. `vignette("clusters")` describes the
+families and their types.
+
+<div id="cb2" class="sourceCode">
 
 ``` r
-
 r <- md_compile(md_spec(layers = "bmf_active"))
 r$report$absence
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Looking at one EIN
 
-[`md_lookup()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_lookup.md)
-shows an EIN’s layer and everything else known about it:
+`md_lookup()` shows an EIN’s layer and everything else known about it:
+
+<div id="cb3" class="sourceCode">
 
 ``` r
-
 md_lookup("53-0196605")
 #> <md_lookup> EIN-53-0196605  AMERICAN NATIONAL RED CROSS
 #>   layer bmf_active, active TRUE, NTEE P210, subsection 3
@@ -104,6 +128,11 @@ md_lookup("53-0196605")
 #>   ...
 ```
 
-[`md_layers()`](https://nonprofit-open-data-collective.github.io/matchdb/reference/md_layers.md)
-returns the vocabulary. It is append-only: values are added, never
-renamed, so a stored layer never changes meaning.
+</div>
+
+`md_layers()` returns the vocabulary. It is append-only: values are
+added, never renamed, so a stored layer never changes meaning.
+
+</div>
+
+</div>

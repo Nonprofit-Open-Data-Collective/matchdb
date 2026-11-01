@@ -28,11 +28,25 @@ check intends. See [NEWS.md](NEWS.md).
 
 The development version takes the normalizer from
 [npnormalize](https://github.com/Nonprofit-Open-Data-Collective/npnormalize)
-and only suggests npmatch. Install npmatch too to match against a reference:
+and only suggests npmatch. Three packages are involved, and both sides of a
+match have to use the same normalizer:
+
+| package | role | install for the published data |
+|---|---|---|
+| npnormalize | turns names and addresses into keys; its signature is stamped on everything matchdb publishes | **0.1.3**, the commit below |
+| matchdb | the database and the references | the development version |
+| npmatch | matches your records against a reference | the development version; 0.1.1 still carries its own, older normalizer |
 
 ```r
-remotes::install_github("Nonprofit-Open-Data-Collective/npmatch")
+remotes::install_github("Nonprofit-Open-Data-Collective/npnormalize@6d9c669")  # 0.1.3
+remotes::install_github("Nonprofit-Open-Data-Collective/npmatch", upgrade = "never")
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb", upgrade = "never")
 ```
+
+`upgrade = "never"` keeps npnormalize at 0.1.3. **npnormalize 0.1.4 moves the
+signature again**, to `v1-1179714ce1e9d31f`, and the data published on
+2026-11-01 is refused under it until it is rebuilt. Check what you have with
+`npnormalize::np_normalize_signature()`.
 
 ## Quick start: download a reference and match
 
@@ -50,7 +64,7 @@ no AWS account.
 
 ```r
 library(matchdb)
-b <- md_reference("active-observed", fetch = "missing")   # ~260 MB, once
+b <- md_reference("active-observed", fetch = "missing")   # ~290 MB, once
 
 m <- npmatch::np_cascade(my_query, b$reference,
                          name_freq = b$name_freq, token_idf = b$token_idf,
@@ -61,9 +75,13 @@ Each bundle is checked against the md5s it was published with and against the
 installed normalizer (npnormalize's signature). A stale or altered bundle is
 refused.
 
+A bundle also carries `b$addr_freq` (how crowded each address is), `b$places`
+and `b$clusters` (the families its organizations belong to), which npmatch's
+`np_pair_links()` and `np_cluster_rollup()` read.
+
 ## Look up an organization
 
-With the database downloaded (`md_fetch_db()`, about 10 GB):
+With the database downloaded (`md_fetch_db()`, 11.8 GB):
 
 ```r
 md_lookup("53-0196605")    # entity, names, addresses, events, relations, clusters, ...
@@ -104,9 +122,17 @@ them, and `md_status()` says what is there now. `md_tranche_diff()` shows
 what a new release changes. See `vignette("workspace")`.
 
 The articles explain each choice:
-[layers](https://nonprofit-open-data-collective.github.io/matchdb/articles/layers.html),
-[sources](https://nonprofit-open-data-collective.github.io/matchdb/articles/sources.html),
-[corroborators](https://nonprofit-open-data-collective.github.io/matchdb/articles/corroborators.html).
+
+| article | question |
+|---|---|
+| [Layers](https://nonprofit-open-data-collective.github.io/matchdb/articles/layers.html) | which organizations a reference can match |
+| [Sources](https://nonprofit-open-data-collective.github.io/matchdb/articles/sources.html) | where each name and address comes from |
+| [Corroborators](https://nonprofit-open-data-collective.github.io/matchdb/articles/corroborators.html) | how much to trust a name someone else wrote |
+| [Families](https://nonprofit-open-data-collective.github.io/matchdb/articles/clusters.html) | which EINs belong together when no single one can be chosen |
+
+Two more explain how the database works:
+[how corroboration is counted and recorded](https://nonprofit-open-data-collective.github.io/matchdb/articles/corroboration-ledger.html),
+and [how the database is updated](https://nonprofit-open-data-collective.github.io/matchdb/articles/updates.html).
 
 ## What is in the database
 
@@ -116,14 +142,18 @@ automatic-revocation list, Part VII officer name keys, and NCCS address
 history and geocodes. That gives 4.24M EINs, 12.8M name rows and 22.0M
 address rows. Relations between EINs and typed clusters are built on top.
 
-`dev/build-matchdb.R` rebuilds it from scratch in about 70 minutes.
-`dev/PLAN.md` is the design, and `dev/PROCESS.md` records the verification
-gates.
+Every name and address is a rollup of an append-only observation ledger
+(48.3M observations), which records which release of which source said it,
+and, for a third party, which filer. The ledger ships only in the maintainer
+copy, `MATCHDB-full.duckdb` (24.2 GB). `dev/build-matchdb.R` rebuilds the database
+from scratch in about 70 minutes. `dev/PLAN.md` is the design, and
+`dev/PROCESS.md` records the verification gates.
 
 ## Related repositories
 
 | repo | role |
 |---|---|
-| [npmatch](https://github.com/Nonprofit-Open-Data-Collective/npmatch) | the record-linkage engine. matchdb imports it; it depends on nothing here. |
+| [npnormalize](https://github.com/Nonprofit-Open-Data-Collective/npnormalize) | the normalizer and its signature. matchdb imports it, and so does npmatch, so both sides of a match key names and addresses the same way |
+| [npmatch](https://github.com/Nonprofit-Open-Data-Collective/npmatch) | the record-linkage engine. matchdb only suggests it; it reads matchdb's references and depends on nothing here |
 | [pfmatch](https://github.com/Nonprofit-Open-Data-Collective/pfmatch) | 990-PF grant-recipient matching: the first consumer, and the benchmark |
 | [ef2](https://github.com/Nonprofit-Open-Data-Collective/ef2) | IRS 990 e-file processing |

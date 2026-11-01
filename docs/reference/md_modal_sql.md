@@ -1,48 +1,72 @@
+<div id="main" class="col-md-9" role="main">
+
 # Deterministically pick a representative value
+
+<div class="ref-description section level2">
 
 Generates SQL that chooses, per group, the most frequently occurring
 value of a column, breaking ties by sorting the value itself. Used
 wherever an ingest collapses many source rows into one and has to keep a
 single spelling.
 
+</div>
+
+<div class="section level2">
+
 ## Usage
+
+<div class="sourceCode">
 
 ``` r
 md_modal_sql(table, by, value, where = NULL, alias = NULL)
 ```
 
+</div>
+
+</div>
+
+<div class="section level2">
+
 ## Arguments
 
-- table:
+-   table:
 
-  Source table or CTE name.
+    Source table or CTE name.
 
-- by:
+-   by:
 
-  Character vector of grouping columns.
+    Character vector of grouping columns.
 
-- value:
+-   value:
 
-  Column whose representative value is wanted.
+    Column whose representative value is wanted.
 
-- where:
+-   where:
 
-  Optional SQL predicate applied before counting.
+    Optional SQL predicate applied before counting.
 
-- alias:
+-   alias:
 
-  Name for the generated CTE.
+    Name for the generated CTE.
+
+</div>
+
+<div class="section level2">
 
 ## Value
 
 A single SQL string defining the CTE.
 
+</div>
+
+<div class="section level2">
+
 ## Why not mode()
 
-DuckDB's [`mode()`](https://rdrr.io/r/base/mode.html) returns *an*
-most-common value, not *the* most-common one. Under a tie it picks
-arbitrarily, and arbitrarily is not deterministically - the choice can
-differ between runs over byte-identical input.
+DuckDB's `mode()` returns *an* most-common value, not *the* most-common
+one. Under a tie it picks arbitrarily, and arbitrarily is not
+deterministically - the choice can differ between runs over
+byte-identical input.
 
 That is not cosmetic. In the Schedule I ingest it changed the row count:
 a tie between `''` and a real street name flipped which side of a
@@ -53,11 +77,14 @@ different rows" - so a build that cannot reproduce its own row count
 cannot be published against a hash at all.
 
 The same objection applies to every "give me a representative"
-aggregate: [`mode()`](https://rdrr.io/r/base/mode.html), `any_value()`,
-`first()`, `arg_max()` and `arg_min()` are all arbitrary under ties.
-**None of them should appear in an ingest.** This function exists so
-that the correct construction is shorter to write than the incorrect
-one.
+aggregate: `mode()`, `any_value()`, `first()`, `arg_max()` and
+`arg_min()` are all arbitrary under ties. **None of them should appear
+in an ingest.** This function exists so that the correct construction is
+shorter to write than the incorrect one.
+
+</div>
+
+<div class="section level2">
 
 ## What it generates
 
@@ -72,7 +99,13 @@ more correct than another - but it is a *fixed* arbitrary, which is the
 property that matters. Prefer it over anything data-dependent like
 "longest" or "most recent", which reintroduce ties of their own.
 
+</div>
+
+<div class="section level2">
+
 ## Examples
+
+<div class="sourceCode">
 
 ``` r
 cat(md_modal_sql("si_clean", c("ein", "name_key"), "name_raw"))
@@ -84,3 +117,9 @@ cat(md_modal_sql("si_clean", c("ein", "name_key"), "name_raw"))
 #>       GROUP BY ein, name_key, name_raw
 #>     )
 ```
+
+</div>
+
+</div>
+
+</div>
