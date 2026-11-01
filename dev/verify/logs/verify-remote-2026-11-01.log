@@ -1,0 +1,15 @@
+fetching active-observed/9cc7b76e3e144a87/reference.parquet
+fetching active-observed/9cc7b76e3e144a87/name_freq.parquet
+fetching active-observed/9cc7b76e3e144a87/token_idf.parquet
+fetching active-observed/9cc7b76e3e144a87/report.json
+fetching active-observed/9cc7b76e3e144a87/addr_freq.parquet
+fetching active-observed/9cc7b76e3e144a87/place.parquet
+fetching active-observed/9cc7b76e3e144a87/place_layer.parquet
+fetching active-observed/9cc7b76e3e144a87/place_unit.parquet
+fetching active-observed/9cc7b76e3e144a87/clusters.parquet
+bundle ok: 2884796 rows; places TRUE ; addr_freq np_addr_freq 
+fetching MATCHDB.duckdb (11.8 GB, built 2026-11-01T10:19:02-0700 from matchdb@df7e2ce)
+db ok: 26 tables; 8007490 addresses with a county
+spec 2402137493f88c8e: 2,742,710 rows over 1,974,830 EINs
+compile from the fetched db: 2742710 rows
+11.3 min

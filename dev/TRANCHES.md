@@ -139,17 +139,29 @@ credentials:
 | then `unified-observed` | 0.54 GB, 0.5 min (the 19 files it shares were skipped) | compiled in 2.1 min; identical to the bundle |
 | then `tables = "all"` | 2.92 GB, 2.8 min | `md_lookup()` and `md_cluster()` identical to the database |
 
+**Uploaded 2026-11-01:** build `2026-11-01-67c0bd2f`, built under npnormalize
+0.1.3 (signature `v1-592912060053c4c3`, matchdb#29), 108 files, 4.53 GB,
+9 min, by `dev/verify/release/upload.sh`, which now syncs the build named by
+`tranches/latest.json` and then the pointer. It is the first live build made
+with the deterministic sort (see "The workspace and its log"):
+`tranche-check` rebuilt the same build id from the same database, so the next
+update can reuse every unchanged file. `82c6f0cb`, which predates the fix and
+sorted 8 tables (1.37 GB) in a different row order on each run, stays on S3
+beside it.
+
+**Fetched back** (`dev/verify/logs/tranche-remote-2026-11-01.log`):
+
+| step | download | result |
+|---|---:|---|
+| `active-observed` | 1.16 GB, 1.2 min | compiled in 1.3 min; identical to the bundle |
+| then `unified-observed` | 0.54 GB, 0.7 min (the 19 files it shares were skipped) | compiled in 2.2 min; identical to the bundle |
+| then `tables = "all"` | 2.83 GB, 3.0 min | `md_lookup()` and `md_cluster()` identical to the database |
+
 ## Not done
 
 * **Reading parquet straight off S3 without downloading** works in DuckDB
   (`read_parquet('https://…')`) and would suit single-EIN lookups. It is not
   wired up, and compiling should download first anyway (§7a).
-* **The live build predates the deterministic sort.** `82c6f0cb` sorted whole
-  tables by EIN only, and 8 of them (1.37 GB) came out in a different row
-  order on each run. Fixed (see "The workspace and its log"): the same
-  database now gives the same build, `d06e747d`. The next upload should be a
-  build made with the fix, so that the update after it can reuse every
-  unchanged file.
 * **Per-cell posting lists** (§6c, §7g) would make `ref_index` a sum as well.
   It is still built from the frame.
 

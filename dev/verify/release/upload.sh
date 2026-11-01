@@ -18,9 +18,20 @@ done
 say "bundles"
 aws s3 sync "$D/publish" "$S3/publish" --exclude "latest.json" --only-show-errors
 aws s3 cp "$D/publish/latest.json" "$S3/publish/latest.json" --only-show-errors
+# the tranche build named by tranches/latest.json, then the pointer itself
+B=$(sed -n 's/.*"build": *"\([^"]*\)".*/\1/p' "$D/tranches/latest.json")
+say "tranches $B"
+aws s3 sync "$D/tranches/$B" "$S3/tranches/$B" --only-show-errors
+aws s3 cp "$D/tranches/latest.json" "$S3/tranches/latest.json" --only-show-errors
 say "logs"
-aws s3 cp "$D/logs/build-matchdb.log" "$S3/logs/build.log" --only-show-errors
-aws s3 cp "$L/build-ledger-$DAY.log" "$S3/logs/build-ledger.log" --only-show-errors
+# The gate logs must exist for the day. The build logs exist only for the step
+# that ran (a ledger build, or a normalizer rebuild); the rest keep the copy
+# already uploaded.
+opt(){ if [ -f "$1" ]; then aws s3 cp "$1" "$2" --only-show-errors; else echo "  (no $1)"; fi; }
+opt "$D/logs/build-matchdb.log" "$S3/logs/build.log"
+opt "$L/build-ledger-$DAY.log" "$S3/logs/build-ledger.log"
+opt "$L/rebuild-normalizer-$DAY.log" "$S3/logs/rebuild-normalizer-$DAY.log"
+opt "$L/rebuild-normalizer-install-$DAY.log" "$S3/logs/rebuild-normalizer-install-$DAY.log"
 aws s3 cp "$L/check-build-$DAY.log" "$S3/logs/check.log" --only-show-errors
 aws s3 cp "$L/phase1-gate-$DAY.log" "$S3/logs/phase1-gate-$DAY.log" --only-show-errors
 aws s3 cp "$L/phase2-measure-$DAY.log" "$S3/logs/phase2-measure-$DAY.log" --only-show-errors
