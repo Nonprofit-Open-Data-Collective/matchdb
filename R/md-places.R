@@ -194,8 +194,18 @@ md_build_places <- function(con, share_min = 10L, unit_coverage_min = 0.5,
     ), hist AS (
       SELECT place_key, count(DISTINCT ein) AS n_eins_ever,
              min(coalesce(fy, ly)) AS first_year, max(coalesce(ly, fy)) AS last_year,
-             bool_or(state IN ('AA', 'AE', 'AP') OR upper(trim(coalesce(city, ''))) IN ('APO', 'FPO', 'DPO')
-                     OR regexp_matches(street_key, '^(GENERAL DELIVERY|PSC [0-9]+|CMR [0-9]+|UNIT [0-9]+ BOX)')) AS military_or_gd,
+             -- The street branch of this flag used to be a hand-typed copy of
+             -- the GENERAL DELIVERY / PSC / CMR vocabulary. npnormalize 0.1.6
+             -- owns that vocabulary as its mailonly gate and md_place_key() now
+             -- blanks on it, so every such row is deleted from pl_addr above
+             -- and the branch was provably unreachable: a place that is
+             -- military mail no longer exists to be flagged, which is the
+             -- problem solved rather than hidden. What is left is matchdb own
+             -- and still reachable -- an on-base STREET address, whose city and
+             -- state say military while the street line does not. npnormalize
+             -- only ever sees the street, so these two columns copy nothing.
+             bool_or(state IN ('AA', 'AE', 'AP')
+                     OR upper(trim(coalesce(city, ''))) IN ('APO', 'FPO', 'DPO')) AS military_or_gd,
              bool_or(regexp_matches(street_key, '^C O ')) AS care_of_street,
              bool_or(regexp_matches(street_key, '(^| )[A-Z]{2}[0-9]{1,2} [0-9]{3,5}$')) AS mail_code
       FROM pl_addr GROUP BY 1
@@ -322,18 +332,27 @@ md_build_places <- function(con, share_min = 10L, unit_coverage_min = 0.5,
 #' npnormalize's address key and suite identifier
 #'
 #' `md_place_key()` is npnormalize's address key: the normalized street, a space,
-#' the five-digit ZIP; empty for a PO box, because a box number is the address
-#' and counting records at one counts its owners, not a building's tenants.
-#' `md_unit_id()` is the suite identifier with its designator and separators
-#' dropped ("STE D-2" -> `D2`, "# 300" -> `300`), so "STE 300", "Suite 300" and
-#' "# 300" are one office.
+#' the five-digit ZIP; empty for any mail-delivery address, because the key
+#' answers *same building?* and none of them is a building. That covers a PO box
+#' (a box number is the address, so counting records at one counts its owners
+#' rather than a building's tenants) and, from npnormalize 0.1.6, general
+#' delivery and military mail. `md_unit_id()` is the suite identifier with its
+#' designator and separators dropped ("STE D-2" -> `D2`, "# 300" -> `300`), so
+#' "STE 300", "Suite 300" and "# 300" are one office.
 #'
 #' `md_place_key()` calls [npnormalize::np_addr_key()] and `md_unit_id()` calls
 #' [npnormalize::np_unit_id()]. The SQL macros `md_place_key()` and
 #' `md_unit_id()` apply the same rules over the regex strings
-#' [npnormalize::np_pattern()] publishes (npnormalize 0.1.5 and later), read
-#' when the macros are created, so they cannot hold an older pattern than the
-#' installed npnormalize; a test holds them to npnormalize's functions.
+#' [npnormalize::np_pattern()] publishes (npnormalize 0.1.6 and later; the
+#' place key reads both the `"pobox"` and `"mailonly"` gates), read when the
+#' macros are created, so they cannot hold an older pattern than the installed
+#' npnormalize; a test holds them to npnormalize's functions.
+#'
+#' The complement is [npnormalize::np_mail_key()], stored as the `mail_key`
+#' column: a blanked box still says something, since two organizations
+#' collecting mail from the *same* box are likely administered by the same
+#' people. Weight it with [npnormalize::np_mail_freq()] before believing it —
+#' one BMF box holds 3,626 EINs.
 #'
 #' @param street_key npnormalize's `street_key`.
 #' @param zip5 Five-digit ZIP.
@@ -350,15 +369,25 @@ md_unit_id <- function(unit) {
   npnormalize::np_unit_id(unit)
 }
 
-# The PO box gate and the np_unit_id() designator strip come from npnormalize,
-# never from a copy here. DuckDB's R client cannot call np_addr_key() from SQL,
-# so the macros below are written over npnormalize's own regex strings, which
-# np_pattern() hands out in the subset R's engine and RE2 share. They are read
-# each time the macros are created, not when matchdb is installed, so upgrading
-# npnormalize alone moves the macros with np_addr_key(). A hand-typed copy is
-# how this drifted once: npnormalize 0.1.5 made "PO BOX A" a box and the copy
-# kept keying it as a building. test-places.R holds the macros to npnormalize's
-# functions and to np_pattern() itself.
+# The address-key gates and the np_unit_id() designator strip come from
+# npnormalize, never from a copy here. DuckDB's R client cannot call
+# np_addr_key() from SQL, so the macros below are written over npnormalize's own
+# regex strings, which np_pattern() hands out in the subset R's engine and RE2
+# share. They are read each time the macros are created, not when matchdb is
+# installed, so upgrading npnormalize alone moves the macros with
+# np_addr_key(). A hand-typed copy is how this drifted once: npnormalize 0.1.5
+# made "PO BOX A" a box and the copy kept keying it as a building.
+# test-places.R holds the macros to npnormalize's functions and to np_pattern()
+# itself.
+#
+# np_addr_key() blanks on the UNION of TWO patterns as of npnormalize 0.1.6, and
+# reading only "pobox" is how this drifted a second time (matchdb#35) -- the
+# wiring above was already right, and it carried the new box spellings DRAWER 7
+# and PO BX 3 for free, but a gate that did not exist when it was written could
+# not be read by it. "mailonly" is general delivery and military mail: a
+# delivery point with no box number and no building. The two patterns overlap by
+# design (a DRAWER is in both of npnormalize's vocabularies), so ORing the raw
+# strings is correct and needs no ordering care.
 .md_sql_pattern <- function(which) {
   p <- npnormalize::np_pattern(which)
   if (!is.character(p) || length(p) != 1L || is.na(p) || !nzchar(p))
@@ -370,9 +399,10 @@ md_unit_id <- function(unit) {
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_place_key(street_key, zip5) AS
       CASE WHEN coalesce(CAST(street_key AS VARCHAR), '') = ''
+                OR regexp_matches(upper(CAST(street_key AS VARCHAR)), '%s')
                 OR regexp_matches(upper(CAST(street_key AS VARCHAR)), '%s') THEN ''
            ELSE upper(CAST(street_key AS VARCHAR)) || ' ' || coalesce(CAST(zip5 AS VARCHAR), '') END",
-    .md_sql_pattern("pobox")))
+    .md_sql_pattern("pobox"), .md_sql_pattern("mailonly")))
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_unit_id(unit) AS
       nullif(regexp_replace(regexp_replace(upper(CAST(unit AS VARCHAR)), '%s', ''),

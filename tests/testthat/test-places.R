@@ -50,9 +50,15 @@ place_db <- function() {
   for (i in 1:2) add(e(i, 17), sprintf("CURRENT CLIENT %s", LETTERS[i]), "77 AGENT WAY", zip5 = "60605")
   for (i in 3:12) add(e(i, 17), sprintf("FORMER CLIENT %s", LETTERS[i]), "77 AGENT WAY", zip5 = "60605",
                       class = "historical", fv = "2012", lv = "2014")
-  # military: two units at one APO address
+  # military, two ways. The PSC line is a mail-delivery address: npnormalize
+  # 0.1.6 blanks its place key, so it forms NO place at all and is asserted
+  # that way below. The on-base street address is the case the military flag
+  # still exists for -- the street is a street, and only city and state say
+  # military, which npnormalize never sees.
   for (i in 1:2) add(e(i, 18), sprintf("UNIT FUND %s", LETTERS[i]), "PSC 802 BOX 74", zip5 = "09499",
                      city = "APO", state = "AE")
+  for (i in 1:2) add(e(i, 22), sprintf("BASE CHAPEL %s", LETTERS[i]), "7 BASE HOUSING RD",
+                     zip5 = "09499", city = "APO", state = "AE")
   # one building, two spellings: same rooftop, different street_key
   add(e(1, 19), "ALPHA ARTS", "127 FILMORE LN", zip5 = "60606", lat = 41.88001, lon = -87.63002,
       gtype = "PointAddress")
@@ -127,7 +133,15 @@ test_that("the flags catch what the class cannot see", {
   expect_equal(c(ch$n_eins, ch$n_eins_ever), c(2, 12))
   expect_true(ch$flag_agent_churn)
   expect_equal(c(ch$first_year, ch$last_year), c(2012, 2024))
-  expect_true(pl(con, "PSC 802 BOX 74 09499")$flag_military_or_gd)
+  # An on-base STREET address is flagged, from city and state alone: the street
+  # line looks ordinary, so this is the branch of the flag matchdb still owns.
+  expect_true(pl(con, "7 BASE HOUSING RD 09499")$flag_military_or_gd)
+  # and the mail-delivery form is not a place to flag any more. npnormalize
+  # 0.1.6 blanks its place key (np_pattern("mailonly")), so md_build_places()
+  # drops it with the PO boxes rather than classifying it as a building
+  # (matchdb#35). The flag's old street regex was a hand-typed copy of that
+  # same vocabulary, and this is why it is gone.
+  expect_equal(nrow(pl(con, "PSC 802 BOX 74 09499")), 0L)
   # an ordinary small cluster carries no flags
   expect_equal(pl(con, "1 SCHOOL ST 60602")$place_flags, "")
 })
@@ -211,24 +225,40 @@ test_that("the place key and suite id equal npnormalize's own functions", {
   expect_identical(got$id, npnormalize::np_unit_id(u))
   expect_identical(md_place_key(sk, z), npnormalize::np_addr_key(sk, z))
   expect_identical(md_unit_id(u), npnormalize::np_unit_id(u))
-  # The guard has teeth: the lettered box is blanked in both, which a macro
-  # still holding the pre-0.1.5 digits-only copy would not do.
+  # The guard has teeth, twice over. The lettered box is blanked in both, which
+  # a macro still holding the pre-0.1.5 digits-only copy would not do; and
+  # GENERAL DELIVERY and the military form are blanked, which is what a macro
+  # reading only the "pobox" gate got wrong (matchdb#35). DRAWER 7 and PO BX 3
+  # are the control: npnormalize 0.1.6 made them boxes and the existing wiring
+  # carried them with no change here, so a failure on those two would mean the
+  # np_pattern() read had broken rather than the gate being missing.
   expect_identical(got$k[sk %in% "PO BOX A"], "")
+  expect_identical(got$k[sk %in% c("GENERAL DELIVERY", "PSC 1234 BOX 56")],
+                   c("", ""))
+  expect_identical(got$k[sk %in% c("DRAWER 7", "PO BX 3")], c("", ""))
+  # and a route is NOT blanked: it is a unique delivery point, so npnormalize
+  # keeps its key and so must the macro
+  expect_true(nzchar(got$k[sk %in% "RR 1 BOX 8"]))
 })
 
 test_that("the SQL macros read np_pattern() when created, not a copy", {
   # A stand-in np_pattern() must reach the macros. A pattern re-typed into
   # matchdb would ignore it, and would go stale the next time npnormalize moves.
+  # Both place-key gates are mocked, so this also asserts that the macro reads
+  # "mailonly" at all -- with the gate dropped, YY 12 would keep a key.
   local_mocked_bindings(
     np_pattern = function(which) switch(which, pobox = "^ZZ ?[0-9]+",
+                                        mailonly = "^YY ?[0-9]+",
                                         unit_id = "^QQ[ .,]*", stop(which)),
     .package = "npnormalize")
   con <- DBI::dbConnect(duckdb::duckdb()); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   .md_place_macros(con)
   got <- DBI::dbGetQuery(con, "
-    SELECT md_place_key('ZZ 12', '60601') AS zz, md_place_key('PO BOX 12', '60601') AS po,
+    SELECT md_place_key('ZZ 12', '60601') AS zz, md_place_key('YY 12', '60601') AS yy,
+           md_place_key('PO BOX 12', '60601') AS po,
            md_unit_id('QQ 300') AS qq, md_unit_id('STE 300') AS ste")
   expect_identical(got$zz, "")
+  expect_identical(got$yy, "")
   expect_identical(got$po, "PO BOX 12 60601")
   expect_identical(got$qq, "300")
   expect_identical(got$ste, "STE300")
