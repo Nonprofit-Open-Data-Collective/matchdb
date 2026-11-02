@@ -28,7 +28,7 @@ Imports:
     duckdb,
     jsonlite,
     methods,
-    npnormalize (>= 0.1.7),
+    npnormalize (>= 0.1.8),
     stringr,
     stats,
     tools,

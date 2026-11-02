@@ -8,6 +8,42 @@
 
 <div class="section level3">
 
+### npnormalize 0.1.8: one case taken back out of the house-number join
+
+-   **Nothing in this package changes, and nothing needed to.** 0.1.8
+    narrows `.np_hyphen_house` so a lone `N`, `S`, `E` or `W` is read as
+    a direction rather than closed up into the house number. matchdb
+    replicates the *name* rules in SQL — `md_guard_clean()`,
+    `md_guard_key()`, `md_light_key()` — and never the street key, so no
+    macro here mirrors the rule that moved. `md_place_key()` reads the
+    derived `street_key` and picks the change up through a rebuild, as
+    it did for 0.1.7.
+-   **The change was found by measuring 0.1.7 against this database.**
+    With the 0.1.7 rows staged beside the 0.1.3 ones,
+    `md_normalizer_diff()` reported 1,499 split address groups, which
+    the four-release diff could not attribute. Re-deriving every
+    affected street twice — once as shipped, once with the join replaced
+    by identity — put all 1,499 on
+    [#16](https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues/16),
+    and isolating the join over the 22,026,817-row `address` table gave
+    its own ledger: **7,583 EIN-level groups merged, 1,496 split**, with
+    every split one address filed two ways and none of them two
+    different streets. `1002-E SENECA ST` keyed as `1002E SENECA ST`,
+    apart from the `1002 E SENECA ST` spelling of the same door; 0.1.8
+    closes 39 such groups. The remaining 1,457 are a measured limitation
+    of any hyphen-based rule, recorded at `.np_hyphen_house`.
+-   **The floor is `npnormalize (>= 0.1.8)`** and the signature is
+    `v1-5e901add4a04a5d6`.
+-   **The database still is not rebuilt**, and the `v1-59c6e84c5f38e9f5`
+    rows staged in `name_text_derived` and `address_text_derived` are
+    superseded before they were ever adopted — `name_derived` and
+    `address_derived` were never relinked to them. They can be dropped
+    once the 0.1.8 pass lands, the same way the 0.1.6 staging rows were.
+
+</div>
+
+<div class="section level3">
+
 ### npnormalize 0.1.7: the split-word table the SQL key was missing
 
 -   **`md_guard_key()`’s macro applies `np_name_rules()$split_words`.**
