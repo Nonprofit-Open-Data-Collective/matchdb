@@ -1,0 +1,9 @@
+data root: D:/matchdb 
+npnormalize 0.1.8 | old v1-59c6e84c5f38e9f5 -> new v1-5e901add4a04a5d6
+name_text_derived: 7,784,942 rows under v1-59c6e84c5f38e9f5 dropped
+address_text_derived: 12,987,311 rows under v1-59c6e84c5f38e9f5 dropped
+                table normalize_signature        n
+    name_text_derived v1-592912060053c4c3  7784942
+    name_text_derived v1-5e901add4a04a5d6  7784942
+ address_text_derived v1-592912060053c4c3 12987311
+ address_text_derived v1-5e901add4a04a5d6 12987311
