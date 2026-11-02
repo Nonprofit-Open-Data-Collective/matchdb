@@ -4,15 +4,20 @@
 # signature's rows go in beside the old ones and the two can be compared before
 # anything compile reads is changed.
 #
-#   Rscript dev/rebuild-normalizer.R <old-sig>              # derive + diff only
-#   Rscript dev/rebuild-normalizer.R <old-sig> --install    # ...then adopt it
-#   Rscript dev/rebuild-normalizer.R <old-sig> --drop-old   # once no published
-#                                                           # tier names <old-sig>
+#   Rscript dev/rebuild-normalizer.R <old-sig>                    # derive + diff
+#   Rscript dev/rebuild-normalizer.R <old-sig> --install          # ...then adopt
+#   Rscript dev/rebuild-normalizer.R <old-sig> --install --prune  # ...and tidy
+#   Rscript dev/rebuild-normalizer.R <old-sig> --drop-old         # once no
+#                                                 # published tier names it
 #
 # Without --install the new rows sit in name_text_derived and
 # address_text_derived and nothing else moves. --install relinks name_derived
 # and address_derived to the installed signature and rebuilds every table
-# dev/build-matchdb.R builds after the derived columns. Then rerun the gates:
+# dev/build-matchdb.R builds after the derived columns. It then reports the
+# stored signatures nothing needs any more -- neither the installed one, nor
+# <old-sig>, nor one a published tier names -- and --prune deletes them, which
+# is the retention rule the staging tables otherwise rely on a maintainer to
+# remember. Then rerun the gates:
 #   Rscript dev/verify/run-gate.R; Rscript dev/verify/phase2-measure.R
 #   Rscript dev/check-build.R
 # and republish the tiers (dev/verify/release/publish-tiers.R).
@@ -23,6 +28,7 @@ a <- commandArgs(trailingOnly = TRUE)
 old <- a[!startsWith(a, "--")][1]
 install <- "--install" %in% a
 drop_old <- "--drop-old" %in% a
+prune <- "--prune" %in% a
 if (is.na(old)) stop("usage: Rscript dev/rebuild-normalizer.R <old-signature> [--install | --drop-old]")
 new <- npnormalize::np_normalize_signature()
 if (identical(old, new)) stop("the installed normalizer is already ", new)
@@ -45,14 +51,9 @@ con <- md_db()
 on.exit(md_db_close(con), add = TRUE)
 
 if (drop_old) {
-  pub <- md_path("publish", "latest.json")
-  if (file.exists(pub)) {
-    l <- jsonlite::read_json(pub)
-    sigs <- vapply(names(l), function(lab) jsonlite::read_json(md_path(
-      "publish", lab, l[[lab]]$spec_hash, "stamp.json"))$normalize_signature, "")
-    if (old %in% sigs) stop("published tier(s) still name ", old, ": ",
-                            paste(names(sigs)[sigs == old], collapse = ", "))
-  }
+  sigs <- md_published_signatures()
+  if (old %in% sigs) stop("published tier(s) still name ", old, ": ",
+                          paste(names(sigs)[sigs == old], collapse = ", "))
   for (t in c("name_text_derived", "address_text_derived")) {
     n <- DBI::dbExecute(con, sprintf("DELETE FROM %s WHERE normalize_signature = %s",
                                      t, DBI::dbQuoteString(con, old)))
@@ -82,6 +83,39 @@ if (install) {
   step("statistics cells", md_build_stats(con = con))
   DBI::dbExecute(con, "CHECKPOINT")
   cat("\ninstalled", new, ". Now run the gates, then republish.\n")
+
+  # Nothing prunes the staging tables on its own: md_build_text_derived() only
+  # adds rows for the installed signature, so every signature move leaves
+  # another ~20.8M rows behind (0.75 GB) until someone remembers them. Three
+  # sets had accumulated by 2026-11-02. Report them here, where the move
+  # happens, rather than leaving it to be noticed later -- but delete only on
+  # --prune, because the keys a stale set holds are the only way to diff back
+  # to it without re-deriving every string.
+  cat("\n==== stored signatures nothing needs any more\n")
+  cat("keeping", new, "(installed),", old, "(the diff's baseline)")
+  pub <- unique(unname(md_published_signatures()))
+  if (length(pub)) cat(", and published:", paste(setdiff(pub, c(new, old)), collapse = " "))
+  cat("\n")
+  gone <- md_droppable_signatures(con, keep = c(new, old))
+  if (!is.null(gone) && nrow(gone)) {
+    print(gone, row.names = FALSE)
+    if (prune) {
+      for (s in unique(gone$normalize_signature)) {
+        for (t in c("name_text_derived", "address_text_derived")) {
+          n <- DBI::dbExecute(con, sprintf("DELETE FROM %s WHERE normalize_signature = %s",
+                                           t, DBI::dbQuoteString(con, s)))
+          cat(sprintf("%s: %s rows under %s dropped\n", t, format(n, big.mark = ","), s))
+        }
+      }
+      DBI::dbExecute(con, "CHECKPOINT")
+      print(md_text_stats(con)$signatures, row.names = FALSE)
+    } else {
+      cat(sprintf("%s row(s) droppable. Rerun with --prune, or drop one with --drop-old.\n",
+                  format(sum(gone$n), big.mark = ",")))
+    }
+  } else {
+    cat("none\n")
+  }
 } else {
   cat("\nnot installed. Review the diff, then rerun with --install.\n")
 }

@@ -190,6 +190,40 @@ md_text_stats <- function(con) {
   list(sizes = sizes, signatures = sigs)
 }
 
+#' @rdname md_text
+#' @return `md_published_signatures()`: the normalizer signature each published
+#'   tier names, a character vector named by tier label, read from
+#'   `publish/latest.json` and each tier's `stamp.json`. Empty when nothing is
+#'   published. Named, so a caller can say which tier is holding a signature.
+#' @export
+md_published_signatures <- function() {
+  pub <- md_path("publish", "latest.json")
+  if (!file.exists(pub)) return(character())
+  l <- jsonlite::read_json(pub)
+  out <- vapply(names(l), function(lab) {
+    st <- md_path("publish", lab, l[[lab]]$spec_hash, "stamp.json")
+    if (!file.exists(st)) return(NA_character_)
+    jsonlite::read_json(st)$normalize_signature
+  }, character(1))
+  out[!is.na(out)]
+}
+
+#' @rdname md_text
+#' @param keep Signatures to keep whatever the published tiers say - normally
+#'   the installed one and the predecessor a diff was taken against.
+#' @return `md_droppable_signatures()`: the rows in the two derived tables that
+#'   nothing needs any more, as `table`, `normalize_signature` and `n`.
+#' @export
+md_droppable_signatures <- function(con, keep = npnormalize::np_normalize_signature()) {
+  sigs <- md_text_stats(con)$signatures
+  if (is.null(sigs) || !nrow(sigs)) return(sigs)
+  # A published tier's stamp is a promise about the keys in the parquet files
+  # beside it, so the rows those keys came from stay while the stamp stands --
+  # the same guard --drop-old has always applied, read from one place now.
+  keep <- unique(c(keep, unname(md_published_signatures())))
+  sigs[!sigs$normalize_signature %in% keep, , drop = FALSE]
+}
+
 # Normalize the strings in `src` that have no row in `dest` for `sig`, and
 # append them. The set to do is fixed in a temp table first: paging over "not
 # yet derived" while appending would shrink the set under the offset.
