@@ -57,6 +57,33 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="matchdb-development-version">matchdb (development version)<a class="anchor" aria-label="anchor" href="#matchdb-development-version"></a></h2>
 <div class="section level3">
+<h3 id="npnormalize-the-address-key-has-a-second-gate-development-version">npnormalize 0.1.6: the address key has a second gate (<a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues/35" class="external-link">#35</a>)<a class="anchor" aria-label="anchor" href="#npnormalize-the-address-key-has-a-second-gate-development-version"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/md_place_key.html">md_place_key()</a></code>’s macro reads both gates.</strong> <code>np_addr_key()</code> blanks on the union of <code>np_pattern("pobox")</code> and the new <code>np_pattern("mailonly")</code> — general delivery and military mail, a delivery point with no box number and no building. The macro read only the first and so kept those keys: the parity test failed on <code>GENERAL DELIVERY</code> and <code>PSC 1234 BOX 56</code>, which the fixture already held. The two patterns overlap by design (a <code>DRAWER</code> is in both of npnormalize’s vocabularies), so the macro ORs the raw strings.</li>
+<li>
+<strong>The <code>np_pattern()</code> wiring did its job.</strong> <code>DRAWER 7</code> and <code>PO BX 3</code> are new box spellings in 0.1.6 and the macro blanked both with no change here, because it reads the live string. Only the gate that did not exist when that wiring was written had to be added, and the two now serve as the control in the parity test.</li>
+<li>
+<strong><code>is_mail_only</code> and <code>mail_key</code> are stored address columns.</strong> <code>mail_key</code> is the complement of the place key — the box plus its ZIP, blank for everything else — and is what a blanked box still says: two organizations collecting mail from the <em>same</em> box are likely administered by the same people. Weight it with <code><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_mail_freq.html" class="external-link">npnormalize::np_mail_freq()</a></code> before believing it; one BMF box holds 3,626 EINs. Both are functions of the address row as a whole, which is why they sit beside <code>zip5</code> in the stored list.</li>
+<li>
+<strong>The military flag’s street branch is gone, because it cannot fire.</strong> It was a hand-typed <code>^(GENERAL DELIVERY|PSC [0-9]+|CMR [0-9]+|UNIT [0-9]+ BOX)</code> — the same vocabulary npnormalize now owns. Those rows are deleted from <code>pl_addr</code> before <code>place</code> is built, so a place that is military mail no longer exists to be flagged. <code>flag_military_or_gd</code> keeps its <code>state</code>/<code>city</code> branches, which are matchdb’s own and still reachable for an on-base <em>street</em> address: the street line looks ordinary and only <code>AA</code>/<code>AE</code>/<code>AP</code> or an <code>APO</code>/<code>FPO</code>/<code>DPO</code> city says military, neither of which npnormalize ever sees. The fixture gained such an address so the flag keeps live coverage.</li>
+<li>
+<strong>matchdb now requires npnormalize 0.1.6</strong>, the first to publish <code>np_pattern("mailonly")</code>.</li>
+<li>
+<strong>The database still is not rebuilt.</strong> The signature is now <code>v1-d49b18cc81ab79fb</code>; <code><a href="../reference/md_build_derived.html">md_build_derived()</a></code> stamps it on the next pass, and the staleness guard refuses to mix signatures in one derived table.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="the-sql-macros-take-their-patterns-from-npnormalize-development-version">The SQL macros take their patterns from npnormalize<a class="anchor" aria-label="anchor" href="#the-sql-macros-take-their-patterns-from-npnormalize-development-version"></a></h3>
+<ul><li>
+<strong><code><a href="../reference/md_place_key.html">md_place_key()</a></code> and <code><a href="../reference/md_place_key.html">md_unit_id()</a></code> in SQL no longer hold a copy of npnormalize’s patterns.</strong> The PO box gate and the suite designator strip are read from <code>npnormalize::np_pattern("pobox")</code> and <code>np_pattern("unit_id")</code> each time the macros are created, so upgrading npnormalize alone moves them with <code>np_addr_key()</code> and <code>np_unit_id()</code>. The copy had already drifted: npnormalize 0.1.5 made a lettered box (<code>PO BOX A</code>) a box, and the macro still keyed it as a building.</li>
+<li>
+<strong>matchdb now requires npnormalize 0.1.5</strong>, the first to publish <code>np_pattern()</code>.</li>
+<li>
+<strong><code>street_has_box</code> is a stored address column.</strong> npnormalize 0.1.4 added it to <code>np_normalize()</code>‘s output, and with it installed 26 tests failed on <code>main</code>: a compiled frame lacked a column the normalizer produces. Existing <code>address_text_derived</code> tables gain the column on the next derive pass, empty for older signatures’ rows.</li>
+<li>The parity test now covers every branch of the box pattern (lettered boxes, streets named for a box, a box number followed by a mail stop, and the rural-route, military and <code>GENERAL DELIVERY</code> lines npnormalize#13 is about), and a second test swaps in a stand-in <code>np_pattern()</code> to prove the macros read it rather than a copy.</li>
+<li>
+<strong>The database is not yet rebuilt</strong> under the 0.1.5 signature (<code>v1-533f186c123357cf</code>); that waits for npnormalize to settle (<a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues/13" class="external-link">#13</a>).</li>
+</ul></div>
+<div class="section level3">
 <h3 id="npnormalize-the-signature-moves-development-version">npnormalize 0.1.3: the signature moves (<a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb/issues/29" class="external-link">#29</a>)<a class="anchor" aria-label="anchor" href="#npnormalize-the-signature-moves-development-version"></a></h3>
 <ul><li>
 <strong>matchdb now requires npnormalize 0.1.3.</strong> Its normalizer signature is <code>v1-592912060053c4c3</code> (was <code>v1-3e7b9f9d59bbb19e</code>), so an install that would silently produce the old keys cannot happen. The database was rebuilt once, under 0.1.3; the 0.1.2 rebuild (<code>v1-6d90b52d8b781673</code>) was never published.</li>
