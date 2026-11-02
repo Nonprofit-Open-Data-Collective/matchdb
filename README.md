@@ -23,8 +23,9 @@ normalizer moved into npnormalize.
 
 **The published data moved on 2026-11-01.** The database, bundles and tranches
 online are now built with npnormalize 0.1.3, signature `v1-592912060053c4c3`.
-Only the development version reads them; 0.1.1 refuses them, as the signature
-check intends. See [NEWS.md](NEWS.md).
+0.1.1 refuses them, and so does the development version on `main`, which has
+moved on to npnormalize 0.1.6; install the pinned commits below to read them.
+See [NEWS.md](NEWS.md).
 
 The development version takes the normalizer from
 [npnormalize](https://github.com/Nonprofit-Open-Data-Collective/npnormalize)
@@ -33,20 +34,25 @@ match have to use the same normalizer:
 
 | package | role | install for the published data |
 |---|---|---|
-| npnormalize | turns names and addresses into keys; its signature is stamped on everything matchdb publishes | **0.1.3**, the commit below |
-| matchdb | the database and the references | the development version |
-| npmatch | matches your records against a reference | the development version; 0.1.1 still carries its own, older normalizer |
+| npnormalize | turns names and addresses into keys; its signature is stamped on everything matchdb publishes | **0.1.3**, commit `6d9c669` |
+| matchdb | the database and the references | commit `df7e2ce` |
+| npmatch | matches your records against a reference | commit `7ea7447`; 0.1.1 still carries its own, older normalizer |
 
 ```r
 remotes::install_github("Nonprofit-Open-Data-Collective/npnormalize@6d9c669")  # 0.1.3
-remotes::install_github("Nonprofit-Open-Data-Collective/npmatch", upgrade = "never")
-remotes::install_github("Nonprofit-Open-Data-Collective/matchdb", upgrade = "never")
+remotes::install_github("Nonprofit-Open-Data-Collective/npmatch@7ea7447", upgrade = "never")
+remotes::install_github("Nonprofit-Open-Data-Collective/matchdb@df7e2ce", upgrade = "never")
 ```
 
-`upgrade = "never"` keeps npnormalize at 0.1.3. **npnormalize 0.1.4 moves the
-signature again**, to `v1-1179714ce1e9d31f`, and the data published on
-2026-11-01 is refused under it until it is rebuilt. Check what you have with
-`npnormalize::np_normalize_signature()`.
+These are the three commits the 2026-11-01 release was built with, as its
+`MANIFEST.json` records. `npnormalize::np_normalize_signature()` should then
+report `v1-592912060053c4c3`.
+
+**Do not install matchdb or npmatch from `main` for the published data.** Both
+now require npnormalize 0.1.6, signature `v1-d49b18cc81ab79fb`, which adds a
+second gate to the address key (general delivery and military mail). The data
+online predates it, so the development versions refuse it, as the signature
+check intends, until it is rebuilt under 0.1.6.
 
 ## Quick start: download a reference and match
 
