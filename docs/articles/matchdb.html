@@ -89,14 +89,14 @@
     
     
 <p>You have a list of organizations: grant recipients, survey respondents, a contractor list. Each has a name and an address but no EIN. matchdb supplies the other side of the match: every name and address the IRS and 990 filers have recorded for each EIN. <a href="https://github.com/Nonprofit-Open-Data-Collective/npmatch" class="external-link">npmatch</a> does the matching.</p>
-<p>This walk-through matches four grant recipients, reads the results, and looks more closely at the ones that are not clear-cut. The output shown is from the references published on 2026-11-01, with npnormalize 0.1.3 and the development npmatch.</p>
+<p>This walk-through matches four grant recipients, reads the results, and looks more closely at the ones that are not clear-cut. The output shown is from the references published on 2026-11-01, with npnormalize 0.1.3 and npmatch at <code>7ea7447</code>.</p>
 <div class="section level2">
 <h2 id="install">1. Install<a class="anchor" aria-label="anchor" href="#install"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/npnormalize@6d9c669"</span><span class="op">)</span>  <span class="co"># 0.1.3</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/npmatch"</span>, upgrade <span class="op">=</span> <span class="st">"never"</span><span class="op">)</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/matchdb"</span>, upgrade <span class="op">=</span> <span class="st">"never"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/npmatch@7ea7447"</span>, upgrade <span class="op">=</span> <span class="st">"never"</span><span class="op">)</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"Nonprofit-Open-Data-Collective/matchdb@df7e2ce"</span>, upgrade <span class="op">=</span> <span class="st">"never"</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/Nonprofit-Open-Data-Collective/matchdb" class="external-link">matchdb</a></span><span class="op">)</span></span></code></pre></div>
 <p>Three packages work together:</p>
 <ul>
@@ -108,6 +108,7 @@
 <strong>npmatch</strong> does the matching.</li>
 </ul>
 <p>The reference and your query must be keyed by the same normalizer. The published references were built with npnormalize 0.1.3, so install that version, and use <code>upgrade = "never"</code> so the other two installs don’t replace it. <code><a href="https://nonprofit-open-data-collective.github.io/npnormalize/reference/np_normalize_signature.html" class="external-link">npnormalize::np_normalize_signature()</a></code> should report <code>v1-592912060053c4c3</code>.</p>
+<p>matchdb and npmatch are pinned too, to the commits the release was built with. Their development versions on <code>main</code> require npnormalize 0.1.6 and refuse the published data until it is rebuilt under that normalizer.</p>
 </div>
 <div class="section level2">
 <h2 id="get-a-reference">2. Get a reference<a class="anchor" aria-label="anchor" href="#get-a-reference"></a>
