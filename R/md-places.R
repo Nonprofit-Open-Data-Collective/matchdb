@@ -329,10 +329,11 @@ md_build_places <- function(con, share_min = 10L, unit_coverage_min = 0.5,
 #' "# 300" are one office.
 #'
 #' `md_place_key()` calls [npnormalize::np_addr_key()] and `md_unit_id()` calls
-#' [npnormalize::np_unit_id()] (npnormalize 0.1.1 and later; matchdb requires
-#' 0.1.3, whose unit pick changes `street_unit`). The SQL macros
-#' `md_place_key()` and `md_unit_id()` are ports of the same rules; a test holds
-#' them to npnormalize's functions.
+#' [npnormalize::np_unit_id()]. The SQL macros `md_place_key()` and
+#' `md_unit_id()` apply the same rules over the regex strings
+#' [npnormalize::np_pattern()] publishes (npnormalize 0.1.5 and later), read
+#' when the macros are created, so they cannot hold an older pattern than the
+#' installed npnormalize; a test holds them to npnormalize's functions.
 #'
 #' @param street_key npnormalize's `street_key`.
 #' @param zip5 Five-digit ZIP.
@@ -349,10 +350,21 @@ md_unit_id <- function(unit) {
   npnormalize::np_unit_id(unit)
 }
 
-# npnormalize's PO box pattern and np_unit_id() designator strip, ported for the
-# SQL macros below; test-places.R holds the macros to npnormalize's functions.
-.md_pobox_pat <- "^(P ?O ?BOX|P ?O ?B|BOX|P ?O) ?#? ?[0-9]+"
-.md_unit_designator_re <- "^(#|[A-Z]+)[ .,]*#?[ .,]*"
+# The PO box gate and the np_unit_id() designator strip come from npnormalize,
+# never from a copy here. DuckDB's R client cannot call np_addr_key() from SQL,
+# so the macros below are written over npnormalize's own regex strings, which
+# np_pattern() hands out in the subset R's engine and RE2 share. They are read
+# each time the macros are created, not when matchdb is installed, so upgrading
+# npnormalize alone moves the macros with np_addr_key(). A hand-typed copy is
+# how this drifted once: npnormalize 0.1.5 made "PO BOX A" a box and the copy
+# kept keying it as a building. test-places.R holds the macros to npnormalize's
+# functions and to np_pattern() itself.
+.md_sql_pattern <- function(which) {
+  p <- npnormalize::np_pattern(which)
+  if (!is.character(p) || length(p) != 1L || is.na(p) || !nzchar(p))
+    stop("npnormalize::np_pattern(\"", which, "\") is not one regex string")
+  gsub("'", "''", p, fixed = TRUE)  # a SQL string literal
+}
 
 .md_place_macros <- function(con) {
   DBI::dbExecute(con, sprintf("
@@ -360,11 +372,11 @@ md_unit_id <- function(unit) {
       CASE WHEN coalesce(CAST(street_key AS VARCHAR), '') = ''
                 OR regexp_matches(upper(CAST(street_key AS VARCHAR)), '%s') THEN ''
            ELSE upper(CAST(street_key AS VARCHAR)) || ' ' || coalesce(CAST(zip5 AS VARCHAR), '') END",
-    .md_pobox_pat))
+    .md_sql_pattern("pobox")))
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_unit_id(unit) AS
       nullif(regexp_replace(regexp_replace(upper(CAST(unit AS VARCHAR)), '%s', ''),
-                            '[^A-Z0-9]', '', 'g'), '')", .md_unit_designator_re))
+                            '[^A-Z0-9]', '', 'g'), '')", .md_sql_pattern("unit_id")))
   invisible(con)
 }
 

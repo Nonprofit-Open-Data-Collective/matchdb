@@ -29,8 +29,9 @@ dropped ("STE D-2" -> \code{D2}, "# 300" -> \code{300}), so "STE 300", "Suite 30
 }
 \details{
 \code{md_place_key()} calls \code{\link[npnormalize:np_tokenize]{npnormalize::np_addr_key()}} and \code{md_unit_id()} calls
-\code{\link[npnormalize:np_tokenize]{npnormalize::np_unit_id()}} (npnormalize 0.1.1 and later; matchdb requires
-0.1.3, whose unit pick changes \code{street_unit}). The SQL macros
-\code{md_place_key()} and \code{md_unit_id()} are ports of the same rules; a test holds
-them to npnormalize's functions.
+\code{\link[npnormalize:np_tokenize]{npnormalize::np_unit_id()}}. The SQL macros \code{md_place_key()} and
+\code{md_unit_id()} apply the same rules over the regex strings
+\code{\link[npnormalize:np_tokenize]{npnormalize::np_pattern()}} publishes (npnormalize 0.1.5 and later), read
+when the macros are created, so they cannot hold an older pattern than the
+installed npnormalize; a test holds them to npnormalize's functions.
 }

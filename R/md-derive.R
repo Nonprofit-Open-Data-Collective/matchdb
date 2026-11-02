@@ -173,8 +173,8 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
 # gains a column these lists do not cover.
 .md_derived_name_cols <- c("name_gen", "name_gen_rank", "name_nums", "name_ord",
   "name_dir", "name_form", "name_full", "name_key", "name_core", "name_placeholder")
-.md_derived_address_base <- c("street_unit", "street_key", "is_po_box", "street_num",
-  "street_name", "street_type", "zip5", "zip3", "zip9", "state_abb")
+.md_derived_address_base <- c("street_unit", "street_key", "is_po_box", "street_has_box",
+  "street_num", "street_name", "street_type", "zip5", "zip3", "zip9", "state_abb")
 # The address columns stored: the base list, plus street_unit_id (the suite
 # identifier with separators dropped, "STE D-2" -> "D2") when the installed
 # npmatch produces it - which it does from its fix/address-class onward. Read

@@ -188,10 +188,21 @@ test_that("the place key and suite id agree in R and SQL", {
 })
 
 test_that("the place key and suite id equal npnormalize's own functions", {
-  # the R functions call npnormalize; the SQL macros are ports, held to it here
-  sk <- c("123 MAIN ST", "PO BOX 12", "P O BOX 7", "", NA, "1 WATERFOWL WAY")
-  z <- c("60601", "60601", NA, "3", "4", "38120")
-  u <- c("STE 300", "# 300", "STE D-2", "FL 2", NA, "PMB 214")
+  # The R functions call npnormalize; the SQL macros run npnormalize's own
+  # np_pattern() strings in DuckDB's engine, held to it here. The keys cover
+  # every branch of the box pattern -- a number, a lettered box at the end of
+  # the key (npnormalize 0.1.5), a street merely named for a box, a box number
+  # followed by a mail stop -- and the designators npnormalize#13 is about, so
+  # a change to the pattern is exercised here whichever way it goes.
+  sk <- c("123 MAIN ST", "PO BOX 12", "P O BOX 7", "", NA, "1 WATERFOWL WAY",
+          "PO BOX A", "PO BOX Z", "P O BOX B", "BOX R", "PO BOX", "PO BOX AB",
+          "POBOX 12", "POB 3", "PO 12", "PO BOX 5371 MSC RC 507",
+          "BOX ELDER ST", "100 BOX SPGS RD", "12 A ST",
+          "RR 1 BOX 8", "GENERAL DELIVERY", "PSC 1234 BOX 56", "DRAWER 7",
+          "PO BX 3", "BX 4")
+  z <- rep_len(c("60601", NA, "38120"), length(sk))
+  u <- rep_len(c("STE 300", "# 300", "STE D-2", "FL 2", NA, "PMB 214",
+                 "APT B", "BLDG 86E", "UNIT 4-C", "", "RM 216"), length(sk))
   con <- DBI::dbConnect(duckdb::duckdb()); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
   .md_place_macros(con)
   DBI::dbWriteTable(con, "p", data.frame(i = seq_along(sk), sk = sk, z = z, u = u))
@@ -200,4 +211,33 @@ test_that("the place key and suite id equal npnormalize's own functions", {
   expect_identical(got$id, npnormalize::np_unit_id(u))
   expect_identical(md_place_key(sk, z), npnormalize::np_addr_key(sk, z))
   expect_identical(md_unit_id(u), npnormalize::np_unit_id(u))
+  # The guard has teeth: the lettered box is blanked in both, which a macro
+  # still holding the pre-0.1.5 digits-only copy would not do.
+  expect_identical(got$k[sk %in% "PO BOX A"], "")
+})
+
+test_that("the SQL macros read np_pattern() when created, not a copy", {
+  # A stand-in np_pattern() must reach the macros. A pattern re-typed into
+  # matchdb would ignore it, and would go stale the next time npnormalize moves.
+  local_mocked_bindings(
+    np_pattern = function(which) switch(which, pobox = "^ZZ ?[0-9]+",
+                                        unit_id = "^QQ[ .,]*", stop(which)),
+    .package = "npnormalize")
+  con <- DBI::dbConnect(duckdb::duckdb()); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  .md_place_macros(con)
+  got <- DBI::dbGetQuery(con, "
+    SELECT md_place_key('ZZ 12', '60601') AS zz, md_place_key('PO BOX 12', '60601') AS po,
+           md_unit_id('QQ 300') AS qq, md_unit_id('STE 300') AS ste")
+  expect_identical(got$zz, "")
+  expect_identical(got$po, "PO BOX 12 60601")
+  expect_identical(got$qq, "300")
+  expect_identical(got$ste, "STE300")
+})
+
+test_that("a quote in a published pattern cannot break the macro SQL", {
+  local_mocked_bindings(np_pattern = function(which) "^O'BOX [0-9]+", .package = "npnormalize")
+  con <- DBI::dbConnect(duckdb::duckdb()); on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+  .md_place_macros(con)
+  got <- DBI::dbGetQuery(con, "SELECT md_place_key('O''BOX 9', '1') AS k")
+  expect_identical(got$k, "")
 })
