@@ -314,7 +314,7 @@
 <p>Two things protect results from a silent change:</p>
 <ul>
 <li>
-<strong>The signature check.</strong> Bundles and tranches built under one normalizer are refused under another. Query keys and reference keys must come from the same normalizer, or they disagree without any error. When npnormalize moves ahead of the published data, as 0.1.4 did on 2026-11-01, install the version the data was built with until it is rebuilt. <code><a href="../reference/md_publish.html">md_reference()</a></code>’s error names both signatures.</li>
+<strong>The signature check.</strong> Bundles and tranches built under one normalizer are refused under another. Query keys and reference keys must come from the same normalizer, or they disagree without any error. When npnormalize moves ahead of the published data, as 0.1.4 did on 2026-11-01, install the versions the data was built with until it is rebuilt: npnormalize, npmatch and matchdb, at the commits its <code>MANIFEST.json</code> records. <code><a href="../reference/md_publish.html">md_reference()</a></code>’s error names both signatures.</li>
 <li>
 <strong>The workspace log.</strong> Every fetch and compile records the build, the normalizer and the package versions. A <code>version_change</code> row marks every change (<code>md_log("version_change")</code>), so a match result can always be traced to the build and normalizer that produced it.</li>
 </ul>

@@ -300,10 +300,13 @@ md_reference("active-observed")
 </div>
 
 That is what npnormalize 0.1.4 gives against the data published on
-2026-11-01. To get the right normalizer, install npnormalize at the
-commit the data was built with (`6d9c669` for 0.1.3), or wait for a
-build made with the newer one. `vignette("updates")` explains when and
-why a rebuild happens.
+2026-11-01. To get the right normalizer, install the commits the data
+was built with, or wait for a build made with the newer one. Pin matchdb
+and npmatch as well as npnormalize: once `main` requires a newer
+npnormalize, it will not load against the older one. For the 2026-11-01
+data that is npnormalize `6d9c669` (0.1.3), npmatch `7ea7447` and
+matchdb `df7e2ce`, as in the README. `vignette("updates")` explains when
+and why a rebuild happens.
 
 To turn logging off, set `options(matchdb.log = FALSE)`.
 

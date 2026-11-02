@@ -1,5 +1,22 @@
 # matchdb (development version)
 
+## The install instructions pin all three packages
+
+* **The README and `vignette("matchdb")` now pin matchdb and npmatch, not only
+  npnormalize**, and `vignette("workspace")` and `vignette("updates")` say to
+  pin all three when the normalizer moves ahead of the data. They said to
+  install npnormalize at `6d9c669` (0.1.3) and matchdb and npmatch from `main`
+  with `upgrade = "never"`. That stopped working when `main` moved to
+  npnormalize 0.1.5 and then 0.1.6: both packages now require a newer
+  npnormalize than the published data was built with, so the instructions gave
+  either a failed install or a matchdb that refuses the data.
+* The pins are the three commits the 2026-11-01 release records in its
+  `MANIFEST.json`: npnormalize `6d9c669`, npmatch `7ea7447`, matchdb
+  `df7e2ce`. Installed together into an empty library, they report signature
+  `v1-592912060053c4c3`, which matches the published bundles.
+* The pins come off once the database is rebuilt and republished under
+  npnormalize 0.1.6 (`v1-d49b18cc81ab79fb`).
+
 ## npnormalize 0.1.6: the address key has a second gate (#35)
 
 * **`md_place_key()`'s macro reads both gates.** `np_addr_key()` blanks on the

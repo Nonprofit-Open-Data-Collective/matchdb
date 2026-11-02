@@ -251,8 +251,10 @@ Two things protect results from a silent change:
     normalizer are refused under another. Query keys and reference keys
     must come from the same normalizer, or they disagree without any
     error. When npnormalize moves ahead of the published data, as 0.1.4
-    did on 2026-11-01, install the version the data was built with until
-    it is rebuilt. `md_reference()`’s error names both signatures.
+    did on 2026-11-01, install the versions the data was built with
+    until it is rebuilt: npnormalize, npmatch and matchdb, at the
+    commits its `MANIFEST.json` records. `md_reference()`’s error names
+    both signatures.
 -   **The workspace log.** Every fetch and compile records the build,
     the normalizer and the package versions. A `version_change` row
     marks every change (`md_log("version_change")`), so a match result
