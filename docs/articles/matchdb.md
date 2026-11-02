@@ -43,7 +43,7 @@ replace it. `npnormalize::np_normalize_signature()` should report
 `v1-592912060053c4c3`.
 
 matchdb and npmatch are pinned too, to the commits the release was built
-with. Their development versions on `main` require npnormalize 0.1.6 and
+with. Their development versions on `main` require npnormalize 0.1.7 and
 refuse the published data until it is rebuilt under that normalizer.
 
 </div>

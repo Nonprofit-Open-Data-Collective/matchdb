@@ -8,6 +8,44 @@
 
 <div class="section level3">
 
+### npnormalize 0.1.7: the split-word table the SQL key was missing
+
+-   **`md_guard_key()`’s macro applies `np_name_rules()$split_words`.**
+    0.1.7 folds eleven further spellings of `FOUNDATION`, three of which
+    are the word cut in two by a fixed-width line break in the filing
+    (`FOUND ATION`, `FOUNDATIO N`, `FOUNDATI ON`). Those three are the
+    only ones the macro could get wrong, and it did: the per-token
+    abbreviation `CASE` folded the head of `FOUNDATIO N` on its own, so
+    the SQL key read `SMITH FAMILY FOUNDATION N` while `np_name_core()`
+    read `SMITH FAMILY FOUNDATION`. The rejoin now runs inside
+    `md_guard_clean()`, after the clean and before the `CASE`, which is
+    the order `np_name_rules()` documents.
+-   **The parity test did not catch it, and that is the more useful
+    finding.** Its fixture held no split word, so a table that gained
+    three entries left a macro silently disagreeing with the function it
+    is tested against. The fixture now carries one of each split form
+    plus a single-token misspelling — the single-token case exercises
+    only the `CASE` and passed throughout — and `PROFOUND ATION TEST`,
+    which must not be rejoined.
+-   **`md_light_key()` is deliberately left alone.** It merges spellings
+    that differ only in how they are typed and leaves misspellings to
+    the normalizer’s derived columns, so `FOUNDATION` and `FOUNDAITON`
+    stay apart there by design.
+-   **No stored column changes shape.** 0.1.7 adds no column; it moves
+    the values of `street_key`, `street_num`, `street_name`, `name_key`,
+    `name_full`, `name_form`, `dba_key` and `division_key`, all of which
+    `md_build_derived()` already stores. `md_place_key()` reads the
+    derived `street_key`, so the hyphenated house numbers 0.1.7 fixes
+    reach the place key through a rebuild with no change here.
+-   **The database still is not rebuilt.** The signature is now
+    `v1-59c6e84c5f38e9f5`; `md_build_derived()` stamps it on the next
+    pass, and the staleness guard refuses to mix signatures in one
+    derived table.
+
+</div>
+
+<div class="section level3">
+
 ### The install instructions pin all three packages
 
 -   **The README and `vignette("matchdb")` now pin matchdb and npmatch,
@@ -26,7 +64,7 @@
     signature `v1-592912060053c4c3`, which matches the published
     bundles.
 -   The pins come off once the database is rebuilt and republished under
-    npnormalize 0.1.6 (`v1-d49b18cc81ab79fb`).
+    npnormalize 0.1.7 (`v1-59c6e84c5f38e9f5`).
 
 </div>
 
