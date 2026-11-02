@@ -1,5 +1,29 @@
 # matchdb (development version)
 
+## The SQL macros take their patterns from npnormalize
+
+* **`md_place_key()` and `md_unit_id()` in SQL no longer hold a copy of
+  npnormalize's patterns.** The PO box gate and the suite designator strip are
+  read from `npnormalize::np_pattern("pobox")` and `np_pattern("unit_id")` each
+  time the macros are created, so upgrading npnormalize alone moves them with
+  `np_addr_key()` and `np_unit_id()`. The copy had already drifted:
+  npnormalize 0.1.5 made a lettered box (`PO BOX A`) a box, and the macro still
+  keyed it as a building.
+* **matchdb now requires npnormalize 0.1.5**, the first to publish
+  `np_pattern()`.
+* **`street_has_box` is a stored address column.** npnormalize 0.1.4 added it
+  to `np_normalize()`'s output, and with it installed 26 tests failed on
+  `main`: a compiled frame lacked a column the normalizer produces. Existing
+  `address_text_derived` tables gain the column on the next derive pass, empty
+  for older signatures' rows.
+* The parity test now covers every branch of the box pattern (lettered boxes,
+  streets named for a box, a box number followed by a mail stop, and the
+  rural-route, military and `GENERAL DELIVERY` lines npnormalize#13 is about),
+  and a second test swaps in a stand-in `np_pattern()` to prove the macros
+  read it rather than a copy.
+* **The database is not yet rebuilt** under the 0.1.5 signature
+  (`v1-533f186c123357cf`); that waits for npnormalize to settle (#13).
+
 ## npnormalize 0.1.3: the signature moves (#29)
 
 * **matchdb now requires npnormalize 0.1.3.** Its normalizer signature is
