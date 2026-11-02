@@ -24,7 +24,7 @@ normalizer moved into npnormalize.
 **The published data moved on 2026-11-01.** The database, bundles and tranches
 online are now built with npnormalize 0.1.3, signature `v1-592912060053c4c3`.
 0.1.1 refuses them, and so does the development version on `main`, which has
-moved on to npnormalize 0.1.6; install the pinned commits below to read them.
+moved on to npnormalize 0.1.7; install the pinned commits below to read them.
 See [NEWS.md](NEWS.md).
 
 The development version takes the normalizer from
@@ -49,10 +49,11 @@ These are the three commits the 2026-11-01 release was built with, as its
 report `v1-592912060053c4c3`.
 
 **Do not install matchdb or npmatch from `main` for the published data.** Both
-now require npnormalize 0.1.6, signature `v1-d49b18cc81ab79fb`, which adds a
-second gate to the address key (general delivery and military mail). The data
+now require npnormalize 0.1.7, signature `v1-59c6e84c5f38e9f5`, which adds a
+second gate to the address key (general delivery and military mail) and then
+fixes hyphenated house numbers and eleven spellings of FOUNDATION. The data
 online predates it, so the development versions refuse it, as the signature
-check intends, until it is rebuilt under 0.1.6.
+check intends, until it is rebuilt under 0.1.7.
 
 ## Quick start: download a reference and match
 

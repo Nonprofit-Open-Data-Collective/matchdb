@@ -40,10 +40,26 @@ test_that("the SQL key and placeholder-EIN rules agree with the R ones", {
          "St. Mary's Church", "St Mary\u2019s", "SAME AS ABOVE", "Habitat for Humanity",
          "1N10 INC", "S H A R E INC", "P33", "F.I.N.D. Inc", "Y.M.C.A. of Greater Boston",
          "Amer Natl Red Cross", "Mt Sinai Dept of Medicine", "Le Caf\u00e9 Fndtn",
-         "Saint Clare\u02bcs Community Care", "", "  ")
+         "Saint Clare\u02bcs Community Care", "", "  ",
+         # npnormalize 0.1.7's split words, and they are exactly the case this
+         # macro got wrong: the per-token abbreviation CASE folded the head of
+         # "FOUNDATIO N" on its own, so the SQL key read "FOUNDATION N" while
+         # np_name_core() read "SMITH FAMILY FOUNDATION". A single-token
+         # misspelling exercises only the CASE and passed throughout, which is
+         # why one of each split form has to be here.
+         "Smith Family Found Ation", "Smith Family Foundatio N",
+         "Smith Family Foundati On", "Smith Family Foudation",
+         # and a word that merely ends in FOUND, which must not be rejoined
+         "Profound Ation Test")
   DBI::dbWriteTable(con, "x", data.frame(s = x))
   got <- DBI::dbGetQuery(con, "SELECT s, md_guard_key(s) AS k FROM x")
   expect_equal(got$k[match(x, got$s)], md_guard_key(x))
+  # named, not just covered by the parity assertion above: the four spellings
+  # are one key, and the word that merely contains FOUND is left alone
+  expect_equal(md_guard_key(c("Smith Family Found Ation", "Smith Family Foundatio N",
+                              "Smith Family Foundati On", "Smith Family Foudation")),
+               rep("SMITH FAMILY FOUNDATION", 4))
+  expect_equal(md_guard_key("Profound Ation Test"), "PROFOUND ATION TEST")
   expect_equal(md_guard_key(x), {k <- npnormalize::np_name_core(x); k[is.na(k)] <- ""; k})
   e <- c("EIN-00-0000000", "EIN-12-3456789", "EIN-00-0019818", "EIN-53-0196605")
   DBI::dbWriteTable(con, "e", data.frame(e = e))

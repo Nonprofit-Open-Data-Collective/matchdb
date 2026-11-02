@@ -301,12 +301,30 @@ md_guard_key <- function(x) {
   abbr_sql <- paste(sprintf("WHEN '%s' THEN '%s'", q(names(rules$abbrev)), q(rules$abbrev)),
                     collapse = " ")
   apos_sql <- q("['\u2018\u2019\u02bc\u00b4`]")
-  DBI::dbExecute(con, sprintf("
-    CREATE OR REPLACE TEMP MACRO md_guard_clean(s) AS trim(regexp_replace(
+  clean <- sprintf("trim(regexp_replace(
       regexp_replace(regexp_replace(
         regexp_replace(replace(strip_accents(upper(COALESCE(CAST(s AS VARCHAR), ''))), '&', ' AND '), '%s', '', 'g'),
         '([A-Z0-9])\\.([A-Z0-9])', '\\1\\2', 'g'), '([A-Z0-9])\\.([A-Z0-9])', '\\1\\2', 'g'),
-      '[^A-Z0-9]+', ' ', 'g'))", apos_sql))
+      '[^A-Z0-9]+', ' ', 'g'))", apos_sql)
+  # np_name_rules()$split_words, which arrived with npnormalize 0.1.7: a word a
+  # fixed-width line break in the filing cut in two ("FOUND ATION").
+  #
+  # Order is the whole point here, and getting it wrong is silent. These run
+  # after the clean and BEFORE md_guard_key's per-token abbreviation CASE, which
+  # is the order np_name_rules() documents. The other way round, the CASE folds
+  # the head on its own: measured, not supposed -- before this loop existed the
+  # macro gave "SMITH FAMILY FOUNDATION N" for "SMITH FAMILY FOUNDATIO N" while
+  # np_name_core() gave "SMITH FAMILY FOUNDATION", and the parity test did not
+  # catch it because its fixture held no split word. It does now.
+  #
+  # \b is in the subset R's engine and RE2 share, so this is the same expression
+  # as the gsub() in .np_fold_split() rather than a second reading of it.
+  for (i in seq_along(rules$split_words)) {
+    clean <- sprintf("regexp_replace(%s, '\\b%s\\b', '%s', 'g')", clean,
+                     q(names(rules$split_words)[i]), q(rules$split_words[[i]]))
+  }
+  DBI::dbExecute(con, sprintf(
+    "CREATE OR REPLACE TEMP MACRO md_guard_clean(s) AS %s", clean))
   DBI::dbExecute(con, sprintf("
     CREATE OR REPLACE TEMP MACRO md_guard_key(s) AS COALESCE(array_to_string(
       list_filter(
