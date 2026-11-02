@@ -35,7 +35,7 @@ before the normalizer moved into npnormalize.
 **The published data moved on 2026-11-01.** The database, bundles and
 tranches online are now built with npnormalize 0.1.3, signature
 `v1-592912060053c4c3`. 0.1.1 refuses them, and so does the development
-version on `main`, which has moved on to npnormalize 0.1.7; install the
+version on `main`, which has moved on to npnormalize 0.1.8; install the
 pinned commits below to read them. See
 [NEWS.md](https://nonprofit-open-data-collective.github.io/matchdb/NEWS.md).
 
@@ -65,12 +65,13 @@ its `MANIFEST.json` records. `npnormalize::np_normalize_signature()`
 should then report `v1-592912060053c4c3`.
 
 **Do not install matchdb or npmatch from `main` for the published
-data.** Both now require npnormalize 0.1.7, signature
-`v1-59c6e84c5f38e9f5`, which adds a second gate to the address key
-(general delivery and military mail) and then fixes hyphenated house
-numbers and eleven spellings of FOUNDATION. The data online predates it,
-so the development versions refuse it, as the signature check intends,
-until it is rebuilt under 0.1.7.
+data.** Both now require npnormalize 0.1.8, signature
+`v1-5e901add4a04a5d6`, which adds a second gate to the address key
+(general delivery and military mail), fixes hyphenated house numbers —
+bar a lone compass letter, which 0.1.8 took back out — and folds eleven
+spellings of FOUNDATION. The data online predates all of it, so the
+development versions refuse it, as the signature check intends, until it
+is rebuilt under 0.1.8.
 
 </div>
 
