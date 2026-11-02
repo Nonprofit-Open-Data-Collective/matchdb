@@ -1,0 +1,68 @@
+data root: D:/matchdb 
+npnormalize 0.1.8 | old v1-59c6e84c5f38e9f5 -> new v1-5e901add4a04a5d6
+
+==== text-keyed derived columns  [07:51:39]
+name_text: 7,784,942 new string(s) to normalize under v1-5e901add4a04a5d6
+name_text -> name_text_derived: 7,784,942 string(s) in 20.8 min
+address_text: 12,987,311 new string(s) to normalize under v1-5e901add4a04a5d6
+address_text -> address_text_derived: 12,987,311 string(s) in 31.8 min
+==== text-keyed derived columns done in 52.8 min (52.8 min total)
+                table   n_text n_derived n_missing
+    name_text_derived  7784942   7784942         0
+ address_text_derived 12987311  12987311         0
+
+==== what the new normalizer changes
+normalizer diff: v1-59c6e84c5f38e9f5 -> v1-5e901add4a04a5d6
+
+strings with a row under each signature:
+                table    n_old    n_new   n_both
+    name_text_derived  7784942  7784942  7784942
+ address_text_derived 12987311 12987311 12987311
+
+derived columns changed: 3 of 24
+                table      column n_compared n_changed pct_changed
+ address_text_derived  street_key   12987311       460       0.004
+ address_text_derived  street_num   12987311       460       0.004
+ address_text_derived street_name   12987311       460       0.004
+
+effect on name and address rows:
+   table               key   n_rows n_rows_rekeyed n_merged_groups n_split_groups n_eins_regrouped
+    name          name_key 12801366              0               0              0                0
+ address street_key + zip5 22026817            433              39             17               53
+
+examples:
+                table      column                         text                      old                       new
+ address_text_derived  street_key       1-S RWDS 140 W 31ST ST    1S RWDS 140 W 31ST ST    1 S RWDS 140 W 31ST ST
+ address_text_derived  street_key   10-S 462 CARRINGTON CIRCLE   10S 462 CARRINGTON CIR   10 S 462 CARRINGTON CIR
+ address_text_derived  street_key       1002 - E SENECA STREET          1002E SENECA ST          1002 E SENECA ST
+ address_text_derived  street_key    101-E TOWN AND COUNTRY DR 101E TOWN AND COUNTRY DR 101 E TOWN AND COUNTRY DR
+ address_text_derived  street_key 101-E TOWN AND COUNTRY DRIVE 101E TOWN AND COUNTRY DR 101 E TOWN AND COUNTRY DR
+ address_text_derived  street_key     101-E TOWN COUNTRY DRIVE     101E TOWN COUNTRY DR     101 E TOWN COUNTRY DR
+ address_text_derived  street_key        101-E Town Country Dr     101E TOWN COUNTRY DR     101 E TOWN COUNTRY DR
+ address_text_derived  street_key 101-E Town and Country Drive 101E TOWN AND COUNTRY DR 101 E TOWN AND COUNTRY DR
+ address_text_derived  street_key         1011-E LEESVILLE AVE      1011E LEESVILLE AVE      1011 E LEESVILLE AVE
+ address_text_derived  street_key              1013 - N 5TH ST             1013N 5TH ST             1013 N 5TH ST
+ address_text_derived  street_num       1-S RWDS 140 W 31ST ST                       1S                         1
+ address_text_derived  street_num   10-S 462 CARRINGTON CIRCLE                      10S                        10
+ address_text_derived  street_num       1002 - E SENECA STREET                    1002E                      1002
+ address_text_derived  street_num    101-E TOWN AND COUNTRY DR                     101E                       101
+ address_text_derived  street_num 101-E TOWN AND COUNTRY DRIVE                     101E                       101
+ address_text_derived  street_num     101-E TOWN COUNTRY DRIVE                     101E                       101
+ address_text_derived  street_num        101-E Town Country Dr                     101E                       101
+ address_text_derived  street_num 101-E Town and Country Drive                     101E                       101
+ address_text_derived  street_num         1011-E LEESVILLE AVE                    1011E                      1011
+ address_text_derived  street_num              1013 - N 5TH ST                    1013N                      1013
+ address_text_derived street_name       1-S RWDS 140 W 31ST ST          RWDS 140 W 31ST         S RWDS 140 W 31ST
+ address_text_derived street_name   10-S 462 CARRINGTON CIRCLE           462 CARRINGTON          S 462 CARRINGTON
+ address_text_derived street_name       1002 - E SENECA STREET                   SENECA                  E SENECA
+ address_text_derived street_name    101-E TOWN AND COUNTRY DR         TOWN AND COUNTRY        E TOWN AND COUNTRY
+ address_text_derived street_name 101-E TOWN AND COUNTRY DRIVE         TOWN AND COUNTRY        E TOWN AND COUNTRY
+ address_text_derived street_name     101-E TOWN COUNTRY DRIVE             TOWN COUNTRY            E TOWN COUNTRY
+ address_text_derived street_name        101-E Town Country Dr             TOWN COUNTRY            E TOWN COUNTRY
+ address_text_derived street_name 101-E Town and Country Drive         TOWN AND COUNTRY        E TOWN AND COUNTRY
+ address_text_derived street_name         1011-E LEESVILLE AVE                LEESVILLE               E LEESVILLE
+ address_text_derived street_name              1013 - N 5TH ST                      5TH                     N 5TH
+
+not installed. Review the diff, then rerun with --install.
+
+54.0 min
