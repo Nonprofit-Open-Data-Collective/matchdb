@@ -21,17 +21,26 @@ A character vector.
 }
 \description{
 \code{md_place_key()} is npnormalize's address key: the normalized street, a space,
-the five-digit ZIP; empty for a PO box, because a box number is the address
-and counting records at one counts its owners, not a building's tenants.
-\code{md_unit_id()} is the suite identifier with its designator and separators
-dropped ("STE D-2" -> \code{D2}, "# 300" -> \code{300}), so "STE 300", "Suite 300" and
-"# 300" are one office.
+the five-digit ZIP; empty for any mail-delivery address, because the key
+answers \emph{same building?} and none of them is a building. That covers a PO box
+(a box number is the address, so counting records at one counts its owners
+rather than a building's tenants) and, from npnormalize 0.1.6, general
+delivery and military mail. \code{md_unit_id()} is the suite identifier with its
+designator and separators dropped ("STE D-2" -> \code{D2}, "# 300" -> \code{300}), so
+"STE 300", "Suite 300" and "# 300" are one office.
 }
 \details{
 \code{md_place_key()} calls \code{\link[npnormalize:np_tokenize]{npnormalize::np_addr_key()}} and \code{md_unit_id()} calls
 \code{\link[npnormalize:np_tokenize]{npnormalize::np_unit_id()}}. The SQL macros \code{md_place_key()} and
 \code{md_unit_id()} apply the same rules over the regex strings
-\code{\link[npnormalize:np_tokenize]{npnormalize::np_pattern()}} publishes (npnormalize 0.1.5 and later), read
-when the macros are created, so they cannot hold an older pattern than the
-installed npnormalize; a test holds them to npnormalize's functions.
+\code{\link[npnormalize:np_tokenize]{npnormalize::np_pattern()}} publishes (npnormalize 0.1.6 and later; the
+place key reads both the \code{"pobox"} and \code{"mailonly"} gates), read when the
+macros are created, so they cannot hold an older pattern than the installed
+npnormalize; a test holds them to npnormalize's functions.
+
+The complement is \code{\link[npnormalize:np_tokenize]{npnormalize::np_mail_key()}}, stored as the \code{mail_key}
+column: a blanked box still says something, since two organizations
+collecting mail from the \emph{same} box are likely administered by the same
+people. Weight it with \code{\link[npnormalize:np_mail_freq]{npnormalize::np_mail_freq()}} before believing it —
+one BMF box holds 3,626 EINs.
 }

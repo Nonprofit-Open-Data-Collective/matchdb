@@ -173,7 +173,12 @@ md_check_derived_fresh <- function(con, stop_on_stale = TRUE) {
 # gains a column these lists do not cover.
 .md_derived_name_cols <- c("name_gen", "name_gen_rank", "name_nums", "name_ord",
   "name_dir", "name_form", "name_full", "name_key", "name_core", "name_placeholder")
-.md_derived_address_base <- c("street_unit", "street_key", "is_po_box", "street_has_box",
+# is_mail_only and mail_key arrived with npnormalize 0.1.6. Both are functions
+# of the address row as a whole rather than of the street line alone -- mail_key
+# is the box plus its ZIP -- which is why they belong here and not in a derived
+# view: zip5 is already part of this unit (see the address pass's `shape`).
+.md_derived_address_base <- c("street_unit", "street_key", "is_po_box",
+  "is_mail_only", "street_has_box", "mail_key",
   "street_num", "street_name", "street_type", "zip5", "zip3", "zip9", "state_abb")
 # The address columns stored: the base list, plus street_unit_id (the suite
 # identifier with separators dropped, "STE D-2" -> "D2") when the installed
