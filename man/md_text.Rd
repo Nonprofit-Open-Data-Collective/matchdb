@@ -8,6 +8,8 @@
 \alias{md_build_text_derived}
 \alias{md_check_text_derived}
 \alias{md_text_stats}
+\alias{md_published_signatures}
+\alias{md_droppable_signatures}
 \title{Text dictionaries and derived columns keyed on the text}
 \usage{
 md_text_schema(con)
@@ -25,6 +27,10 @@ md_check_text_derived(
 )
 
 md_text_stats(con)
+
+md_published_signatures()
+
+md_droppable_signatures(con, keep = npnormalize::np_normalize_signature())
 }
 \arguments{
 \item{con}{A DuckDB connection, usually from \code{\link[=md_db]{md_db()}}.}
@@ -42,6 +48,9 @@ installed npmatch's.}
 
 \item{stop_on_missing}{Error, rather than return, when a string has no row
 for the signature.}
+
+\item{keep}{Signatures to keep whatever the published tiers say - normally
+the installed one and the predecessor a diff was taken against.}
 }
 \value{
 \code{md_text_schema()}: \code{con}, invisibly.
@@ -59,6 +68,14 @@ strings with a row for the signature, and strings missing one.
 \code{md_text_stats()}: the step 3 measurement - rows in \code{name} and
 \code{address} against distinct strings in the dictionaries, and the derived
 rows per signature.
+
+\code{md_published_signatures()}: the normalizer signature each published
+tier names, a character vector named by tier label, read from
+\code{publish/latest.json} and each tier's \code{stamp.json}. Empty when nothing is
+published. Named, so a caller can say which tier is holding a signature.
+
+\code{md_droppable_signatures()}: the rows in the two derived tables that
+nothing needs any more, as \code{table}, \code{normalize_signature} and \code{n}.
 }
 \description{
 Phase 5 step 3 (\code{dev/IDENTITY.md} §4, §7). Every distinct name string and

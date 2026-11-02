@@ -133,3 +133,46 @@ test_that("md_text_stats reports rows against distinct strings", {
   expect_equal(s$rows, c(6, 4))
   expect_equal(s$distinct_text, c(3, 2))
 })
+
+test_that("a stale signature is named only when no tier and no caller holds it", {
+  # The retention rule for the staging tables. Nothing prunes them on its own,
+  # so three signature moves leave three full sets; this is what decides which
+  # of them dev/rebuild-normalizer.R --prune may delete.
+  skip_if_no_text_deps()
+  con <- text_db(); on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  md_build_text(con); suppressMessages(md_build_text_derived(con))
+  live <- npnormalize::np_normalize_signature()
+  for (s in c("v0-published", "v0-baseline", "v0-stale")) {
+    DBI::dbExecute(con, sprintf("
+      INSERT INTO name_text_derived (name_text_id, normalize_signature, name_key)
+      SELECT name_text_id, '%s', 'X' FROM name_text", s))
+  }
+
+  root <- tempfile("md-pub")
+  dir.create(file.path(root, "publish", "unified-legal", "h0"), recursive = TRUE)
+  was <- Sys.getenv("MATCHDB_DATA", unset = NA)
+  Sys.setenv(MATCHDB_DATA = root)
+  on.exit(if (is.na(was)) Sys.unsetenv("MATCHDB_DATA") else Sys.setenv(MATCHDB_DATA = was),
+          add = TRUE)
+
+  # nothing published: no signature is protected by a tier's promise
+  expect_identical(md_published_signatures(), character())
+  expect_setequal(md_droppable_signatures(con, keep = live)$normalize_signature,
+                  c("v0-published", "v0-baseline", "v0-stale"))
+
+  jsonlite::write_json(list(`unified-legal` = list(spec_hash = "h0")),
+                       file.path(root, "publish", "latest.json"), auto_unbox = TRUE)
+  jsonlite::write_json(list(normalize_signature = "v0-published"),
+                       file.path(root, "publish", "unified-legal", "h0", "stamp.json"),
+                       auto_unbox = TRUE)
+  # named by tier label, so a refusal can say which tier is holding it
+  expect_identical(md_published_signatures(), c(`unified-legal` = "v0-published"))
+
+  # installed + the diff's baseline by argument, the published one by its stamp
+  gone <- md_droppable_signatures(con, keep = c(live, "v0-baseline"))
+  expect_setequal(gone$normalize_signature, "v0-stale")
+  expect_equal(sum(gone$n), 3)
+  # a tier's stamp holds its signature even when the caller keeps nothing
+  expect_false("v0-published" %in%
+                 md_droppable_signatures(con, keep = character())$normalize_signature)
+})

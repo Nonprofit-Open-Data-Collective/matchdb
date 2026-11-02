@@ -1,5 +1,26 @@
 # matchdb (development version)
 
+## The staging tables have a retention rule, not a memory
+
+* **`md_droppable_signatures()` names the derived rows nothing needs.** Derived
+  columns are stored per string and per signature and nothing removes an old
+  set — `md_build_text_derived()` only adds rows for the installed one — so
+  every signature move leaves another ~20.8M rows (about 0.75 GB) behind. Three
+  full sets had accumulated by 2026-11-02, and one of them was gone only
+  because someone happened to ask about it. A signature is kept when the caller
+  names it (the installed one, and the predecessor a diff was taken against) or
+  when a published tier's `stamp.json` names it; everything else is reported
+  with its row count.
+* **`md_published_signatures()`** reads `publish/latest.json` and each tier's
+  stamp, which is the guard `dev/rebuild-normalizer.R --drop-old` already
+  applied inline. It is named by tier label, so a refusal can still say which
+  tier is holding a signature. One definition of "published" now, in one place.
+* **`dev/rebuild-normalizer.R --install` reports what is droppable**, at the
+  moment the signature moves rather than months later, and the new `--prune`
+  deletes it. Deleting stays opt-in: a stale set's keys are the only way to
+  diff back to it without re-deriving every string, which is exactly what made
+  the 0.1.8 measurement possible.
+
 ## npnormalize 0.1.8: one case taken back out of the house-number join
 
 * **Nothing in this package changes, and nothing needed to.** 0.1.8 narrows
@@ -15,8 +36,13 @@
   Re-deriving every affected street twice — once as shipped, once with the join
   replaced by identity — put all 1,499 on #16, and isolating the join over the
   22,026,817-row `address` table gave its own ledger: **7,583 EIN-level groups
-  merged, 1,496 split**, with every split one address filed two ways and none
-  of them two different streets. `1002-E SENECA ST` keyed as `1002E SENECA ST`,
+  merged, 1,496 split**. Classified over the 1,499 splits the diff itself
+  reported, not one differs in anything beyond its separators — 505 are the
+  same raw string once every mark is stripped, 994 have keys that agree once
+  their spaces are — but that is a test on strings, not a reading of addresses:
+  for 20 of them it does not settle which street, `1049-38 STREET` against
+  `1049 38 ST STE 400` being either a house number on an unnamed numeric street
+  or one on a numbered street. `1002-E SENECA ST` keyed as `1002E SENECA ST`,
   apart from the `1002 E SENECA ST` spelling of the same door; 0.1.8 closes 39
   such groups. The remaining 1,457 are a measured limitation of any
   hyphen-based rule, recorded at `.np_hyphen_house`.
