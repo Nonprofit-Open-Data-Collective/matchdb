@@ -1,5 +1,33 @@
 # matchdb (development version)
 
+## One definition of a log's name, written by the step and read by the upload
+
+* **`dev/verify/run-step.sh` runs a step and writes its log where the upload
+  looks for it.** It takes the stem and the command — the stem given rather than
+  derived, since a log is not named after its script (`run-gate.R` writes
+  `phase1-gate` when `MD_GATE=phase1`) — and tees, so the console still shows a
+  54-minute run live. An existing log is never overwritten: it is the record of
+  a run that happened, and replacing it silently is how 2026-11-02 would have
+  lost the 0.1.6 rebuild that was killed and restarted.
+* **`dev/verify/log-name.sh` holds the naming rule, and both sides use it.**
+  This is the actual repair. The producer was a redirect typed at the call site
+  and the consumer was a literal name inside `upload.sh`; they agreed only
+  because the same person had written both, and on 2026-11-02 they stopped
+  agreeing. A shared definition cannot drift from itself. Its paths are absolute,
+  derived from the file's own location, so `upload.sh` no longer has to be run
+  from the repo root.
+* **A sink inside each R script would be the stronger-sounding fix and is the
+  wrong one.** `sink(split = TRUE)` tees stdout, but `sink(type = "message")`
+  cannot split, so warnings and errors would reach either only the log —
+  invisible to whoever is watching the run — or only the console, which loses the
+  most important thing in the record, and an `Rscript` crash escapes both. A pipe
+  through `tee` gets stdout, stderr and the crash.
+* **It is a wrapper, so a step can still be run without it.** What makes that
+  visible rather than silent is the preflight below; the runner makes the
+  artifact uniform and the preflight makes its absence loud. Claiming more than
+  that would be claiming the operator cannot forget, which is not true of
+  anything either file does.
+
 ## The release upload checks its inputs before it moves 34 GB
 
 * **`upload.sh` looked for log names that nothing in the repo produces.** Every
