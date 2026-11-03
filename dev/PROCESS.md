@@ -521,10 +521,14 @@ Two candidates for one stem is an error, including for a log that is otherwise
 optional: publishing the wrong run's record is worse than publishing none.
 
 **`MD_RELEASE_LABEL` is how a release says which run is its own.** Names alone
-cannot separate two runs in a day: 2026-11-02 holds both an abandoned 0.1.6
-rebuild (killed at 01:02, restarted, abandoned) and the 0.1.8 one that produced
-the release, and both are legitimate records. The labelled log wins, with the
-bare name as the fallback for a step that did not carry the label. The preflight
+cannot separate two runs in a day: on 2026-11-02 an abandoned 0.1.6 rebuild
+(killed at 01:02:55 with 6,000,000 of 12,987,311 addresses written, restarted at
+01:03:45, then abandoned) sat beside the 0.1.8 one that produced the release.
+That log has since been deleted — it recorded a run that left no rows, and the
+database carries none under its signature — so the collision is no longer in the
+tree. The mechanism is not here for that file. It is here for the next day that
+holds two runs worth keeping, which is not a rare day. The labelled log wins,
+with the bare name as the fallback for a step that did not carry the label. The preflight
 prints what every stem resolved to, so the choice is visible before anything
 moves:
 
