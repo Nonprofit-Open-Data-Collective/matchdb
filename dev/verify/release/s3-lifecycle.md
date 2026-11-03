@@ -1,7 +1,15 @@
 # The published release's version retention
 
-`s3-lifecycle.json` is a **draft**. It has not been applied. Applying it is the
-separate, deliberate step at the bottom of this file.
+`s3-lifecycle.json` is **applied**, as of 2026-11-03. It is the bucket's only
+lifecycle rule. S3's read-back matches the file field for field, including
+`NewerNoncurrentVersions`, which is worth saying because the CLI here predates
+that field by weeks and a field the CLI does not model is dropped in silence
+rather than refused.
+
+Applying it deleted nothing. Expiry is bounded by `NoncurrentDays`, and the
+oldest noncurrent version became noncurrent on 2026-10-22, so the first
+deletions fall due around **2026-11-21** — about three weeks of room to change
+course.
 
 ## What it is for
 
@@ -71,7 +79,7 @@ failed, not a property of the upload.
   signature keeps working. What to retain there is a different question, and it
   is not answered here.
 
-## Applying it
+## Changing it, later
 
 ```
 aws s3api get-bucket-lifecycle-configuration --bucket nccs-efile
@@ -80,9 +88,12 @@ aws s3api put-bucket-lifecycle-configuration --bucket nccs-efile \
 aws s3api get-bucket-lifecycle-configuration --bucket nccs-efile
 ```
 
-The first call is expected to fail with `NoSuchLifecycleConfiguration` while
-there is no configuration; if it returns rules instead, stop and merge rather
-than overwrite. The third confirms what took effect. S3 evaluates lifecycle
-asynchronously, usually within a day, so nothing is deleted at the moment of
-applying — and because expiry here is bounded by `NoncurrentDays`, the first
-deletions are weeks out, which leaves room to change course.
+Read first, every time. When this was first applied the `get` was expected to
+fail with `NoSuchLifecycleConfiguration`, and did. **That is no longer the
+case**: the bucket now has a configuration, so a `put` from this file overwrites
+whatever is there, including rules someone else added for another prefix. If the
+`get` returns anything this file does not contain, merge it in before putting.
+
+The third call confirms what took effect, and is not a formality — it is the
+only way to see that a field the CLI does not understand was dropped.
+
