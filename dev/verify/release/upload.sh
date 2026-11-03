@@ -3,52 +3,21 @@
 # the maintainer copy. Databases first, manifests last, so a reader never sees a
 # manifest whose md5 does not match its file.
 set -euo pipefail
-# Run from the repo root once the day's logs are in dev/verify/logs.
-S3=s3://nccs-efile/dev/matchdb; D="${MATCHDB_DATA:?set MATCHDB_DATA}"; L=dev/verify/logs
-DAY="${MD_RELEASE_DAY:-$(date +%Y-%m-%d)}"
+S3=s3://nccs-efile/dev/matchdb; D="${MATCHDB_DATA:?set MATCHDB_DATA}"
 t0=$(date +%s); say(){ echo "[$(( ($(date +%s)-t0)/60 )) min] $*"; }
 
 # ---------------------------------------------------------------- the day's logs
-# Each step's log is written by a redirect typed at the call site, so its name is
-# a convention and nothing in the repo produces it. The 2026-11-02 release
-# labelled every log with the npnormalize release under test
-# (publish-tiers-0.1.8-2026-11-02.log), because two normalizer rebuilds ran that
-# day and the bare name would have overwritten the first one's record. The label
-# was the right instinct and the day-only name is the part that is wrong, so the
-# files on disk are the authority here rather than a name spelled out below.
-#
-# A label must begin with a digit, because it names a release. That is not
-# decoration: it is what keeps the stem `rebuild-normalizer` from also matching
-# `rebuild-normalizer-install-0.1.8-2026-11-02.log`. Two matches are an error
-# rather than a coin toss, since picking the wrong one publishes a log that
-# describes a different run.
-#
-# Each candidate is tested with -f rather than left to nullglob, which discards
-# only a pattern that HAS glob characters: "$L/$stem-$DAY.log" is a literal word
-# and survives however little it exists, so relying on nullglob made every stem
-# look ambiguous.
-#
-# Two runs in one day cannot be told apart by their names, whatever they are
-# labelled -- 2026-11-02 holds an abandoned 0.1.6 rebuild as well as the 0.1.8
-# one that produced the release. So where a release knows its own label it says
-# so in MD_RELEASE_LABEL, and the labelled log wins over the bare name; a stem
-# whose step did not carry the label still resolves, because the bare name is
-# the second candidate. Without it there is nothing to choose on, and two
-# candidates stay an error.
-LABEL="${MD_RELEASE_LABEL:-}"
+# The naming rule lives in log-name.sh, which dev/verify/run-step.sh writes with
+# and this script reads with, so the two cannot drift. That is the whole point of
+# the file: they used to agree only because the same person had typed both.
+. "$(dirname "${BASH_SOURCE[0]}")/../log-name.sh"
+L="$md_log_dir"; DAY=$(md_log_day); LABEL=$(md_log_label)
+
 PICK=""
 pick(){ # pick <stem>; sets PICK to the one match, "" if none; fails if two
-  local stem=$1 f hits=()
+  local hits=()
   PICK=""
-  if [ -n "$LABEL" ]; then
-    for f in "$L/$stem-$LABEL-$DAY.log" "$L/$stem-$DAY.log"; do
-      if [ -f "$f" ]; then PICK=$f; return 0; fi
-    done
-    return 0
-  fi
-  for f in "$L/$stem-$DAY.log" "$L/$stem"-[0-9]*-"$DAY.log"; do
-    if [ -f "$f" ]; then hits+=("$f"); fi
-  done
+  mapfile -t hits < <(md_log_found "$1")
   if [ "${#hits[@]}" -gt 1 ]; then PICK="${hits[*]}"; return 1; fi
   if [ "${#hits[@]}" -eq 1 ]; then PICK="${hits[0]}"; fi
   return 0

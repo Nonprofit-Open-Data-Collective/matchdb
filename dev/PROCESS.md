@@ -470,14 +470,45 @@ Phases are the plan's; the gate column is what this document adds.
 6. Upload databases first and manifests last (`upload.sh`).
 7. Fetch and compile from S3 as a user would (`verify-remote.R`).
 
-**The day's logs are an input to step 6, not a by-product of it.** Each step's
-log is written by a redirect typed at the call site; nothing in the repo produces
-the name, and `upload.sh` is the only thing that reads it. A log that is missing
-or named differently used to stop the upload at the logs step — *after* both
-databases, the bundles and `publish/latest.json` were up and *before* the
+**The day's logs are an input to step 6, not a by-product of it.** A log that is
+missing or named differently used to stop the upload at the logs step — *after*
+both databases, the bundles and `publish/latest.json` were up and *before* the
 manifests, which is the one window that leaves the release broken rather than
 stale: the new database sits under the previous manifest, and `md_fetch_db()`
 refuses a file whose md5 does not match what the manifest records.
+
+**Run every step that owes a log through `dev/verify/run-step.sh`.** It takes the
+log's stem and the command, writes the log where `upload.sh` will look for it,
+and tees so the console still shows the run live:
+
+```
+bash dev/verify/run-step.sh check-build -- Rscript dev/check-build.R
+MD_GATE=phase1 MD_BASELINE=dev/BASELINE-2026-10 \
+  bash dev/verify/run-step.sh phase1-gate -- Rscript dev/verify/run-gate.R
+```
+
+The stem is given rather than derived, because a step's log is not named after
+its script — `run-gate.R` writes `phase1-gate` when `MD_GATE=phase1`. The log
+path is independent of where the runner is called from, but the dev scripts call
+`pkgload::load_all(".")`, so run them from the repo root. An existing log is
+never overwritten: it is the record of a run that happened, and silently
+replacing it is how 2026-11-02 would have lost the killed 0.1.6 rebuild.
+
+`run-step.sh` writes with `dev/verify/log-name.sh` and `upload.sh` reads with it,
+so the two cannot drift. That shared definition is the fix; before it, the
+producer was a redirect typed by hand and the consumer was a literal name in the
+upload script, and they agreed only because the same person had written both.
+
+It is a wrapper, so it is still possible to run a step without it — what makes
+that visible rather than silent is the preflight below. The two work as a pair:
+the runner makes the artifact uniform, the preflight makes its absence loud.
+
+A sink inside each R script would be the stronger-sounding fix and is the wrong
+one. `sink(split = TRUE)` tees stdout, but `sink(type = "message")` cannot split,
+so warnings and errors would reach either only the log — invisible to whoever is
+watching a 54-minute derive — or only the console, which loses the most
+important thing in the record. An `Rscript` crash escapes both. A pipe through
+`tee` gets stdout, stderr and the crash.
 
 `upload.sh` now resolves the whole set before it uploads anything, and
 `MD_PREFLIGHT_ONLY=1` runs just those checks, which costs nothing and can be

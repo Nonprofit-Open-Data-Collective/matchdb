@@ -1,0 +1,40 @@
+[1] 0
+[1] 0
+[1] 0
+slim: 26 tables, 11.85 GB
+[1] 0
+[1] 0
+[1] database_name n            
+<0 rows> (or 0-length row.names)
+  database_name constraint_type  n
+1             f        NOT NULL 18
+2             f     PRIMARY KEY  6
+26 tables in slim; mismatched: none 
+{
+  "database": "MATCHDB.duckdb",
+  "size_bytes": 11853115392,
+  "md5": "b22b2c21b2e10188342ddb847ca1611e",
+  "built": "2026-11-02T17:46:37-0700",
+  "matchdb_branch": "main",
+  "matchdb_commit": "5c4ebbd56b9c78829273e35eef1ac859b4c03b1a",
+  "build_script": "dev/build-matchdb.R; dev/build-ledger.R --install; dev/rebuild-normalizer.R --install",
+  "check_script": "dev/check-build.R",
+  "npnormalize_version": "0.1.9",
+  "npnormalize_commit": "1f7144b1f3cc013909aa23312a48085c9232950d",
+  "npmatch_version": "0.1.1.9000",
+  "npmatch_commit": "169ba81c3d07b476e92db10ac75d8afa644f3a70",
+  "normalize_signature": "v1-5e901add4a04a5d6",
+{
+  "database": "MATCHDB-full.duckdb",
+  "size_bytes": 32084078592,
+  "md5": "4fd53c88b8036834b0b60a303984b0e4",
+  "built": "2026-11-02T09:39:47-0700",
+  "matchdb_branch": "main",
+  "matchdb_commit": "5c4ebbd56b9c78829273e35eef1ac859b4c03b1a",
+  "build_script": "dev/build-matchdb.R; dev/build-ledger.R --install; dev/rebuild-normalizer.R --install",
+  "check_script": "dev/check-build.R",
+  "npnormalize_version": "0.1.9",
+  "npnormalize_commit": "1f7144b1f3cc013909aa23312a48085c9232950d",
+  "npmatch_version": "0.1.1.9000",
+  "npmatch_commit": "169ba81c3d07b476e92db10ac75d8afa644f3a70",
+  "normalize_signature": "v1-5e901add4a04a5d6",

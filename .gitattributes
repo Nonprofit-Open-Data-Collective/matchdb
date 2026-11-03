@@ -3,3 +3,8 @@
 # fail on the carriage returns -- halfway through a release, in the confusing way
 # that a mis-resolved log name used to. Shell scripts keep LF everywhere.
 *.sh text eol=lf
+
+# Logs are release artifacts: upload.sh copies the working copy to S3, so a
+# clone that converted them to CRLF would publish different bytes for the same
+# run. Keep them LF too.
+*.log text eol=lf
