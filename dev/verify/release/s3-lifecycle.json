@@ -1,0 +1,18 @@
+{
+  "Rules": [
+    {
+      "ID": "matchdb-dev-noncurrent-versions",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "dev/matchdb/"
+      },
+      "NoncurrentVersionExpiration": {
+        "NewerNoncurrentVersions": 2,
+        "NoncurrentDays": 30
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 7
+      }
+    }
+  ]
+}
