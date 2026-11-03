@@ -2,7 +2,7 @@
 # compile from what arrived. Arg: a scratch folder (emptied first).
 suppressMessages(pkgload::load_all(".", quiet = TRUE))
 root <- commandArgs(TRUE)[1]; stopifnot(!is.na(root))
-unlink(root, recursive = TRUE); dir.create(root)
+unlink(root, recursive = TRUE); dir.create(root, recursive = TRUE)
 t0 <- Sys.time()
 dir <- md_fetch_reference("active-observed", root = file.path(root, "publish"))
 b <- md_reference("active-observed", root = file.path(root, "publish"))

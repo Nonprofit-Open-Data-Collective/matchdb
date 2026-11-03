@@ -54,5 +54,22 @@ echo "run-step.sh: -> $out"
 "$@" 2>&1 | tee -a "$out"
 st=${PIPESTATUS[0]}
 printf '\n# exit %s at %s\n' "$st" "$(date +%Y-%m-%dT%H:%M:%S%z)" >> "$out"
+
+# Rscript's stdout crosses the Windows CRT on its way into the pipe above, and
+# the CRT turns every \n into \r\n, so the file tee has just written has CRLF
+# endings. .gitattributes makes git store the blob with LF, but upload.sh
+# publishes the working copy, so the bytes that reached S3 used to depend on
+# whether anyone had happened to check the log out again after it was written.
+# The 2026-11-02 release published LF only because the logs had been
+# re-checked-out for an unrelated reason an hour earlier.
+#
+# Only a CR at end of line goes. A bare \r mid-line is a progress bar redrawing
+# itself -- that is the step's output, not a line ending, and stripping it would
+# concatenate every redraw into one unreadable line.
+#
+# This is outside any `if`: the step's exit status does not change what its log
+# should be, and a step that failed is exactly the one whose log gets read.
+sed -i 's/\r$//' "$out"
+
 echo "run-step.sh: exit $st, log $out"
 exit "$st"
