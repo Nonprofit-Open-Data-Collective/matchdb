@@ -1,5 +1,42 @@
 # matchdb (development version)
 
+## The release upload checks its inputs before it moves 34 GB
+
+* **`upload.sh` looked for log names that nothing in the repo produces.** Every
+  file in `dev/verify/logs/` is written by a redirect typed at the call site,
+  and this script was the only reader, matching `<stem>-$DAY.log` literally.
+  The 2026-11-02 release labelled each log with the npnormalize release under
+  test (`publish-tiers-0.1.8-2026-11-02.log`) because two normalizer rebuilds
+  ran that day and the day-only name would have overwritten the first one's
+  record — so the upload would have aborted on the first log it could not find.
+* **That abort lands in the one damaging window.** The logs are copied after
+  both databases, the bundles and `publish/latest.json`, and before the
+  manifests. The new database then sits under the previous manifest, and
+  `.md_download()` refuses a file whose md5 does not match what the manifest
+  records, so every `md_fetch_db()` fails until the manifests land.
+  Manifests-last protects a reader from a manifest promising a file that is not
+  there yet; it does nothing about a file that arrives ahead of its manifest.
+* **Nothing is uploaded until the whole set resolves**, and every problem is
+  reported at once rather than only the first. `MD_PREFLIGHT_ONLY=1` runs those
+  checks alone, which costs nothing and can be done while the release is still
+  building. Each manifest is also compared with its database on `size_bytes`,
+  which catches a manifest left describing the previous build for the price of a
+  `stat`; the md5 is the authoritative comparison, and `manifest.R` has just
+  made it over the same files.
+* **A log may name the release that produced it.** The label has to begin with a
+  digit, which is what keeps the stem `rebuild-normalizer` from also matching
+  `rebuild-normalizer-install-0.1.8-…`, and two candidates for one stem is an
+  error — including for a log that is otherwise optional, because publishing the
+  wrong run's record is worse than publishing none.
+* **`MD_RELEASE_LABEL` says which run the release is**, which no naming rule can
+  settle on its own: 2026-11-02 holds an abandoned 0.1.6 rebuild as well as the
+  0.1.8 one that produced the release, and both are real records of that day.
+  With it set the labelled log wins and the bare name is the fallback, so a step
+  that did not carry the label still resolves. `compact-$DAY.log` is no
+  longer required: compaction is not an every-release step, since `compact.R`
+  refuses to run while the previous release's `MATCHDB.precompact.duckdb` is
+  still on disk.
+
 ## The staging tables have a retention rule, not a memory
 
 * **`md_droppable_signatures()` names the derived rows nothing needs.** Derived

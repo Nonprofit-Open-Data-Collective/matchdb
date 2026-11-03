@@ -462,12 +462,45 @@ Phases are the plan's; the gate column is what this document adds.
 1. Phase 2 clears.
 2. Merge to `main`.
 3. Drop the legacy tables and copy into a fresh file (`compact.R`: DuckDB does
-   not give space back on DROP).
+   not give space back on DROP). Not every release: `compact.R` refuses to run
+   while the previous one's `MATCHDB.precompact.duckdb` is still on disk.
 4. Write the user copy without the ledger (`slim.R`, checked by
    `verify-slim.R`).
 5. Write both manifests from `main` (`manifest.R`).
 6. Upload databases first and manifests last (`upload.sh`).
 7. Fetch and compile from S3 as a user would (`verify-remote.R`).
+
+**The day's logs are an input to step 6, not a by-product of it.** Each step's
+log is written by a redirect typed at the call site; nothing in the repo produces
+the name, and `upload.sh` is the only thing that reads it. A log that is missing
+or named differently used to stop the upload at the logs step — *after* both
+databases, the bundles and `publish/latest.json` were up and *before* the
+manifests, which is the one window that leaves the release broken rather than
+stale: the new database sits under the previous manifest, and `md_fetch_db()`
+refuses a file whose md5 does not match what the manifest records.
+
+`upload.sh` now resolves the whole set before it uploads anything, and
+`MD_PREFLIGHT_ONLY=1` runs just those checks, which costs nothing and can be
+done while the release is still building. A log may carry the release it was
+testing (`publish-tiers-0.1.8-2026-11-02.log`) — necessary when two rebuilds run
+in a day, as on 2026-11-02, since the day-only name would overwrite the first
+one's record. The label must begin with a digit, so that the stem
+`rebuild-normalizer` does not also match `rebuild-normalizer-install-0.1.8-…`.
+Two candidates for one stem is an error, including for a log that is otherwise
+optional: publishing the wrong run's record is worse than publishing none.
+
+**`MD_RELEASE_LABEL` is how a release says which run is its own.** Names alone
+cannot separate two runs in a day: 2026-11-02 holds both an abandoned 0.1.6
+rebuild (killed at 01:02, restarted, abandoned) and the 0.1.8 one that produced
+the release, and both are legitimate records. Set it to the release and the
+labelled log wins, with the bare name as the fallback for a step that did not
+carry the label. The preflight prints what every stem resolved to, so the choice
+is visible before anything moves:
+
+```
+MATCHDB_DATA=D:/matchdb MD_RELEASE_LABEL=0.1.8 MD_PREFLIGHT_ONLY=1 \
+  bash dev/verify/release/upload.sh
+```
 
 | phase | repo | gate — passes when |
 |---|---|---|
