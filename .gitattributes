@@ -4,7 +4,11 @@
 # that a mis-resolved log name used to. Shell scripts keep LF everywhere.
 *.sh text eol=lf
 
-# Logs are release artifacts: upload.sh copies the working copy to S3, so a
-# clone that converted them to CRLF would publish different bytes for the same
-# run. Keep them LF too.
+# Logs are release artifacts: upload.sh copies the working copy to S3, not the
+# committed blob, so the published bytes are whatever is on disk. This line only
+# settles what git stores. What a log is written with is settled by
+# dev/verify/run-step.sh, which strips the CR that the Windows CRT adds on the
+# way into its pipe; the two together are what make one run publish one set of
+# bytes. Keeping only this line meant the bytes depended on whether anyone had
+# happened to check the log out again since it was written.
 *.log text eol=lf

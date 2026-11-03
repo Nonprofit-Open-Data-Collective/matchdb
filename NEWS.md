@@ -1,5 +1,36 @@
 # matchdb (development version)
 
+## Three things the first release through the runner exposed
+
+The npnormalize 0.1.9 release was the first one carried end to end by
+`run-step.sh` and the upload preflight. The mechanism held — the upload resolved
+seven logs, reported two absent optional ones and carried on where 2026-11-01
+had aborted mid-upload — and it also showed three defects, two of them in the
+work that had just been added.
+
+* **`run-step.sh` now writes LF, which is what `.gitattributes` alone could not
+  do.** `*.log text eol=lf` settles what git *stores*; `upload.sh` publishes the
+  working copy. `Rscript`'s stdout crosses the Windows CRT into the pipe, which
+  turns every `\n` into `\r\n`, so the published bytes depended on whether anyone
+  had checked the log out again since it was written. The 0.1.9 release
+  published LF only because its logs had been re-checked-out an hour earlier for
+  an unrelated reason. The runner now strips the end-of-line CR itself. Only at
+  end of line: a bare `\r` mid-line is a progress bar redrawing, which is the
+  step's output and not a line ending.
+* **`MD_RELEASE_LABEL` now has a defined value.** `PROCESS.md` said to "set it to
+  the release" without saying what that meant, and the two plausible readings
+  disagree whenever the normalizer is upgraded between the rebuild and the
+  upload. It is the npnormalize version that rebuilt the keys — the one
+  `rebuild-normalizer` logs — and not the manifest's `npnormalize_version`,
+  which is read at stamping time and so cannot name logs already written. On
+  2026-11-02 those were 0.1.8 and 0.1.9 respectively, both correct; the manifest
+  names the release and the label names the rebuild.
+* **`verify-remote.R` could not create its own scratch root.** `dir.create(root)`
+  had no `recursive = TRUE`, which `tranche-remote.R` has. It warned and did no
+  harm, because the fetch helpers create their own directories, so the root was
+  simply never there — the kind of defect that stays invisible until the one run
+  that depends on it.
+
 ## One definition of a log's name, written by the step and read by the upload
 
 * **`dev/verify/run-step.sh` runs a step and writes its log where the upload

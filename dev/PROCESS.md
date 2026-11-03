@@ -523,15 +523,40 @@ optional: publishing the wrong run's record is worse than publishing none.
 **`MD_RELEASE_LABEL` is how a release says which run is its own.** Names alone
 cannot separate two runs in a day: 2026-11-02 holds both an abandoned 0.1.6
 rebuild (killed at 01:02, restarted, abandoned) and the 0.1.8 one that produced
-the release, and both are legitimate records. Set it to the release and the
-labelled log wins, with the bare name as the fallback for a step that did not
-carry the label. The preflight prints what every stem resolved to, so the choice
-is visible before anything moves:
+the release, and both are legitimate records. The labelled log wins, with the
+bare name as the fallback for a step that did not carry the label. The preflight
+prints what every stem resolved to, so the choice is visible before anything
+moves:
 
 ```
 MATCHDB_DATA=D:/matchdb MD_RELEASE_LABEL=0.1.8 MD_PREFLIGHT_ONLY=1 \
   bash dev/verify/release/upload.sh
 ```
+
+**The label is the npnormalize version that rebuilt the keys** — the version
+`rebuild-normalizer` logged on the line `npnormalize X | old <sig> -> new
+<sig>`, which is the one that produced the signature the release publishes. It
+is not read from anywhere; it is typed, and this is the value to type.
+
+It is deliberately *not* the manifest's `npnormalize_version`, which
+`manifest.R` takes from `packageVersion("npnormalize")` at stamping time. That
+would be unusable as a log label, because the day's earlier steps have already
+written their logs by then and cannot be renamed. The rebuild is the earliest
+moment the release's identity exists, so it is the only moment every later step
+can agree on.
+
+**So the label and the release's name can differ, and on 2026-11-02 they did.**
+The rebuild ran under npnormalize 0.1.8 (`old v1-592912060053c4c3 -> new
+v1-5e901add4a04a5d6`); 0.1.9 was installed afterwards and left the signature
+untouched, so the manifests stamped that evening read `npnormalize_version:
+0.1.9`. Both are correct: the logs are labelled `0.1.8` because 0.1.8 built the
+keys, and it is the **npnormalize 0.1.9 release** because that is what the
+published manifest says, which is the convention `NEWS.md` headings follow.
+
+When they differ, the manifest names the release and the label names the
+rebuild. Reading the label as the release name is the mistake to avoid — it is
+the one made when this release was first described, before this paragraph
+existed.
 
 | phase | repo | gate — passes when |
 |---|---|---|
