@@ -1,0 +1,23 @@
+# upload: bash dev/verify/release/upload.sh 
+# started 2026-11-02T23:15:06-0700
+
+[0 min] preflight clear, label 0.1.8, 7 logs resolved
+    check-build -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/check-build-0.1.8-2026-11-02.log
+    compact -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/compact-0.1.8-2026-11-02.log
+    phase1-gate -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/phase1-gate-0.1.8-2026-11-02.log
+    phase2-measure -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/phase2-measure-0.1.8-2026-11-02.log
+    publish-tiers -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/publish-tiers-0.1.8-2026-11-02.log
+    rebuild-normalizer -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/rebuild-normalizer-0.1.8-2026-11-02.log
+    rebuild-normalizer-install -> /c/Users/jdlec/Dropbox (Personal)/00 - URBAN/00-GITHUB/matchdb/dev/verify/logs/rebuild-normalizer-install-0.1.8-2026-11-02.log
+[0 min] user copy
+[17 min] maintainer copy
+[57 min] pins
+[58 min] bundles
+[61 min] tranches 2026-11-02-139d759f
+[68 min] logs
+  (no build-ledger log)
+  (no D:/matchdb/logs/build-matchdb.log)
+[68 min] manifests
+[68 min] uploaded
+
+# exit 0 at 2026-11-03T00:24:05-0700
