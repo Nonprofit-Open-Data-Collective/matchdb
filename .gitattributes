@@ -1,0 +1,5 @@
+# upload.sh is stored with LF, but this repo is worked on with core.autocrlf
+# true, so a fresh clone on Windows would check it out with CRLF and bash would
+# fail on the carriage returns -- halfway through a release, in the confusing way
+# that a mis-resolved log name used to. Shell scripts keep LF everywhere.
+*.sh text eol=lf
