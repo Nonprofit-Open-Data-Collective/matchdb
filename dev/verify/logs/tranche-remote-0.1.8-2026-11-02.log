@@ -1,0 +1,18 @@
+# tranche-remote: /c/Program\ Files/R/R-4.5.1/bin/Rscript dev/verify/tranche-remote.R D:/matchdb/scratch-verify/tranches 
+# started 2026-11-03T00:35:20-0700
+
+remote: https://nccs-efile.s3.amazonaws.com/dev/matchdb 
+
+active-observed: tranches 2026-11-02-139d759f: 19 files here (0 already were, 0 copied from an older build), 1.17 GB downloaded (1.17 GB new, 1.2 min)
+  open, verify, compile 1.4 min: 2,878,266 rows; identical to the bundle TRUE
+
+unified-observed: tranches 2026-11-02-139d759f: 31 files here (19 already were, 0 copied from an older build), 0.54 GB downloaded (0.54 GB new, 0.5 min)
+  open, verify, compile 2.3 min: 5,121,214 rows; identical to the bundle TRUE
+
+all: tranches 2026-11-02-139d759f: 108 files here (31 already were, 0 copied from an older build), 2.84 GB downloaded (2.84 GB new, 2.6 min)
+53-0196605: md_lookup() and md_cluster() identical to the database TRUE
+39-1925617: md_lookup() and md_cluster() identical to the database TRUE
+
+REMOTE TRANCHES MATCH; 4.56 GB fetched in all, 9.4 min
+
+# exit 0 at 2026-11-03T00:44:48-0700
