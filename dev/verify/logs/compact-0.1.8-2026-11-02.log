@@ -1,0 +1,45 @@
+# compact: /c/Program\ Files/R/R-4.5.1/bin/Rscript dev/verify/release/compact.R 
+# started 2026-11-02T22:51:04-0700
+
+[1] 0
+[1] 0
+[1] 307904592
+[1] 0
+[1] 0
+tables 32, views/macros 0, rows identical
+before 32.08 GB, after 26.51 GB
+                  table     rows
+1               address 22026817
+2       address_compact 10308171
+3       address_derived 22026817
+4          address_text 12987311
+5  address_text_derived 25974622
+6               cluster   797814
+7     cluster_footprint  1392960
+8        cluster_member  3464358
+9               ein_key 32358968
+10        ein_key_layer 21457206
+11         ein_relation  2184885
+12               entity  4236242
+13         entity_event  2649231
+14         entity_group   450964
+15                 name 12801366
+16         name_compact  6767308
+17         name_derived 12801366
+18            name_text  7784942
+19    name_text_derived 15569884
+20        ntee_observed   514844
+21                  obs 48310562
+22              orgtext 15824934
+23           person_key 16556057
+24                place   278567
+25          place_layer   415600
+26           place_unit    35434
+27              release       82
+28       source_vintage       45
+29            stat_cell       32
+30       stat_name_cell  5545677
+31      stat_token_cell  1364690
+32              website  1016836
+
+# exit 0 at 2026-11-02T23:07:48-0700

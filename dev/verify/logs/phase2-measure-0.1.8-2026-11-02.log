@@ -1,0 +1,27 @@
+# phase2-measure: /c/Program\ Files/R/R-4.5.1/bin/Rscript dev/verify/phase2-measure.R 
+# started 2026-11-02T21:34:33-0700
+
+active-legal     2402137493f88c8e  2,736,535 rows 
+active-observed  9cc7b76e3e144a87  2,878,266 rows 
+spec 403876f42334529d: 3,458,343 rows over 1,974,830 EINs
+active-observed-1 403876f42334529d  3,458,343 rows 
+Warning message:
+this reference bundle carries no normalizer stamp, so it cannot be shown to match the installed npmatch (v1-5e901add4a04a5d6).
+  It predates reference stamping. Rebuild it with pf_build_reference(), or pass action = "warn" if you have established by other means that the keys are current. 
+
+arm                   YES  MAYBE     NO     ids 
+active-legal         2945    944    854    4743 
+active-observed      3091    942    716    4749 
+active-observed-1    2421   1701    647    4769 
+
+active-legal -> active-observed 
+  YES gained 294, YES lost 148, net +146 
+  MAYBE net -2 
+  YES in both with a different EIN: 32 
+
+active-legal -> active-observed-1 
+  YES gained 389, YES lost 913, net -524 
+  MAYBE net +757 
+  YES in both with a different EIN: 95 
+
+# exit 0 at 2026-11-02T22:50:45-0700
